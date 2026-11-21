@@ -13501,6 +13501,52 @@ state.sentKycEmailCode = null;
   </script>
 
 
+  
+  <script>
+    (function permanentMasterAdminDirectRoute() {
+      function hasMasterAdminHash() {
+        const h = String(window.location.hash || "").toLowerCase();
+        const href = String(window.location.href || "").toLowerCase();
+        return h.includes("master-admin") || href.includes("#master-admin");
+      }
+
+      function showDirectAdminLoginNow() {
+        if (!hasMasterAdminHash()) return;
+        if (typeof state !== "undefined") {
+          state.currentRoute = "master-admin";
+          if (state.admin) {
+            state.admin.authenticated = false;
+            state.admin.pendingOtp = null;
+          }
+        }
+        if (typeof renderAll === "function") {
+          try { renderAll(); } catch (e) {}
+        }
+        const mainView = document.getElementById("main-view");
+        if (mainView && typeof window.renderMasterAdminPanelScreen === "function") {
+          const curHtml = String(mainView.innerHTML || "");
+          if (!curHtml.includes("adm-login-email")) {
+            mainView.innerHTML = window.renderMasterAdminPanelScreen();
+          }
+        }
+      }
+
+      const prevDomInit = window.onload;
+      window.addEventListener("hashchange", showDirectAdminLoginNow);
+      window.addEventListener("DOMContentLoaded", () => {
+        showDirectAdminLoginNow();
+        setTimeout(showDirectAdminLoginNow, 150);
+        setTimeout(showDirectAdminLoginNow, 450);
+        setTimeout(showDirectAdminLoginNow, 900);
+      });
+
+      if (document.readyState === "complete" || document.readyState === "interactive") {
+        showDirectAdminLoginNow();
+      }
+    })();
+  </script>
+
+
   <input type="file" id="profile-photo-file-input" accept="image/*" class="hidden" onchange="handleOneTimeProfilePhotoUpload(event)" />
 </body>
 
