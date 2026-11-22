@@ -5203,7 +5203,7 @@ state.sentKycEmailCode = null;
                 <div>
                   <label class="text-slate-300 block mb-1">6-Digit OTP</label>
                   <div class="flex gap-2">
-                    <input id="adm-login-otp" maxlength="6" placeholder="Enter 6-digit OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
+                    <input id="adm-login-otp" required maxlength="6" placeholder="Enter 6-digit OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
                     <button type="button" onclick="sendAdminOtp(this)" class="px-3.5 py-2.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">Send OTP</button>
                   </div>
                 </div>
@@ -5502,7 +5502,7 @@ state.sentKycEmailCode = null;
                 <div>
                   <label class="text-slate-300 block mb-1">Admin OTP</label>
                   <div class="flex gap-2">
-                    <input id="adm-login-otp" maxlength="6" placeholder="Enter OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
+                    <input id="adm-login-otp" required maxlength="6" placeholder="Enter OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
                     <button type="button" onclick="sendAdminOtp(this)" class="px-3.5 py-2.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">Send OTP</button>
                   </div>
                 </div>
@@ -10508,7 +10508,7 @@ state.sentKycEmailCode = null;
                 <div>
                   <label class="text-slate-300 block mb-1">Admin OTP</label>
                   <div class="flex gap-2">
-                    <input id="adm-login-otp" maxlength="6" placeholder="Enter 6-digit OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
+                    <input id="adm-login-otp" required maxlength="6" placeholder="Enter 6-digit OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
                     <button type="button" onclick="sendAdminOtp(this)" class="px-3.5 py-2.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">Send OTP</button>
                   </div>
                 </div>
@@ -12482,7 +12482,7 @@ state.sentKycEmailCode = null;
                 <div>
                   <label class="text-slate-300 block mb-1">6-Digit OTP</label>
                   <div class="flex gap-2">
-                    <input id="adm-login-otp" maxlength="6" placeholder="Enter 6-digit OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
+                    <input id="adm-login-otp" required maxlength="6" placeholder="Enter 6-digit OTP" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
                     <button type="button" onclick="sendAdminOtp(this)" class="px-3.5 py-2.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">Send OTP</button>
                   </div>
                 </div>
@@ -13501,1248 +13501,248 @@ state.sentKycEmailCode = null;
   </script>
 
 
-  
-  <script>
-    (function permanentMasterAdminDirectRoute() {
-      function hasMasterAdminHash() {
-        const h = String(window.location.hash || "").toLowerCase();
-        const href = String(window.location.href || "").toLowerCase();
-        return h.includes("master-admin") || href.includes("#master-admin");
-      }
-
-      function showDirectAdminLoginNow() {
-        if (!hasMasterAdminHash()) return;
-        if (typeof state !== "undefined") {
-          state.currentRoute = "master-admin";
-          if (state.admin) {
-            state.admin.authenticated = false;
-            state.admin.pendingOtp = null;
-          }
-        }
-        if (typeof renderAll === "function") {
-          try { renderAll(); } catch (e) {}
-        }
-        const mainView = document.getElementById("main-view");
-        if (mainView && typeof window.renderMasterAdminPanelScreen === "function") {
-          const curHtml = String(mainView.innerHTML || "");
-          if (!curHtml.includes("adm-login-email")) {
-            mainView.innerHTML = window.renderMasterAdminPanelScreen();
-          }
-        }
-      }
-
-      const prevDomInit = window.onload;
-      window.addEventListener("hashchange", showDirectAdminLoginNow);
-      window.addEventListener("DOMContentLoaded", () => {
-        showDirectAdminLoginNow();
-        setTimeout(showDirectAdminLoginNow, 150);
-        setTimeout(showDirectAdminLoginNow, 450);
-        setTimeout(showDirectAdminLoginNow, 900);
-      });
-
-      if (document.readyState === "complete" || document.readyState === "interactive") {
-        showDirectAdminLoginNow();
-      }
-    })();
-  </script>
-
-
-    <script>
-    (function fixAdminOtpAndFirebaseEmailLogin() {
-      window.__nfxLatestAdminOtp = window.__nfxLatestAdminOtp || null;
-
-      var origSend = window.sendAdminOtp;
-      window.sendAdminOtp = async function (btnEl) {
-        var idEl = document.getElementById("adm-login-email");
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        if (!rawId) {
-          if (typeof showToast === "function") {
-            showToast("Username Required", "Enter your Admin or Master Admin Username first.", "error");
-          }
-          return;
-        }
-        var code = String(Math.floor(100000 + Math.random() * 900000));
-        window.__nfxLatestAdminOtp = code;
-        if (typeof state !== "undefined") {
-          state.admin = state.admin || {};
-          state.admin.pendingOtp = code;
-        }
-        try {
-          if (typeof origSend === "function") {
-            await origSend(btnEl);
-            if (typeof state !== "undefined" && state.admin && state.admin.pendingOtp) {
-              window.__nfxLatestAdminOtp = String(state.admin.pendingOtp).trim();
-            }
-          }
-        } catch (e) {}
-        if (typeof state !== "undefined" && state.admin) {
-          state.admin.pendingOtp = window.__nfxLatestAdminOtp;
-        }
-        if (typeof showToast === "function") {
-          showToast("Admin OTP Ready", "6-Digit OTP: " + window.__nfxLatestAdminOtp, "success");
-        }
-      };
-
-      var origSubmit = window.submitAdminLogin;
-      window.submitAdminLogin = async function (e) {
-        if (e && e.preventDefault) e.preventDefault();
-        var userEl = document.getElementById("adm-login-email");
-        var pwEl = document.getElementById("adm-login-pw");
-        var otpEl = document.getElementById("adm-login-otp");
-
-        var rawId = (userEl && userEl.value ? userEl.value : "").trim();
-        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
-        var otpVal = (otpEl && otpEl.value ? otpEl.value : "").trim();
-
-        if (!rawId || !pwVal) {
-          if (typeof showToast === "function") {
-            showToast("Credentials Required", "Enter Username and Password.", "error");
-          }
-          return;
-        }
-
-        var validOtp =
-          (typeof state !== "undefined" && state.admin && state.admin.pendingOtp
-            ? String(state.admin.pendingOtp).trim()
-            : "") ||
-          (window.__nfxLatestAdminOtp ? String(window.__nfxLatestAdminOtp).trim() : "");
-
-        if (!otpVal || !validOtp || otpVal !== validOtp) {
-          if (typeof showToast === "function") {
-            showToast("Invalid OTP", "Enter the valid 6-digit OTP.", "error");
-          }
-          return;
-        }
-
-        if (
-          typeof computeSha256HexStrict === "function" &&
-          typeof NFX_ADMIN_HASH_VAULT !== "undefined"
-        ) {
-          var uHash = await computeSha256HexStrict(rawId);
-          var pHash = await computeSha256HexStrict(pwVal);
-
-          var isMaster =
-            uHash === NFX_ADMIN_HASH_VAULT.masterUserHash &&
-            pHash === NFX_ADMIN_HASH_VAULT.masterPassHash;
-
-          var isAdmin =
-            uHash === NFX_ADMIN_HASH_VAULT.adminUserHash &&
-            pHash === NFX_ADMIN_HASH_VAULT.adminPassHash;
-
-          if (isMaster || isAdmin) {
-            if (typeof state !== "undefined") {
-              state.admin = state.admin || {};
-              state.admin.role = isMaster ? "master_admin" : "admin";
-              state.admin.username = rawId;
-              state.admin.email = rawId;
-              state.admin.authenticated = true;
-              state.admin.pendingOtp = null;
-              state.adminMenuTab = "overview";
-              state.adminPage = "dashboard";
-              state.currentRoute = "master-admin";
-            }
-            if (typeof syncMasterAdminSidebarVisibility === "function") {
-              syncMasterAdminSidebarVisibility();
-            }
-            if (typeof saveSessionState === "function") {
-              saveSessionState();
-            }
-            if (typeof renderAll === "function") {
-              renderAll();
-            }
-            if (typeof showSuccessPopup2s === "function") {
-              showSuccessPopup2s(
-                isMaster ? "MASTER ADMIN UNLOCKED" : "ADMIN UNLOCKED",
-                "Logged in as " + rawId
-              );
-            }
-            return;
-          }
-        }
-
-        if (rawId.indexOf("@") === -1) {
-          if (typeof showToast === "function") {
-            showToast("Login Failed", "Invalid Admin / Master Admin Username or Password.", "error");
-          }
-          return;
-        }
-
-        if (typeof origSubmit === "function") {
-          await origSubmit(e);
-        }
-      };
-    })();
-  </script>
-
-
-  
-  <script>
-    (function ensureRealAdminEmailOtpDelivery() {
-      function resolveAdminOtpTargetEmail(rawId) {
-        var cleanId = String(rawId || "").trim();
-        if (cleanId.indexOf("@") !== -1) return cleanId.toLowerCase();
-
-        var otpEmailEl = document.getElementById("adm-login-otp-email");
-        if (otpEmailEl && String(otpEmailEl.value || "").trim().indexOf("@") !== -1) {
-          return String(otpEmailEl.value).trim().toLowerCase();
-        }
-
-        if (typeof state !== "undefined") {
-          if (state.adminVault && state.adminVault.email && String(state.adminVault.email).indexOf("@") !== -1) {
-            return String(state.adminVault.email).trim().toLowerCase();
-          }
-          if (state.admin && state.admin.otpEmail && String(state.admin.otpEmail).indexOf("@") !== -1) {
-            return String(state.admin.otpEmail).trim().toLowerCase();
-          }
-        }
-        return "";
-      }
-
-      window.sendAdminOtp = async function(btnEl = null) {
-        var idEl = document.getElementById("adm-login-email");
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        if (!rawId) {
-          if (typeof showToast === "function") {
-            showToast("Username Required", "Enter your Admin or Master Admin Username first.", "error");
-          }
-          return;
-        }
-
-        if (typeof computeSha256HexStrict === "function" && typeof NFX_ADMIN_HASH_VAULT !== "undefined") {
-          var uHash = await computeSha256HexStrict(rawId);
-          var isValidAdmin =
-            uHash === NFX_ADMIN_HASH_VAULT.adminUserHash ||
-            uHash === NFX_ADMIN_HASH_VAULT.masterUserHash;
-          if (!isValidAdmin) {
-            if (typeof showToast === "function") {
-              showToast("Access Denied", "Invalid Admin or Master Admin Username.", "error");
-            }
-            return;
-          }
-        }
-
-        var targetEmail = resolveAdminOtpTargetEmail(rawId);
-        if (!targetEmail || targetEmail.indexOf("@") === -1) {
-          var otpEmailInp = document.getElementById("adm-login-otp-email");
-          if (otpEmailInp) otpEmailInp.focus();
-          if (typeof showToast === "function") {
-            showToast("Email Required", "Please enter your own Email Address in the Admin Email box to receive the 6-digit OTP.", "error");
-          }
-          return;
-        }
-
-        var origText = btnEl ? btnEl.textContent : "";
-        if (btnEl) {
-          btnEl.disabled = true;
-          btnEl.textContent = "Sending...";
-        }
-
-        try {
-          if (typeof window.sendRealEmailOtp !== "function") {
-            throw new Error("EmailJS OTP sender is not available.");
-          }
-          var result = await window.sendRealEmailOtp(targetEmail, "Admin / Master Admin Login", rawId);
-          var code = String(result.otpCode || "").trim();
-          window.__nfxLatestAdminOtp = code;
-          if (typeof state !== "undefined") {
-            state.admin = state.admin || {};
-            state.admin.pendingOtp = code;
-            state.admin.otpEmail = targetEmail;
-            state.adminOtpExpiresAt = Date.now() + 3 * 60 * 1000;
-            state.otpSessions = state.otpSessions || {};
-            state.otpSessions["admin-login"] = {
-              code: code,
-              expiresAt: Date.now() + 3 * 60 * 1000
-            };
-          }
-          if (typeof startThreeMinuteOtpTimer === "function") {
-            startThreeMinuteOtpTimer("admin-login", btnEl);
-          }
-          if (typeof saveSessionState === "function") {
-            saveSessionState();
-          }
-          if (typeof showToast === "function") {
-            showToast("Email OTP Sent", "6-digit OTP sent to " + targetEmail + ". Check your email inbox/spam.", "success");
-          }
-        } catch (err) {
-          if (typeof showToast === "function") {
-            showToast("Email OTP Failed", (err && (err.text || err.message)) || "Could not send OTP to email.", "error");
-          }
-        } finally {
-          if (btnEl) {
-            btnEl.disabled = false;
-            if (!String(btnEl.textContent || "").startsWith("Resend")) {
-              btnEl.textContent = origText || "Send OTP";
-            }
-          }
-        }
-      };
-
-      function injectEmailFieldIntoAdminLoginForm() {
-        var passEl = document.getElementById("adm-login-pw");
-        if (!passEl) return;
-        if (document.getElementById("adm-login-otp-email")) return;
-        var formEl = passEl.closest("form");
-        var otpEl = document.getElementById("adm-login-otp");
-        if (!formEl || !otpEl) return;
-
-        var savedEm = (typeof state !== "undefined" && state.admin && state.admin.otpEmail) ? String(state.admin.otpEmail).trim() : "";
-        var wrapper = document.createElement("div");
-        wrapper.innerHTML =
-          '<label class="text-slate-300 block mb-1">Admin Email (OTP will be sent here)</label>' +
-          '<input type="email" id="adm-login-otp-email" required value="' + savedEm.replace(/"/g, "&quot;") + '" oninput="if(typeof state!=='undefined'){state.admin=state.admin||{};state.admin.otpEmail=this.value.trim();}" placeholder="Enter your Email Address to receive 6-digit OTP" class="input-box w-full rounded-lg px-3 py-2.5" />';
-
-        var otpContainer = otpEl.closest("div.flex") ? otpEl.closest("div.flex").parentElement : otpEl.parentElement;
-        if (otpContainer && otpContainer.parentElement === formEl) {
-          formEl.insertBefore(wrapper, otpContainer);
-        } else {
-          formEl.insertBefore(wrapper, passEl.parentElement.nextSibling);
-        }
-      }
-
-      var prevRenderAllForEmailField = window.renderAll;
-      window.renderAll = function() {
-        var r = typeof prevRenderAllForEmailField === "function" ? prevRenderAllForEmailField() : undefined;
-        injectEmailFieldIntoAdminLoginForm();
-        return r;
-      };
-
-      setInterval(injectEmailFieldIntoAdminLoginForm, 500);
-      injectEmailFieldIntoAdminLoginForm();
-    })();
-  </script>
-
-
-<script>
-    (function fixOtpAndLoginFlowCleanly() {
-      function getLatestAdminOtp() {
-        var sOtp = (typeof state !== "undefined" && state.admin && state.admin.pendingOtp)
-          ? String(state.admin.pendingOtp).trim()
-          : "";
-        var wOtp = (typeof window !== "undefined" && window.__nfxLatestAdminOtp)
-          ? String(window.__nfxLatestAdminOtp).trim()
-          : "";
-        var sessOtp = (typeof state !== "undefined" && state.otpSessions && state.otpSessions["admin-login"] && state.otpSessions["admin-login"].code)
-          ? String(state.otpSessions["admin-login"].code).trim()
-          : "";
-        return sOtp || wOtp || sessOtp || "";
-      }
-
-      window.submitAdminLogin = async function(e) {
-        if (e && e.preventDefault) e.preventDefault();
-        var idEl = document.getElementById("adm-login-email");
-        var pwEl = document.getElementById("adm-login-pw");
-        var otpEl = document.getElementById("adm-login-otp");
-
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
-        var otpVal = (otpEl && otpEl.value ? otpEl.value : "").trim();
-
-        if (!rawId || !pwVal) {
-          if (typeof showToast === "function") {
-            showToast("Credentials Required", "Enter Admin / Master Admin Username and Password.", "error");
-          }
-          return;
-        }
-
-        var expectedOtp = (typeof getLatestAdminOtp === "function") ? getLatestAdminOtp() : "";
-        if (otpVal && expectedOtp && otpVal !== expectedOtp) {
-          if (typeof showToast === "function") {
-            showToast("Invalid OTP", "The 6-digit OTP you entered does not match. Please check your email or resend OTP.", "error");
-          }
-          return;
-        }
-
-        var isMaster = false;
-        var isAdmin = false;
-        if (typeof computeSha256HexStrict === "function" && typeof NFX_ADMIN_HASH_VAULT !== "undefined") {
-          var uHash = await computeSha256HexStrict(rawId);
-          var pHash = await computeSha256HexStrict(pwVal);
-          isMaster = (uHash === NFX_ADMIN_HASH_VAULT.masterUserHash && pHash === NFX_ADMIN_HASH_VAULT.masterPassHash);
-          isAdmin = (uHash === NFX_ADMIN_HASH_VAULT.adminUserHash && pHash === NFX_ADMIN_HASH_VAULT.adminPassHash);
-        }
-
-        var isOwnerDirect = (rawId.toLowerCase() === "bibek1998" && pwVal === "Bibek@shaikh@1998");
-        if (!isMaster && !isAdmin && !isOwnerDirect) {
-          if (typeof showToast === "function") {
-            showToast("Login Failed", "Invalid Admin or Master Admin Username or Password.", "error");
-          }
-          return;
-        }
-        if (isOwnerDirect) {
-          isMaster = true;
-        }
-
-        var otpEmailEl = document.getElementById("adm-login-otp-email");
-        var chosenEmail = (otpEmailEl && otpEmailEl.value ? otpEmailEl.value.trim() : "") || (state.admin && state.admin.otpEmail) || "";
-
-        if (typeof state !== "undefined") {
-          state.admin = state.admin || {};
-          state.admin.role = isMaster ? "master_admin" : "admin";
-          state.admin.username = rawId;
-          state.admin.email = chosenEmail || rawId;
-          state.admin.authenticated = true;
-          state.admin.pendingOtp = null;
-          state.adminMenuTab = "overview";
-          state.adminPage = "dashboard";
-          state.currentRoute = "master-admin";
-          state.isLoggedIn = true;
-        }
-        window.__nfxLatestAdminOtp = null;
-        if (typeof syncMasterAdminSidebarVisibility === "function") syncMasterAdminSidebarVisibility();
-        if (typeof saveSessionState === "function") saveSessionState();
-        if (typeof renderAll === "function") renderAll();
-        if (typeof showSuccessPopup2s === "function") {
-          showSuccessPopup2s(
-            isMaster ? "MASTER ADMIN UNLOCKED" : "ADMIN UNLOCKED",
-            "Logged in successfully as " + rawId
-          );
-        }
-      };
-    })();
-  </script>
-
-
-  <script>
-    (function guardAdminLoginAgainstFirebaseNoise() {
-      if (typeof window.showToast === "function" && !window.__nfxToastGuarded) {
-        var rawToast = window.showToast;
-        window.showToast = function(title, msg, kind) {
-          var tStr = String(title || "");
-          var mStr = String(msg || "");
-          if (tStr === "Admin Login Failed" && mStr.indexOf("Firebase:") !== -1) {
-            return;
-          }
-          return rawToast.call(this, title, msg, kind);
-        };
-        window.__nfxToastGuarded = true;
-      }
-    })();
-  </script>
-
-
-  <script>
-    (function fixRegisterFormWipeAndAdminOtp() {
-      // 1. Preserve & restore typed values in Register form across any renderAll()
-      var origRenderAllForRg = window.renderAll;
-      if (typeof origRenderAllForRg === "function" && !window.__nfxRgPreserved) {
-        window.renderAll = function() {
-          var rgIds = ["rg-user", "rg-country", "rg-mobile", "rg-email", "rg-code", "rg-pw", "rg-cpw", "rg-inv"];
-          var savedVals = {};
-          var activeId = document.activeElement && document.activeElement.id ? document.activeElement.id : null;
-          for (var i = 0; i < rgIds.length; i++) {
-            var el = document.getElementById(rgIds[i]);
-            if (el && typeof el.value !== "undefined") {
-              savedVals[rgIds[i]] = el.value;
-            }
-          }
-
-          var res = origRenderAllForRg.apply(this, arguments);
-
-          for (var j = 0; j < rgIds.length; j++) {
-            var id = rgIds[j];
-            if (Object.prototype.hasOwnProperty.call(savedVals, id) && savedVals[id] !== "") {
-              var targetEl = document.getElementById(id);
-              if (targetEl && targetEl.value !== savedVals[id]) {
-                targetEl.value = savedVals[id];
-              }
-            }
-          }
-          if (activeId && rgIds.indexOf(activeId) !== -1) {
-            var actEl = document.getElementById(activeId);
-            if (actEl && typeof actEl.focus === "function") {
-              try { actEl.focus(); } catch (e) {}
-            }
-          }
-          return res;
-        };
-        window.__nfxRgPreserved = true;
-      }
-
-      // 2. Ensure Admin Login OTP always sends real EmailJS OTP to the email entered in #adm-login-otp-email (or #adm-login-email)
-      window.sendAdminOtp = async function(btnEl) {
-        var idEl = document.getElementById("adm-login-email");
-        var otpEmailEl = document.getElementById("adm-login-otp-email");
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        var rawOtpEmail = (otpEmailEl && otpEmailEl.value ? otpEmailEl.value : "").trim();
-
-        var targetEmail = "";
-        if (rawOtpEmail && rawOtpEmail.indexOf("@") !== -1) {
-          targetEmail = rawOtpEmail.toLowerCase();
-        } else if (rawId && rawId.indexOf("@") !== -1) {
-          targetEmail = rawId.toLowerCase();
-        } else if (typeof state !== "undefined" && state.admin && state.admin.otpEmail && String(state.admin.otpEmail).indexOf("@") !== -1) {
-          targetEmail = String(state.admin.otpEmail).trim().toLowerCase();
-        }
-
-        if (!rawId) {
-          if (typeof showToast === "function") {
-            showToast("Username Required", "Enter your Admin or Master Admin Username first.", "error");
-          }
-          return;
-        }
-
-        if (!targetEmail || targetEmail.indexOf("@") === -1) {
-          if (otpEmailEl) otpEmailEl.focus();
-          if (typeof showToast === "function") {
-            showToast("Email Required", "Please enter a valid Email Address in the Admin Email box to receive the 6-digit OTP.", "error");
-          }
-          return;
-        }
-
-        var origText = btnEl ? btnEl.textContent : "";
-        if (btnEl) {
-          btnEl.disabled = true;
-          btnEl.textContent = "Sending...";
-        }
-
-        try {
-          if (typeof window.sendRealEmailOtp !== "function") {
-            throw new Error("EmailJS OTP sender is not available.");
-          }
-          var result = await window.sendRealEmailOtp(targetEmail, "Admin / Master Admin Login", rawId);
-          var code = String(result.otpCode || "").trim();
-          window.__nfxLatestAdminOtp = code;
-          if (typeof state !== "undefined") {
-            state.admin = state.admin || {};
-            state.admin.pendingOtp = code;
-            state.admin.otpEmail = targetEmail;
-            state.adminOtpExpiresAt = Date.now() + 3 * 60 * 1000;
-            state.otpSessions = state.otpSessions || {};
-            state.otpSessions["admin-login"] = {
-              code: code,
-              expiresAt: Date.now() + 3 * 60 * 1000
-            };
-          }
-          if (typeof startThreeMinuteOtpTimer === "function") {
-            startThreeMinuteOtpTimer("admin-login", btnEl);
-          }
-          if (typeof saveSessionState === "function") {
-            saveSessionState();
-          }
-          if (typeof showToast === "function") {
-            showToast("Email OTP Sent", "6-digit OTP sent to " + targetEmail + ". Check your email inbox/spam.", "success");
-          }
-        } catch (err) {
-          if (typeof showToast === "function") {
-            showToast("Email OTP Failed", (err && (err.text || err.message)) || "Could not send OTP to email.", "error");
-          }
-        } finally {
-          if (btnEl) {
-            btnEl.disabled = false;
-            if (!String(btnEl.textContent || "").startsWith("Resend")) {
-              btnEl.textContent = origText || "Send OTP";
-            }
-          }
-        }
-      };
-    })();
-  </script>
-
-
-  <script>
-    (function ensureAdminEmailBoxAlwaysVisible() {
-      function mountAdminEmailInput() {
-        var pwInput = document.getElementById("adm-login-pw");
-        if (!pwInput) return;
-        var form = pwInput.closest("form");
-        if (!form) return;
-        if (document.getElementById("adm-login-otp-email")) return;
-
-        var savedEmail = "";
-        try {
-          if (typeof state !== "undefined" && state.admin && state.admin.otpEmail) {
-            savedEmail = String(state.admin.otpEmail).trim();
-          }
-        } catch (e) {}
-
-        var row = document.createElement("div");
-        row.id = "adm-otp-email-row";
-        row.className = "space-y-1";
-        row.innerHTML =
-          '<label for="adm-login-otp-email" class="text-slate-300 block mb-1">Admin Email (OTP will be sent here)</label>' +
-          '<input type="email" id="adm-login-otp-email" required value="' + savedEmail.replace(/"/g, "&quot;") + '" ' +
-          'placeholder="Enter active Email Address to receive 6-digit OTP" ' +
-          'oninput="if(typeof state!=='undefined'){state.admin=state.admin||{};state.admin.otpEmail=this.value.trim();}" ' +
-          'class="input-box w-full rounded-lg px-3 py-2.5 text-xs" />';
-
-        var otpInp = document.getElementById("adm-login-otp");
-        var otpWrap = otpInp ? (otpInp.closest("div.flex") ? otpInp.closest("div.flex").parentElement : otpInp.parentElement) : null;
-        if (otpWrap && otpWrap.parentElement === form) {
-          form.insertBefore(row, otpWrap);
-        } else {
-          var submitBtn = form.querySelector("button[type='submit']");
-          if (submitBtn && submitBtn.parentElement === form) {
-            form.insertBefore(row, submitBtn);
-          } else {
-            form.appendChild(row);
-          }
-        }
-      }
-
-      var prevRender = window.renderAll;
-      if (typeof prevRender === "function" && !window.__nfxAdminEmailBoxHooked) {
-        window.renderAll = function() {
-          var out = prevRender.apply(this, arguments);
-          mountAdminEmailInput();
-          return out;
-        };
-        window.__nfxAdminEmailBoxHooked = true;
-      }
-
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", mountAdminEmailInput);
-      } else {
-        mountAdminEmailInput();
-      }
-      setInterval(mountAdminEmailInput, 400);
-    })();
-  </script>
-
-
-  <script>
-    (function fixAdminEmailBoxAndValidation() {
-      function ensureBox() {
-        var pwInput = document.getElementById("adm-login-pw");
-        if (!pwInput) return null;
-        var form = pwInput.closest("form");
-        if (!form) return null;
-        var existing = document.getElementById("adm-login-otp-email");
-        if (existing) return existing;
-
-        var savedEmail = "";
-        try {
-          if (typeof state !== "undefined" && state.admin && state.admin.otpEmail) {
-            savedEmail = String(state.admin.otpEmail).trim();
-          }
-        } catch (e) {}
-
-        var row = document.createElement("div");
-        row.id = "adm-otp-email-row";
-        row.className = "space-y-1";
-        row.innerHTML =
-          '<label for="adm-login-otp-email" class="text-slate-300 block mb-1">Admin Email (OTP will be sent here)</label>' +
-          '<input type="email" id="adm-login-otp-email" required value="' + savedEmail.replace(/"/g, "&quot;") + '" ' +
-          'placeholder="Enter active Email Address (e.g. name@gmail.com)" ' +
-          'oninput="if(typeof state!=='undefined'){state.admin=state.admin||{};state.admin.otpEmail=this.value.trim();}" ' +
-          'class="input-box w-full rounded-lg px-3 py-2.5 text-xs" />';
-
-        var otpInp = document.getElementById("adm-login-otp");
-        var otpWrap = otpInp ? (otpInp.closest("div.flex") ? otpInp.closest("div.flex").parentElement : otpInp.parentElement) : null;
-        if (otpWrap && otpWrap.parentElement === form) {
-          form.insertBefore(row, otpWrap);
-        } else {
-          var submitBtn = form.querySelector("button[type='submit']");
-          if (submitBtn && submitBtn.parentElement === form) {
-            form.insertBefore(row, submitBtn);
-          } else {
-            form.appendChild(row);
-          }
-        }
-        return document.getElementById("adm-login-otp-email");
-      }
-
-      window.sendAdminOtp = async function(btnEl) {
-        var otpEmailEl = ensureBox();
-        var idEl = document.getElementById("adm-login-email");
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        var rawOtpEmail = (otpEmailEl && otpEmailEl.value ? otpEmailEl.value : "").trim();
-
-        var formEmail = "";
-        if (!rawOtpEmail && idEl && idEl.closest("form")) {
-          var anyEmailInForm = idEl.closest("form").querySelector("input[type='email']");
-          if (anyEmailInForm && anyEmailInForm.value) {
-            formEmail = String(anyEmailInForm.value).trim();
-          }
-        }
-
-        var candidateEmail = (rawOtpEmail || formEmail || (rawId.indexOf("@") !== -1 ? rawId : "") || (typeof state !== "undefined" && state.admin && state.admin.otpEmail ? String(state.admin.otpEmail).trim() : "")).toLowerCase();
-        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-        if (!candidateEmail || !emailRegex.test(candidateEmail)) {
-          if (otpEmailEl) {
-            otpEmailEl.focus();
-            try { otpEmailEl.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
-          }
-          if (typeof showToast === "function") {
-            showToast("Valid Email Required", "Enter a valid email address (like name@gmail.com) in the Admin Email box.", "error");
-          }
-          return;
-        }
-
-        var origText = btnEl ? btnEl.textContent : "";
-        if (btnEl) {
-          btnEl.disabled = true;
-          btnEl.textContent = "Sending...";
-        }
-
-        try {
-          if (typeof window.sendRealEmailOtp !== "function") {
-            throw new Error("EmailJS OTP sender is not available.");
-          }
-          var result = await window.sendRealEmailOtp(candidateEmail, "Admin / Master Admin Login", rawId || "Admin");
-          var code = String(result.otpCode || "").trim();
-          window.__nfxLatestAdminOtp = code;
-          if (typeof state !== "undefined") {
-            state.admin = state.admin || {};
-            state.admin.pendingOtp = code;
-            state.admin.otpEmail = candidateEmail;
-            state.adminOtpExpiresAt = Date.now() + 3 * 60 * 1000;
-            state.otpSessions = state.otpSessions || {};
-            state.otpSessions["admin-login"] = {
-              code: code,
-              expiresAt: Date.now() + 3 * 60 * 1000
-            };
-          }
-          if (typeof startThreeMinuteOtpTimer === "function") {
-            startThreeMinuteOtpTimer("admin-login", btnEl);
-          }
-          if (typeof saveSessionState === "function") {
-            saveSessionState();
-          }
-          if (typeof showToast === "function") {
-            showToast("Email OTP Sent", "6-digit OTP sent to " + candidateEmail + ". Check your email inbox/spam.", "success");
-          }
-        } catch (err) {
-          if (typeof showToast === "function") {
-            showToast("Email OTP Failed", (err && (err.text || err.message)) || "Could not send OTP to email.", "error");
-          }
-        } finally {
-          if (btnEl) {
-            btnEl.disabled = false;
-            if (!String(btnEl.textContent || "").startsWith("Resend")) {
-              btnEl.textContent = origText || "Send OTP";
-            }
-          }
-        }
-      };
-
-      setInterval(ensureBox, 300);
-    })();
-  </script>
-
-
-    <input type="file" id="profile-photo-file-input" accept="image/*" class="hidden" onchange="handleOneTimeProfilePhotoUpload(event)" />
-<script>
-    (function nfxFinalAdminEmailOtpFix() {
-      var STORAGE_KEY = "__nfx_saved_admin_otp_email_v1";
-
-      function readStoredEmail() {
-        try {
-          if (typeof state !== "undefined" && state.admin && state.admin.otpEmail) {
-            return String(state.admin.otpEmail).trim();
-          }
-        } catch (e) {}
-        try {
-          return String(localStorage.getItem(STORAGE_KEY) || "").trim();
-        } catch (e) {}
-        return "";
-      }
-
-      function writeStoredEmail(val) {
-        var clean = String(val || "").trim();
-        try {
-          if (typeof state !== "undefined") {
-            state.admin = state.admin || {};
-            state.admin.otpEmail = clean;
-          }
-        } catch (e) {}
-        try {
-          if (clean) localStorage.setItem(STORAGE_KEY, clean);
-        } catch (e) {}
-      }
-
-      function syncAdminEmailInput() {
-        var pwInput = document.getElementById("adm-login-pw");
-        if (!pwInput) return null;
-        var form = pwInput.closest("form");
-        if (!form) return null;
-
-        var inp = document.getElementById("adm-login-otp-email");
-        var stored = readStoredEmail();
-
-        if (!inp) {
-          var row = document.createElement("div");
-          row.id = "adm-otp-email-row";
-          row.className = "space-y-1";
-
-          var lbl = document.createElement("label");
-          lbl.setAttribute("for", "adm-login-otp-email");
-          lbl.className = "text-slate-300 block mb-1";
-          lbl.textContent = "Admin Email (OTP will be sent here)";
-
-          inp = document.createElement("input");
-          inp.type = "text";
-          inp.inputMode = "email";
-          inp.id = "adm-login-otp-email";
-          inp.placeholder = "Enter active Email Address (e.g. name@gmail.com)";
-          inp.className = "input-box w-full rounded-lg px-3 py-2.5 text-xs";
-          if (stored) inp.value = stored;
-
-          inp.addEventListener("input", function() {
-            writeStoredEmail(inp.value);
-          });
-          inp.addEventListener("change", function() {
-            writeStoredEmail(inp.value);
-          });
-
-          row.appendChild(lbl);
-          row.appendChild(inp);
-
-          var otpInp = document.getElementById("adm-login-otp");
-          var otpWrap = otpInp ? (otpInp.closest("div.flex") ? otpInp.closest("div.flex").parentElement : otpInp.parentElement) : null;
-          if (otpWrap && otpWrap.parentElement === form) {
-            form.insertBefore(row, otpWrap);
-          } else {
-            var submitBtn = form.querySelector("button[type='submit']");
-            if (submitBtn && submitBtn.parentElement === form) {
-              form.insertBefore(row, submitBtn);
-            } else {
-              form.appendChild(row);
-            }
-          }
-        } else {
-          inp.type = "text";
-          inp.inputMode = "email";
-          inp.removeAttribute("required");
-          if (!inp.value && stored) {
-            inp.value = stored;
-          } else if (inp.value) {
-            writeStoredEmail(inp.value);
-          }
-        }
-        return inp;
-      }
-
-      window.sendAdminOtp = async function(btnEl) {
-        var otpEmailEl = syncAdminEmailInput();
-        var idEl = document.getElementById("adm-login-email");
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        var rawOtpElVal = (otpEmailEl && otpEmailEl.value ? otpEmailEl.value : "").trim();
-        if (rawOtpElVal) writeStoredEmail(rawOtpElVal);
-
-        var candidate = (rawOtpElVal || (rawId.indexOf("@") !== -1 ? rawId : "") || readStoredEmail()).trim().toLowerCase();
-        var validFmt = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!candidate || !validFmt.test(candidate)) {
-          if (otpEmailEl) {
-            otpEmailEl.focus();
-          }
-          if (typeof showToast === "function") {
-            showToast("Email Required", "Please enter a valid email address in the Admin Email box.", "error");
-          }
-          return;
-        }
-
-        writeStoredEmail(candidate);
-
-        var origText = btnEl ? btnEl.textContent : "";
-        if (btnEl) {
-          btnEl.disabled = true;
-          btnEl.textContent = "Sending...";
-        }
-
-        try {
-          if (typeof window.sendRealEmailOtp !== "function") {
-            throw new Error("EmailJS OTP sender is not available.");
-          }
-          var result = await window.sendRealEmailOtp(candidate, "Admin / Master Admin Login", rawId || "Admin");
-          var code = String(result.otpCode || "").trim();
-          window.__nfxLatestAdminOtp = code;
-          if (typeof state !== "undefined") {
-            state.admin = state.admin || {};
-            state.admin.pendingOtp = code;
-            state.admin.otpEmail = candidate;
-            state.adminOtpExpiresAt = Date.now() + 3 * 60 * 1000;
-            state.otpSessions = state.otpSessions || {};
-            state.otpSessions["admin-login"] = {
-              code: code,
-              expiresAt: Date.now() + 3 * 60 * 1000
-            };
-          }
-          if (typeof startThreeMinuteOtpTimer === "function") {
-            startThreeMinuteOtpTimer("admin-login", btnEl);
-          }
-          if (typeof saveSessionState === "function") {
-            saveSessionState();
-          }
-          if (typeof showToast === "function") {
-            showToast("Email OTP Sent", "6-digit OTP sent to " + candidate + ". Check your email inbox/spam.", "success");
-          }
-        } catch (err) {
-          if (typeof showToast === "function") {
-            showToast("Email OTP Failed", (err && (err.text || err.message)) || "Could not send OTP to email.", "error");
-          }
-        } finally {
-          if (btnEl) {
-            btnEl.disabled = false;
-            if (!String(btnEl.textContent || "").startsWith("Resend")) {
-              btnEl.textContent = origText || "Send OTP";
-            }
-          }
-        }
-      };
-
-      syncAdminEmailInput();
-      setInterval(syncAdminEmailInput, 250);
-    })();
-  </script>
-<script>
-    (function nfxGuaranteedSecureLoginFix() {
-      async function sha256Hex(str) {
-        if (typeof computeSha256HexStrict === "function") {
-          return await computeSha256HexStrict(str);
-        }
-        var enc = new TextEncoder().encode(String(str ?? ""));
-        var buf = await crypto.subtle.digest("SHA-256", enc);
-        return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
-      }
-
-      function forceOpenAdminPanel(roleLabel, userId, emailVal) {
-        if (typeof state !== "undefined") {
-          state.admin = state.admin || {};
-          state.admin.authenticated = true;
-          state.admin.role = roleLabel || "master_admin";
-          state.admin.username = userId || "Bibek1998";
-          state.admin.email = emailVal || "bibekshaikh8@gmail.com";
-          state.admin.pendingOtp = null;
-          state.adminMenuTab = "overview";
-          state.adminPage = "dashboard";
-          state.currentRoute = "master-admin";
-          state.isLoggedIn = true;
-        }
-        window.__nfxLatestAdminOtp = null;
-        try {
-          if (typeof syncMasterAdminSidebarVisibility === "function") syncMasterAdminSidebarVisibility();
-        } catch (e) {}
-        try {
-          if (typeof saveSessionState === "function") saveSessionState();
-        } catch (e) {}
-        try {
-          if (typeof renderAll === "function") renderAll();
-        } catch (e) {}
-
-        var mainView = document.getElementById("main-view");
-        if (mainView && typeof window.renderMasterAdminPanelScreen === "function") {
-          var html = window.renderMasterAdminPanelScreen();
-          if (html && html.indexOf("adm-login-pw") === -1) {
-            mainView.innerHTML = html;
-          }
-        }
-        if (typeof showSuccessPopup2s === "function") {
-          showSuccessPopup2s("MASTER ADMIN UNLOCKED", "Logged in successfully as " + (userId || "Admin"));
-        } else if (typeof showToast === "function") {
-          showToast("Login Success", "Logged in successfully.", "success");
-        }
-      }
-
-      window.submitAdminLogin = async function(e) {
-        if (e && e.preventDefault) e.preventDefault();
-        if (e && e.stopPropagation) e.stopPropagation();
-
-        var idEl = document.getElementById("adm-login-email");
-        var pwEl = document.getElementById("adm-login-pw");
-        var otpEl = document.getElementById("adm-login-otp");
-        var emailBox = document.getElementById("adm-login-otp-email");
-
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
-        var otpVal = (otpEl && otpEl.value ? otpEl.value : "").trim();
-        var chosenEmail = (emailBox && emailBox.value ? emailBox.value : "").trim() || (state.admin && state.admin.email) || "";
-
-        if (!rawId || !pwVal) {
-          if (typeof showToast === "function") {
-            showToast("Credentials Required", "Enter Admin / Master Admin Username and Password.", "error");
-          }
-          return;
-        }
-
-        var uHash = await sha256Hex(rawId);
-        var pHash = await sha256Hex(pwVal);
-
-        var vault = (typeof NFX_ADMIN_HASH_VAULT !== "undefined") ? NFX_ADMIN_HASH_VAULT : {
-          adminUserHash: "a620f308e03879f9f76b7ed608662b924c7862023f796f32e5e3d75c1e39552f",
-          adminPassHash: "1509de71b52d84add96f93440fb3f4c19706dbc7ab7fdfa04e670d500a1c47bb",
-          masterUserHash: "9885fad8ad30c5a3b4ea4f1d594ac81fee163c63143b9ad97204bd7e0e5cefdf",
-          masterPassHash: "0aed8849c26164080d35359ba4c9d9f89e7eeba26f215d574b79afa225f734e9"
-        };
-
-        var isMaster = (uHash === vault.masterUserHash && pHash === vault.masterPassHash);
-        var isAdmin = (uHash === vault.adminUserHash && pHash === vault.adminPassHash);
-
-        if (!isMaster && !isAdmin) {
-          if (typeof showToast === "function") {
-            showToast("Login Failed", "Invalid Admin or Master Admin Username or Password.", "error");
-          }
-          return;
-        }
-
-        forceOpenAdminPanel(isMaster ? "master_admin" : "admin", rawId, chosenEmail);
-      };
-
-      document.addEventListener("click", function(ev) {
-        var btn = ev.target && ev.target.closest ? ev.target.closest("button") : null;
-        if (!btn) return;
-        var txt = String(btn.textContent || "").trim().toUpperCase();
-        if (txt.indexOf("SECURE LOGIN") !== -1 || txt.indexOf("LOGIN TO MASTER ADMIN") !== -1 || txt.indexOf("SECURE ADMIN LOGIN") !== -1) {
-          var form = btn.closest("form");
-          if (form && form.querySelector("#adm-login-pw")) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            window.submitAdminLogin(ev);
-          }
-        }
-      }, true);
-    })();
-  </script>
-<script>
-    (function nfxFinalDirectAdminLoginBypassFix() {
-      function openPanelNow(roleStr, uId, emVal) {
-        if (typeof state !== "undefined") {
-          state.admin = state.admin || {};
-          state.admin.authenticated = true;
-          state.admin.role = roleStr || "master_admin";
-          state.admin.username = uId || "Bibek1998";
-          state.admin.email = emVal || "bibekshaikh8@gmail.com";
-          state.admin.pendingOtp = null;
-          state.adminMenuTab = "overview";
-          state.adminPage = "dashboard";
-          state.currentRoute = "master-admin";
-          state.isLoggedIn = true;
-        }
-        window.__nfxLatestAdminOtp = null;
-        try { if (typeof syncMasterAdminSidebarVisibility === "function") syncMasterAdminSidebarVisibility(); } catch (e) {}
-        try { if (typeof saveSessionState === "function") saveSessionState(); } catch (e) {}
-        try { if (typeof renderAll === "function") renderAll(); } catch (e) {}
-        var mv = document.getElementById("main-view");
-        if (mv && typeof window.renderMasterAdminPanelScreen === "function") {
-          var outHtml = window.renderMasterAdminPanelScreen();
-          if (outHtml && outHtml.indexOf("adm-login-pw") === -1) {
-            mv.innerHTML = outHtml;
-          }
-        }
-        if (typeof showSuccessPopup2s === "function") {
-          showSuccessPopup2s("MASTER ADMIN UNLOCKED", "Logged in successfully as " + (uId || "Admin"));
-        }
-      }
-
-      window.submitAdminLogin = async function(e) {
-        if (e && e.preventDefault) e.preventDefault();
-        if (e && e.stopPropagation) e.stopPropagation();
-
-        var idEl = document.getElementById("adm-login-email");
-        var pwEl = document.getElementById("adm-login-pw");
-        var emailBox = document.getElementById("adm-login-otp-email");
-
-        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
-        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
-        var chosenEmail = (emailBox && emailBox.value ? emailBox.value : "").trim() || (state.admin && state.admin.email) || "";
-
-        if (!rawId || !pwVal) {
-          if (typeof showToast === "function") {
-            showToast("Credentials Required", "Enter Admin / Master Admin Username and Password.", "error");
-          }
-          return;
-        }
-
-        if (rawId.toLowerCase() === "bibek1998" && pwVal === "Bibek@shaikh@1998") {
-          openPanelNow("master_admin", rawId, chosenEmail);
-          return;
-        }
-
-        var isMaster = false;
-        var isAdmin = false;
-        if (typeof computeSha256HexStrict === "function" && typeof NFX_ADMIN_HASH_VAULT !== "undefined") {
-          var uHash = await computeSha256HexStrict(rawId);
-          var pHash = await computeSha256HexStrict(pwVal);
-          isMaster = (uHash === NFX_ADMIN_HASH_VAULT.masterUserHash && pHash === NFX_ADMIN_HASH_VAULT.masterPassHash);
-          isAdmin = (uHash === NFX_ADMIN_HASH_VAULT.adminUserHash && pHash === NFX_ADMIN_HASH_VAULT.adminPassHash);
-        }
-
-        if (!isMaster && !isAdmin) {
-          if (typeof showToast === "function") {
-            showToast("Login Failed", "Invalid Admin or Master Admin Username or Password.", "error");
-          }
-          return;
-        }
-
-        openPanelNow(isMaster ? "master_admin" : "admin", rawId, chosenEmail);
-      };
-    })();
-  </script>
+  <input type="file" id="profile-photo-file-input" accept="image/*" class="hidden" onchange="handleOneTimeProfilePhotoUpload(event)" />
 <script>
     // =========================================================================
-    // DIRECT ADMIN & MASTER ADMIN LOGIN (USERNAME + PASSWORD ONLY, NO EMAIL/OTP)
+    // COMPLETE MEMBER REGISTER -> DASHBOARD & LOGOUT -> LOGIN FLOW FIX
+    // + MASTER ADMIN URL HASH (#master-admin) & USERNAME/PASSWORD ONLY LOGIN
     // =========================================================================
-    const NFX_DIRECT_ADMIN_CREDENTIALS = {
-      admin: {
-        username: "Admin1998",
-        password: "Admin@shaikh@1998",
-        role: "admin"
-      },
-      masterAdmin: {
-        username: "Bibek1998",
-        password: "Bibek@shaikh@1998",
-        role: "master_admin"
+    (function nfxCompleteMemberAndAdminFlowFix() {
+      var REG_USERS_STORAGE_KEY = "nfx_registered_members_vault_v1";
+
+      function readSavedMembersList() {
+        try {
+          var raw = localStorage.getItem(REG_USERS_STORAGE_KEY);
+          if (!raw) return [];
+          var parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
       }
-    };
 
-    (function nfxDirectUsernamePasswordLoginOnly() {
-      function cleanAdminLoginFormUi() {
-        var pwEl = document.getElementById("adm-login-pw");
-        if (!pwEl) return;
-        var form = pwEl.closest("form");
-        if (!form) return;
+      function writeSavedMembersList(list) {
+        try {
+          if (!Array.isArray(list)) return;
+          var cleanList = list.filter(function(m) {
+            return m && (m.username || m.email || m.mobile);
+          });
+          localStorage.setItem(REG_USERS_STORAGE_KEY, JSON.stringify(cleanList));
+        } catch (e) {}
+      }
 
-        // Remove any injected email OTP row/input
-        var otpEmailRow = document.getElementById("adm-otp-email-row");
-        if (otpEmailRow && otpEmailRow.parentNode) {
-          otpEmailRow.parentNode.removeChild(otpEmailRow);
-        }
-        var otpEmailInp = document.getElementById("adm-login-otp-email");
-        if (otpEmailInp && otpEmailInp.parentNode) {
-          var wrapDiv = otpEmailInp.closest("div.space-y-1") || otpEmailInp.parentNode;
-          if (wrapDiv && wrapDiv !== form && wrapDiv.parentNode) {
-            wrapDiv.parentNode.removeChild(wrapDiv);
+      function mergeSavedMembersIntoState() {
+        if (typeof state === "undefined") return;
+        state.members = Array.isArray(state.members) ? state.members : [];
+        var persisted = readSavedMembersList();
+        persisted.forEach(function(pm) {
+          if (!pm || !pm.uid) return;
+          var idx = state.members.findIndex(function(m) {
+            return m.uid === pm.uid || (pm.email && m.email && m.email.toLowerCase() === pm.email.toLowerCase());
+          });
+          if (idx === -1) {
+            state.members.push(Object.assign({}, pm));
           } else {
-            otpEmailInp.parentNode.removeChild(otpEmailInp);
-          }
-        }
-
-        // Remove OTP input & Send OTP / Resend button
-        var otpInp = document.getElementById("adm-login-otp");
-        if (otpInp) {
-          var otpSection = otpInp.closest("div.space-y-1") || otpInp.parentElement;
-          if (otpSection && otpSection.parentNode) {
-            otpSection.parentNode.removeChild(otpSection);
-          }
-        }
-
-        // Update subtitle / label so it clearly says Username & Password login
-        var labels = form.querySelectorAll("label");
-        labels.forEach(function(lbl) {
-          if (/admin email/i.test(lbl.textContent || "")) {
-            lbl.textContent = "Admin / Master Admin Username";
+            state.members[idx] = Object.assign({}, state.members[idx], pm, {
+              password: pm.password || state.members[idx].password
+            });
           }
         });
       }
 
-      function enterAdminPanelImmediately(roleName, unameVal) {
-        if (typeof state !== "undefined") {
-          state.admin = state.admin || {};
-          state.admin.authenticated = true;
-          state.admin.role = roleName || "master_admin";
-          state.admin.username = unameVal || "Bibek1998";
-          state.admin.email = unameVal || "Bibek1998";
-          state.admin.pendingOtp = null;
-          state.adminMenuTab = "overview";
-          state.adminPage = "dashboard";
-          state.currentRoute = "master-admin";
-          state.isLoggedIn = true;
+      function persistAllMembersNow() {
+        mergeSavedMembersIntoState();
+        if (typeof state !== "undefined" && Array.isArray(state.members)) {
+          writeSavedMembersList(state.members);
         }
-        window.__nfxLatestAdminOtp = null;
-        try {
-          if (typeof syncMasterAdminSidebarVisibility === "function") {
-            syncMasterAdminSidebarVisibility();
-          }
-        } catch (err1) {}
-        try {
-          if (typeof saveSessionState === "function") {
-            saveSessionState();
-          }
-        } catch (err2) {}
-        try {
-          if (typeof renderAll === "function") {
-            renderAll();
-          }
-        } catch (err3) {}
-
-        var mainView = document.getElementById("main-view");
-        if (mainView && typeof window.renderMasterAdminPanelScreen === "function") {
-          var rendered = window.renderMasterAdminPanelScreen();
-          if (rendered && rendered.indexOf('id="adm-login-pw"') === -1) {
-            mainView.innerHTML = rendered;
-          }
-        }
-        if (typeof showSuccessPopup2s === "function") {
-          showSuccessPopup2s(
-            roleName === "master_admin" ? "MASTER ADMIN UNLOCKED" : "ADMIN UNLOCKED",
-            "Logged in as " + unameVal
-          );
+        if (typeof saveSessionState === "function") {
+          try { saveSessionState(); } catch (e) {}
         }
       }
 
-      window.submitAdminLogin = function(e) {
+      function enterMemberDashboardDirectly(memberObj) {
+        if (typeof state === "undefined") return;
+        if (memberObj && memberObj.uid) {
+          state.currentUserUid = memberObj.uid;
+        }
+        state.isLoggedIn = true;
+        state.showForgetInLogin = false;
+        if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+          routeHistory.length = 0;
+        }
+        state.currentRoute = "dashboard";
+        persistAllMembersNow();
+        if (typeof renderAll === "function") {
+          renderAll();
+        }
+        var mv = document.getElementById("main-view");
+        if (mv && typeof window.renderDashboardScreen === "function") {
+          var u = typeof activeMember === "function" ? activeMember() : memberObj;
+          var dashHtml = window.renderDashboardScreen(u);
+          if (dashHtml && dashHtml.trim().length > 0) {
+            mv.innerHTML = dashHtml;
+          }
+        }
+      }
+
+      // Override Register handler so normal members enter Dashboard immediately after registering
+      window.handleRegisterSubmit = function(e) {
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
 
-        var idEl = document.getElementById("adm-login-email");
-        var pwEl = document.getElementById("adm-login-pw");
+        var uname = (document.getElementById("rg-user") && document.getElementById("rg-user").value ? document.getElementById("rg-user").value : "").trim();
+        var country = (document.getElementById("rg-country") && document.getElementById("rg-country").value ? document.getElementById("rg-country").value : "");
+        var mobile = (document.getElementById("rg-mobile") && document.getElementById("rg-mobile").value ? document.getElementById("rg-mobile").value : "").trim();
+        var email = (document.getElementById("rg-email") && document.getElementById("rg-email").value ? document.getElementById("rg-email").value : "").trim();
+        var pw = (document.getElementById("rg-pw") && document.getElementById("rg-pw").value ? document.getElementById("rg-pw").value : "");
+        var cpw = (document.getElementById("rg-cpw") && document.getElementById("rg-cpw").value ? document.getElementById("rg-cpw").value : "");
+        var inv = (document.getElementById("rg-inv") && document.getElementById("rg-inv").value ? document.getElementById("rg-inv").value : "").trim();
 
-        var enteredUser = (idEl && idEl.value ? idEl.value : "").trim();
-        var enteredPass = pwEl && pwEl.value ? pwEl.value : "";
-
-        if (!enteredUser || !enteredPass) {
-          if (typeof showToast === "function") {
-            showToast("Credentials Required", "Enter Username and Password.", "error");
-          }
+        if (!uname || !pw) {
+          if (typeof showToast === "function") showToast("Required Fields", "Please enter Username and Password.", "error");
+          return false;
+        }
+        if (cpw && pw !== cpw) {
+          if (typeof showToast === "function") showToast("Password Mismatch", "Password and Confirm Password must match.", "error");
           return false;
         }
 
-        var isMasterMatch =
-          enteredUser === NFX_DIRECT_ADMIN_CREDENTIALS.masterAdmin.username &&
-          enteredPass === NFX_DIRECT_ADMIN_CREDENTIALS.masterAdmin.password;
-
-        var isAdminMatch =
-          enteredUser === NFX_DIRECT_ADMIN_CREDENTIALS.admin.username &&
-          enteredPass === NFX_DIRECT_ADMIN_CREDENTIALS.admin.password;
-
-        if (!isMasterMatch && !isAdminMatch) {
-          if (typeof showToast === "function") {
-            showToast("Login Failed", "Invalid Username or Password.", "error");
+        mergeSavedMembersIntoState();
+        var existingUids = new Set((state.members || []).map(function(m) { return String(m.uid || "").toUpperCase(); }));
+        var uid = "";
+        for (var attempt = 0; attempt < 25; attempt++) {
+          var cand = "NFX-" + Math.floor(2000 + Math.random() * 7999);
+          if (!existingUids.has(cand)) {
+            uid = cand;
+            break;
           }
-          return false;
         }
+        if (!uid) uid = "NFX-" + String(Date.now()).slice(-6);
 
-        enterAdminPanelImmediately(
-          isMasterMatch ? "master_admin" : "admin",
-          enteredUser
-        );
+        var uniqueKey = typeof generateUniqueBase32Key === "function"
+          ? generateUniqueBase32Key(uid + "_" + uname)
+          : "JBSWY3DPEHPK3PXP9NFX" + String(Date.now()).slice(-6);
+
+        var newMember = {
+          uid: uid,
+          username: uname,
+          email: email,
+          mobile: mobile,
+          country: country,
+          password: pw,
+          avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
+          authenticatorBound: false,
+          authenticatorSecret: uniqueKey,
+          referralCode: uid.replace("-", ""),
+          referredBy: inv || null,
+          referralBonus: 0,
+          balance: 0,
+          yourInvest: 0,
+          teamInvest: 0,
+          aMembersCount: 0,
+          aMembersInvest: 0,
+          bMembersCount: 0,
+          bMembersInvest: 0,
+          cMembersCount: 0,
+          cMembersInvest: 0,
+          totalProfit: 0,
+          investmentId: "#INV2026" + uid.slice(-4),
+          planName: "None",
+          startDate: "-",
+          endDate: "-",
+          status: "Inactive",
+          kycStatus: "Unverified",
+          withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
+        };
+
+        state.members.push(newMember);
+        if (inv && typeof registerReferralMemberRecord === "function") {
+          try { registerReferralMemberRecord(inv, newMember); } catch (errRef) {}
+        }
+        state.sentRegisterCode = null;
+        enterMemberDashboardDirectly(newMember);
+
+        if (typeof showSuccessPopup2s === "function") {
+          showSuccessPopup2s("Registered!", "Welcome to NFX Treading.");
+        }
+        if (typeof showReferralBonusPopup === "function") {
+          setTimeout(function() { showReferralBonusPopup(); }, 250);
+        }
         return false;
       };
 
-      // Hide email/OTP elements on login form
-      var styleHideEmailOtp = document.createElement("style");
-      styleHideEmailOtp.textContent = "#adm-otp-email-row, #adm-login-otp-email, [for='adm-login-otp-email'] { display: none !important; }";
-      document.head.appendChild(styleHideEmailOtp);
+      // Override Login handler so members can log in smoothly with their registered Username & Password
+      window.handleLoginSubmit = function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
 
-      cleanAdminLoginFormUi();
-      setInterval(cleanAdminLoginFormUi, 200);
+        mergeSavedMembersIntoState();
+        var idEl = document.getElementById("lg-user");
+        var pwEl = document.getElementById("lg-pw");
+        var idVal = (idEl && idEl.value ? idEl.value : "").trim().toLowerCase();
+        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
 
-      // Direct capture handler on form submit & button click
-      document.addEventListener("submit", function(ev) {
-        var frm = ev.target;
-        if (frm && frm.querySelector && frm.querySelector("#adm-login-pw")) {
-          ev.preventDefault();
-          ev.stopPropagation();
-          window.submitAdminLogin(ev);
+        if (!idVal || !pwVal) {
+          if (typeof showToast === "function") showToast("Login Required", "Enter Username and Password.", "error");
+          return false;
         }
-      }, true);
 
-      document.addEventListener("click", function(ev) {
-        var btn = ev.target && ev.target.closest ? ev.target.closest("button") : null;
-        if (!btn) return;
-        var frm = btn.closest("form");
-        if (frm && frm.querySelector("#adm-login-pw")) {
-          var bType = (btn.getAttribute("type") || "submit").toLowerCase();
-          var bText = String(btn.textContent || "").trim().toUpperCase();
-          if (bType === "submit" || bText.indexOf("LOGIN") !== -1) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            window.submitAdminLogin(ev);
+        var matched = (state.members || []).find(function(m) {
+          return (
+            (m.username && String(m.username).trim().toLowerCase() === idVal) ||
+            (m.mobile && String(m.mobile).trim().toLowerCase() === idVal) ||
+            (m.email && String(m.email).trim().toLowerCase() === idVal) ||
+            (m.uid && String(m.uid).trim().toLowerCase() === idVal)
+          );
+        });
+
+        if (!matched) {
+          if (typeof showToast === "function") {
+            showToast("Account Not Found", "No member found with this Username. Please check or register.", "error");
           }
+          return false;
         }
-      }, true);
+
+        if (matched.password && pwVal !== matched.password) {
+          if (typeof showToast === "function") {
+            showToast("Incorrect Password", "Password does not match for " + (matched.username || idVal) + ".", "error");
+          }
+          return false;
+        }
+
+        enterMemberDashboardDirectly(matched);
+        if (typeof showSuccessPopup2s === "function") {
+          showSuccessPopup2s("Logged In!", "Welcome back, " + (matched.username || matched.uid) + ".");
+        }
+        if (typeof showReferralBonusPopup === "function") {
+          setTimeout(function() { showReferralBonusPopup(); }, 250);
+        }
+        return false;
+      };
+
+      // Check if URL has #master-admin, /master-admin, or ?master-admin
+      function isMasterAdminUrlRequested() {
+        var h = String(window.location.hash || "").toLowerCase();
+        var p = String(window.location.pathname || "").toLowerCase();
+        var q = String(window.location.search || "").toLowerCase();
+        return (
+          h.indexOf("master-admin") !== -1 ||
+          p.indexOf("/master-admin") !== -1 ||
+          q.indexOf("master-admin") !== -1
+        );
+      }
+
+      mergeSavedMembersIntoState();
+      if (typeof state !== "undefined") {
+        if (isMasterAdminUrlRequested()) {
+          state.currentRoute = "master-admin";
+        } else if (state.currentRoute === "master-admin" && (!state.admin || !state.admin.authenticated)) {
+          state.currentRoute = state.isLoggedIn ? "dashboard" : "register";
+        }
+        if (typeof renderAll === "function") {
+          renderAll();
+        }
+      }
     })();
   </script>
 </body>
