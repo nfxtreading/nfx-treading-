@@ -15631,112 +15631,1051 @@ state.sentKycEmailCode = null;
     })();
   </script>
 
+
+
 <script>
-    (function nfxOtpFreeFinalOverride() {
-      var ADMIN_ACCOUNTS = [
-        { user: "Bibek1998", pass: "Bibek@shaikh@1998", role: "master_admin", title: "Master Admin Panel" },
-        { user: "Admin1998", pass: "Admin@shaikh@1998", role: "admin", title: "Admin Panel" }
-      ];
+(function nfxMasterUnifiedFinalFixV2() {
+  if (typeof window === "undefined") return;
 
-      function removeOtpUiCompletely() {
-        var pwInput = document.getElementById("adm-login-pw");
-        if (!pwInput) return;
-        var form = pwInput.closest("form");
-        if (!form) return;
+  const ADMIN_CREDENTIALS = [
+    { user: "Bibek1998", pass: "Bibek@shaikh@1998", role: "master_admin", title: "Master Admin Panel" },
+    { user: "Admin1998", pass: "Admin@shaikh@1998", role: "admin", title: "Admin Panel" }
+  ];
 
-        ["adm-login-otp", "adm-login-otp-email", "adm-otp-email-row"].forEach(function(id) {
-          var el = document.getElementById(id);
-          if (el && el.parentNode) {
-            var wrap = el.closest("div.space-y-1") || el.parentElement;
-            if (wrap && wrap !== form && wrap.parentNode) {
-              wrap.parentNode.removeChild(wrap);
+  const DB_MEMBERS_KEY = "nfx_registered_members_db_v100";
+  const DB_SESSION_KEY = "nfx_active_session_db_v100";
+  const DB_ADMIN_NAV_KEY = "nfx_admin_nav_stack_v101";
+  const DB_MEMBER_NAV_KEY = "nfx_member_nav_stack_v101";
+
+  var adminSearchTerm = "";
+  var adminActiveFilterTerm = "";
+  var adminInspectedUid = null;
+
+  function norm(s) {
+    return String(s || "").trim().toLowerCase();
+  }
+  function digits(s) {
+    return String(s || "").replace(/[^0-9]/g, "");
+  }
+  function escHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function isAdminHashUrl() {
+    var h = norm(window.location.hash || "");
+    var href = norm(window.location.href || "");
+    var path = norm(window.location.pathname || "");
+    var search = norm(window.location.search || "");
+    return (
+      h.indexOf("master-admin") !== -1 ||
+      h.indexOf("master_admin") !== -1 ||
+      href.indexOf("#master-admin") !== -1 ||
+      path.indexOf("master-admin") !== -1 ||
+      search.indexOf("master-admin") !== -1
+    );
+  }
+
+  function isAdminSessionActive() {
+    return Boolean(typeof state !== "undefined" && state.admin && state.admin.authenticated === true);
+  }
+
+  var adminNavStack = [];
+  var memberNavStack = [];
+
+  try {
+    var sAdminStack = JSON.parse(sessionStorage.getItem(DB_ADMIN_NAV_KEY) || localStorage.getItem(DB_ADMIN_NAV_KEY) || "[]");
+    if (Array.isArray(sAdminStack)) adminNavStack = sAdminStack;
+  } catch (e) {}
+
+  try {
+    var sMemStack = JSON.parse(sessionStorage.getItem(DB_MEMBER_NAV_KEY) || localStorage.getItem(DB_MEMBER_NAV_KEY) || "[]");
+    if (Array.isArray(sMemStack)) memberNavStack = sMemStack;
+  } catch (e) {}
+
+  function persistNavStacks() {
+    try {
+      var aJson = JSON.stringify(adminNavStack.slice(-30));
+      var mJson = JSON.stringify(memberNavStack.slice(-30));
+      sessionStorage.setItem(DB_ADMIN_NAV_KEY, aJson);
+      localStorage.setItem(DB_ADMIN_NAV_KEY, aJson);
+      sessionStorage.setItem(DB_MEMBER_NAV_KEY, mJson);
+      localStorage.setItem(DB_MEMBER_NAV_KEY, mJson);
+    } catch (e) {}
+  }
+
+  function snapshotAdminViewState() {
+    if (typeof state === "undefined") return { page: "dashboard", menuTab: "overview", editUid: null, umUid: null, inspUid: null };
+    return {
+      page: state.adminPage || "dashboard",
+      menuTab: state.adminMenuTab || "overview",
+      editUid: state.adminEditSaveSelectedUid || null,
+      umUid: state.adminUmSelectedUid || null,
+      inspUid: adminInspectedUid || null
+    };
+  }
+
+  function applyAdminViewState(snap) {
+    if (!snap || typeof state === "undefined") return;
+    state.currentRoute = "master-admin";
+    state.adminPage = snap.page || "dashboard";
+    state.adminMenuTab = snap.menuTab || "overview";
+    state.adminEditSaveSelectedUid = snap.editUid || null;
+    state.adminUmSelectedUid = snap.umUid || null;
+    adminInspectedUid = snap.inspUid || null;
+  }
+
+  function pushAdminNavSnapshot() {
+    if (!isAdminSessionActive()) return;
+    var cur = snapshotAdminViewState();
+    var top = adminNavStack.length > 0 ? adminNavStack[adminNavStack.length - 1] : null;
+    if (!top || top.page !== cur.page || top.menuTab !== cur.menuTab || top.editUid !== cur.editUid || top.umUid !== cur.umUid || top.inspUid !== cur.inspUid) {
+      adminNavStack.push(cur);
+      persistNavStacks();
+    }
+  }
+
+  function syncEverythingToStorage() {
+    if (typeof state === "undefined") return;
+    try {
+      var list = Array.isArray(state.members) ? state.members : [];
+      localStorage.setItem(DB_MEMBERS_KEY, JSON.stringify(list));
+    } catch (e) {}
+
+    try {
+      localStorage.setItem(DB_SESSION_KEY, JSON.stringify({
+        isLoggedIn: Boolean(state.isLoggedIn),
+        currentUserUid: state.currentUserUid || "",
+        currentRoute: state.currentRoute || "register",
+        adminAuthenticated: Boolean(state.admin && state.admin.authenticated),
+        adminRole: (state.admin && state.admin.role) || "",
+        adminUsername: (state.admin && state.admin.username) || "",
+        adminEmail: (state.admin && state.admin.email) || "",
+        adminPage: state.adminPage || "dashboard",
+        adminMenuTab: state.adminMenuTab || "overview",
+        adminEditSaveSelectedUid: state.adminEditSaveSelectedUid || null,
+        adminUmSelectedUid: state.adminUmSelectedUid || null,
+        extraData: state.extraData || {}
+      }));
+    } catch (e) {}
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (e) {}
+    }
+    persistNavStacks();
+  }
+
+  function restoreEverythingFromStorage() {
+    if (typeof state === "undefined") return false;
+    var restored = false;
+
+    try {
+      var mRaw = localStorage.getItem(DB_MEMBERS_KEY);
+      if (mRaw) {
+        var mArr = JSON.parse(mRaw);
+        if (Array.isArray(mArr) && mArr.length > 0) {
+          var existing = Array.isArray(state.members) ? state.members : [];
+          mArr.forEach(function(savedM) {
+            if (!savedM) return;
+            var idx = existing.findIndex(function(x) {
+              return (savedM.uid && x.uid && norm(savedM.uid) === norm(x.uid)) ||
+                     (savedM.email && x.email && norm(savedM.email) === norm(x.email)) ||
+                     (savedM.username && x.username && norm(savedM.username) === norm(x.username));
+            });
+            if (idx === -1) {
+              existing.push(Object.assign({}, savedM));
             } else {
-              el.parentNode.removeChild(el);
+              var keepPw = savedM.password || existing[idx].password;
+              existing[idx] = Object.assign({}, existing[idx], savedM, { password: keepPw });
             }
-          }
-        });
+          });
+          state.members = existing;
+          restored = true;
+        }
+      }
+    } catch (e) {}
 
-        var nodes = form.querySelectorAll("label, button, span, p");
-        for (var i = 0; i < nodes.length; i++) {
-          var n = nodes[i];
-          if (!n || !n.parentNode) continue;
-          var txt = String(n.textContent || "").trim();
-          if (
-            txt === "6-Digit OTP" ||
-            txt === "Admin OTP" ||
-            txt === "Send OTP" ||
-            txt === "Email Code" ||
-            /otp will be sent here/i.test(txt) ||
-            /^Resend/i.test(txt)
-          ) {
-            var rowDiv = n.closest("div.space-y-1");
-            if (rowDiv && rowDiv !== form && rowDiv.parentNode) {
-              rowDiv.parentNode.removeChild(rowDiv);
-            } else if (n.parentNode) {
-              n.parentNode.removeChild(n);
+    try {
+      var sRaw = localStorage.getItem(DB_SESSION_KEY);
+      if (sRaw) {
+        var sObj = JSON.parse(sRaw);
+        if (sObj && typeof sObj === "object") {
+          if (sObj.extraData && typeof sObj.extraData === "object") {
+            state.extraData = Object.assign({}, state.extraData || {}, sObj.extraData);
+          }
+          if (sObj.currentUserUid) {
+            state.currentUserUid = sObj.currentUserUid;
+          }
+          if (typeof sObj.isLoggedIn === "boolean") {
+            state.isLoggedIn = sObj.isLoggedIn;
+          }
+          if (sObj.adminAuthenticated === true) {
+            state.admin = state.admin || {};
+            state.admin.authenticated = true;
+            state.admin.role = sObj.adminRole || "master_admin";
+            state.admin.username = sObj.adminUsername || "Bibek1998";
+            state.admin.email = sObj.adminEmail || state.admin.username;
+            state.admin.pendingOtp = null;
+            state.adminPage = sObj.adminPage || state.adminPage || "dashboard";
+            state.adminMenuTab = sObj.adminMenuTab || state.adminMenuTab || "overview";
+            state.adminEditSaveSelectedUid = sObj.adminEditSaveSelectedUid || null;
+            state.adminUmSelectedUid = sObj.adminUmSelectedUid || null;
+            state.isLoggedIn = true;
+            restored = true;
+          }
+          if (sObj.currentRoute) {
+            if (sObj.currentRoute === "master-admin") {
+              if (state.admin && state.admin.authenticated) {
+                state.currentRoute = "master-admin";
+              } else if (isAdminHashUrl()) {
+                state.currentRoute = "master-admin";
+              }
+            } else if (!AUTH_PAGES || !AUTH_PAGES.has(sObj.currentRoute) || !state.isLoggedIn) {
+              state.currentRoute = sObj.currentRoute;
             }
-          } else if (/admin email/i.test(txt) && n.tagName === "LABEL") {
-            n.textContent = "Admin / Master Admin Username";
           }
         }
       }
+    } catch (e) {}
 
-      // Direct Username + Password login with ZERO OTP check
-      window.submitAdminLogin = function(e) {
-        if (e && e.preventDefault) e.preventDefault();
-        if (e && e.stopPropagation) e.stopPropagation();
+    return restored;
+  }
 
-        var uEl = document.getElementById("adm-login-email");
-        var pEl = document.getElementById("adm-login-pw");
-        var uVal = (uEl && uEl.value ? uEl.value : "").trim();
-        var pVal = pEl && pEl.value ? pEl.value : "";
+  // Collect all registered/real members across state.members and localStorage
+  function getAllSearchableMembers() {
+    restoreEverythingFromStorage();
+    var rawList = (typeof state !== "undefined" && Array.isArray(state.members)) ? state.members : [];
+    var seen = new Map();
+    rawList.forEach(function(m) {
+      if (!m || typeof m !== "object") return;
+      var key = norm(m.uid || m.email || m.username || m.mobile);
+      if (!key) return;
+      if (!seen.has(key)) {
+        seen.set(key, m);
+      } else {
+        seen.set(key, Object.assign({}, seen.get(key), m));
+      }
+    });
+    return Array.from(seen.values());
+  }
 
-        if (!uVal || !pVal) {
-          if (typeof showToast === "function") {
-            showToast("Required", "Please enter Username and Password.", "error");
+  function matchesMemberQuery(m, qStr) {
+    var q = norm(qStr);
+    if (!q) return true;
+    var qDig = digits(qStr);
+    var uMatch = m.username && norm(m.username).indexOf(q) !== -1;
+    var uidMatch = m.uid && norm(m.uid).indexOf(q) !== -1;
+    var eMatch = m.email && norm(m.email).indexOf(q) !== -1;
+    var cMatch = m.country && norm(m.country).indexOf(q) !== -1;
+    var rMatch = m.referralCode && norm(m.referralCode).indexOf(q) !== -1;
+    var mMatch = qDig.length >= 3 && m.mobile && digits(m.mobile).indexOf(qDig) !== -1;
+    return Boolean(uMatch || uidMatch || eMatch || cMatch || rMatch || mMatch);
+  }
+
+  window.handleAdminMemberSearchInput = function(val) {
+    adminSearchTerm = String(val || "");
+    adminActiveFilterTerm = adminSearchTerm.trim();
+    if (typeof state !== "undefined") {
+      state.adminSearch = adminSearchTerm;
+      state.adminSearchQuery = adminSearchTerm;
+      state.adminUmSearchInput = adminSearchTerm;
+      state.adminUmActiveFilter = adminActiveFilterTerm;
+      state.adminEditSaveSearchQuery = adminSearchTerm;
+      state.adminEditSaveActiveFilter = adminActiveFilterTerm;
+    }
+    var box = document.getElementById("master-admin-search-results");
+    if (box) {
+      box.innerHTML = renderAdminSearchResultsListHtml(adminActiveFilterTerm);
+      var inp = document.getElementById("master-admin-search-input");
+      if (inp && document.activeElement !== inp) {
+        inp.value = adminSearchTerm;
+      }
+      return;
+    }
+    if (typeof renderAll === "function") renderAll();
+  };
+
+  window.triggerAdminMemberSearchSubmit = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var inp = document.getElementById("master-admin-search-input");
+    if (inp) {
+      adminSearchTerm = String(inp.value || "");
+    }
+    adminActiveFilterTerm = adminSearchTerm.trim();
+    if (typeof state !== "undefined") {
+      state.adminSearch = adminSearchTerm;
+      state.adminSearchQuery = adminSearchTerm;
+      state.adminUmSearchInput = adminSearchTerm;
+      state.adminUmActiveFilter = adminActiveFilterTerm;
+      state.adminEditSaveSearchQuery = adminSearchTerm;
+      state.adminEditSaveActiveFilter = adminActiveFilterTerm;
+    }
+    if (typeof renderAll === "function") renderAll();
+    var mv = document.getElementById("main-view");
+    if (mv && isAdminSessionActive()) {
+      mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+    }
+    return false;
+  };
+
+  window.clearAdminMemberSearch = function() {
+    adminSearchTerm = "";
+    adminActiveFilterTerm = "";
+    if (typeof state !== "undefined") {
+      state.adminSearch = "";
+      state.adminSearchQuery = "";
+      state.adminUmSearchInput = "";
+      state.adminUmActiveFilter = "";
+      state.adminEditSaveSearchQuery = "";
+      state.adminEditSaveActiveFilter = "";
+    }
+    if (typeof renderAll === "function") renderAll();
+    var mv = document.getElementById("main-view");
+    if (mv && isAdminSessionActive()) {
+      mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+    }
+  };
+
+  window.inspectMemberProfileInAdmin = function(uid) {
+    pushAdminNavSnapshot();
+    adminInspectedUid = String(uid || "").trim();
+    if (typeof state !== "undefined") {
+      state.adminEditSaveSelectedUid = adminInspectedUid;
+      state.adminUmSelectedUid = adminInspectedUid;
+    }
+    syncEverythingToStorage();
+    if (typeof renderAll === "function") renderAll();
+    var mv = document.getElementById("main-view");
+    if (mv && isAdminSessionActive()) {
+      mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+    }
+  };
+
+  window.closeInspectedMemberProfile = function() {
+    adminInspectedUid = null;
+    if (typeof state !== "undefined") {
+      state.adminEditSaveSelectedUid = null;
+      state.adminUmSelectedUid = null;
+    }
+    syncEverythingToStorage();
+    if (typeof renderAll === "function") renderAll();
+    var mv = document.getElementById("main-view");
+    if (mv && isAdminSessionActive()) {
+      mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+    }
+  };
+
+  window.saveInspectedMemberProfile = function(e, uid) {
+    if (e && e.preventDefault) e.preventDefault();
+    var targetUid = String(uid || adminInspectedUid || "").trim();
+    if (!targetUid) return false;
+
+    var uInp = document.getElementById("adm-prof-username");
+    var eInp = document.getElementById("adm-prof-email");
+    var mInp = document.getElementById("adm-prof-mobile");
+    var cInp = document.getElementById("adm-prof-country");
+    var bInp = document.getElementById("adm-prof-balance");
+    var iInp = document.getElementById("adm-prof-invest");
+    var tInp = document.getElementById("adm-prof-teaminvest");
+    var pInp = document.getElementById("adm-prof-profit");
+    var kInp = document.getElementById("adm-prof-kyc");
+    var sInp = document.getElementById("adm-prof-status");
+
+    var patch = {
+      username: uInp ? uInp.value.trim() : undefined,
+      email: eInp ? eInp.value.trim() : undefined,
+      mobile: mInp ? mInp.value.trim() : undefined,
+      country: cInp ? cInp.value.trim() : undefined,
+      balance: bInp ? parseFloat(bInp.value) || 0 : undefined,
+      yourInvest: iInp ? parseFloat(iInp.value) || 0 : undefined,
+      teamInvest: tInp ? parseFloat(tInp.value) || 0 : undefined,
+      totalProfit: pInp ? parseFloat(pInp.value) || 0 : undefined,
+      kycStatus: kInp ? kInp.value : undefined,
+      status: sInp ? sInp.value : undefined
+    };
+
+    var updatedMem = window.pushImmediateMemberUpdate(targetUid, patch);
+    if (updatedMem) {
+      adminInspectedUid = updatedMem.uid;
+      if (typeof renderAll === "function") renderAll();
+      var mv = document.getElementById("main-view");
+      if (mv && isAdminSessionActive()) {
+        mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+      }
+      if (typeof showSuccessPopup2s === "function") {
+        showSuccessPopup2s("Member Updated!", (updatedMem.username || updatedMem.uid) + " profile & wallet updated.");
+      }
+    }
+    return false;
+  };
+
+  function renderAdminSearchResultsListHtml(filterText) {
+    var all = getAllSearchableMembers();
+    var matched = all.filter(function(m) {
+      return matchesMemberQuery(m, filterText);
+    });
+
+    if (matched.length === 0) {
+      return (
+        '<div class="p-4 rounded-xl bg-[#040d21] border border-amber-400/35 text-center space-y-2">' +
+          '<div class="text-xs font-bold text-amber-300">No member found for "' + escHtml(filterText) + '"</div>' +
+          '<button type="button" onclick="window.clearAdminMemberSearch()" class="px-3 py-1 rounded-lg bg-sky-500/20 border border-sky-400/40 text-sky-200 font-bold text-[11px]">Show All Members (' + all.length + ')</button>' +
+        '</div>'
+      );
+    }
+
+    return (
+      '<div class="space-y-2.5">' +
+        matched.map(function(m) {
+          var dispUser = m.username ? escHtml(m.username) : '<span class="text-slate-400 italic">(No Username Set)</span>';
+          var dispUid = escHtml(m.uid || "-");
+          var dispEmail = escHtml(m.email || "-");
+          var dispMobile = escHtml(m.mobile || "-");
+          var dispBal = Number(m.balance || 0).toFixed(2);
+          var dispInv = Number(m.yourInvest || 0).toFixed(2);
+          var dispProf = Number(m.totalProfit || 0).toFixed(2);
+          var dispKyc = escHtml(m.kycStatus || "Unverified");
+
+          return (
+            '<div class="p-3.5 rounded-xl bg-[#040d21] border border-sky-400/30 hover:border-amber-400/60 transition flex flex-wrap items-center justify-between gap-3">' +
+              '<div class="space-y-1 min-w-0">' +
+                '<div class="flex flex-wrap items-center gap-2">' +
+                  '<span class="text-sm font-extrabold text-white">' + dispUser + '</span>' +
+                  '<span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/40 font-mono text-[11px] font-bold text-sky-300">UID: ' + dispUid + '</span>' +
+                  '<span class="px-2 py-0.5 rounded bg-amber-400/15 border border-amber-400/35 font-mono text-[10px] font-bold text-amber-300">KYC: ' + dispKyc + '</span>' +
+                '</div>' +
+                '<div class="text-[11px] font-mono text-slate-300">' +
+                  'Email: <strong class="text-white">' + dispEmail + '</strong> • Mobile: <strong class="text-white">' + dispMobile + '</strong>' +
+                '</div>' +
+                '<div class="text-[11px] font-mono text-slate-300">' +
+                  'Balance: <strong class="text-emerald-300">' + dispBal + ' USDT</strong> • ' +
+                  'Invest: <strong class="text-sky-200">' + dispInv + ' USDT</strong> • ' +
+                  'Profit: <strong class="text-amber-300">' + dispProf + ' USDT</strong>' +
+                '</div>' +
+              '</div>' +
+              '<div class="flex items-center gap-2 shrink-0">' +
+                '<button type="button" onclick="window.inspectMemberProfileInAdmin('' + escHtml(m.uid) + '')" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow">View / Edit Profile</button>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join("") +
+      '</div>'
+    );
+  }
+
+  function renderInspectedMemberProfileEditorHtml(uid) {
+    var all = getAllSearchableMembers();
+    var m = all.find(function(x) { return x && String(x.uid) === String(uid); });
+    if (!m) return "";
+
+    return (
+      '<div class="account-solid-panel rounded-2xl p-5 border-2 border-amber-400/70 space-y-4 text-xs">' +
+        '<div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-sky-500/25">' +
+          '<div>' +
+            '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/40">MEMBER PROFILE & WALLET</span>' +
+            '<h3 class="text-base sm:text-lg font-extrabold text-white mt-1">' + escHtml(m.username || m.uid) + ' <span class="font-mono text-sky-300 text-sm">(' + escHtml(m.uid) + ')</span></h3>' +
+          '</div>' +
+          '<button type="button" onclick="window.closeInspectedMemberProfile()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs">← Back to Search List</button>' +
+        '</div>' +
+        '<form onsubmit="return window.saveInspectedMemberProfile(event, '' + escHtml(m.uid) + '')" class="space-y-3">' +
+          '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">' +
+            '<div><label class="text-slate-300 block mb-1">Username</label><input id="adm-prof-username" value="' + escHtml(m.username || "") + '" class="input-box w-full rounded-lg px-3 py-2" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">UID (Read-Only)</label><input readonly value="' + escHtml(m.uid || "") + '" class="input-box w-full rounded-lg px-3 py-2 font-mono text-sky-300 opacity-85" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Email</label><input id="adm-prof-email" value="' + escHtml(m.email || "") + '" class="input-box w-full rounded-lg px-3 py-2" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Mobile</label><input id="adm-prof-mobile" value="' + escHtml(m.mobile || "") + '" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Country</label><input id="adm-prof-country" value="' + escHtml(m.country || "") + '" class="input-box w-full rounded-lg px-3 py-2" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Wallet Balance (USDT)</label><input type="number" step="0.01" id="adm-prof-balance" value="' + Number(m.balance || 0) + '" class="input-box w-full rounded-lg px-3 py-2 font-mono text-emerald-300" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Your Invest (USDT)</label><input type="number" step="0.01" id="adm-prof-invest" value="' + Number(m.yourInvest || 0) + '" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Team Invest (USDT)</label><input type="number" step="0.01" id="adm-prof-teaminvest" value="' + Number(m.teamInvest || 0) + '" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">Total Profit (USDT)</label><input type="number" step="0.01" id="adm-prof-profit" value="' + Number(m.totalProfit || 0) + '" class="input-box w-full rounded-lg px-3 py-2 font-mono text-amber-300" /></div>' +
+            '<div><label class="text-slate-300 block mb-1">KYC Status</label><select id="adm-prof-kyc" class="input-box w-full rounded-lg px-3 py-2 font-bold">' +
+              '<option value="Unverified" ' + ((m.kycStatus || "Unverified") === "Unverified" ? "selected" : "") + '>Unverified</option>' +
+              '<option value="KYC Pending" ' + (m.kycStatus === "KYC Pending" ? "selected" : "") + '>KYC Pending</option>' +
+              '<option value="Verified" ' + (m.kycStatus === "Verified" ? "selected" : "") + '>Verified</option>' +
+              '<option value="Rejected" ' + (m.kycStatus === "Rejected" ? "selected" : "") + '>Rejected</option>' +
+            '</select></div>' +
+            '<div><label class="text-slate-300 block mb-1">Account Status</label><select id="adm-prof-status" class="input-box w-full rounded-lg px-3 py-2 font-bold">' +
+              '<option value="Active" ' + ((m.status || "Active") === "Active" ? "selected" : "") + '>Active</option>' +
+              '<option value="Pending" ' + (m.status === "Pending" ? "selected" : "") + '>Pending</option>' +
+              '<option value="Successful" ' + (m.status === "Successful" ? "selected" : "") + '>Successful</option>' +
+              '<option value="Blocked" ' + (m.status === "Blocked" ? "selected" : "") + '>Blocked</option>' +
+            '</select></div>' +
+          '</div>' +
+          '<div class="flex justify-end gap-2 pt-2">' +
+            '<button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow">Save Changes Immediately</button>' +
+          '</div>' +
+        '</form>' +
+      '</div>'
+    );
+  }
+
+  function renderAdminPanelWithSearchAndEdit() {
+    var all = getAllSearchableMembers();
+    var roleTitle = (typeof state !== "undefined" && state.admin && state.admin.role === "master_admin")
+      ? "Master Admin Panel"
+      : "Admin Panel";
+    var adminName = (typeof state !== "undefined" && state.admin && state.admin.username)
+      ? state.admin.username
+      : "Admin";
+
+    var inspectedHtml = adminInspectedUid ? renderInspectedMemberProfileEditorHtml(adminInspectedUid) : "";
+
+    return (
+      '<div class="space-y-5 max-w-5xl mx-auto">' +
+        '<div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 flex flex-wrap items-center justify-between gap-3">' +
+          '<div>' +
+            '<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/40">' + escHtml(roleTitle) + '</span>' +
+            '<h1 class="text-xl sm:text-2xl font-extrabold text-white mt-1">Welcome, ' + escHtml(adminName) + '</h1>' +
+            '<p class="text-xs text-slate-300">Search any member by Username, UID, Email, or Mobile and view/edit their profile & wallet.</p>' +
+          '</div>' +
+          '<button type="button" onclick="window.logoutMemberAccount();" class="px-4 py-2 rounded-xl bg-rose-500/25 border border-rose-400/45 text-rose-200 font-bold text-xs">Logout</button>' +
+        '</div>' +
+        inspectedHtml +
+        '<div class="account-solid-panel rounded-2xl p-5 border border-sky-400/40 space-y-4 text-xs">' +
+          '<div class="flex flex-wrap items-center justify-between gap-2">' +
+            '<div class="font-extrabold text-amber-300 text-sm">Member Search & Profile Lookup (' + all.length + ' Members)</div>' +
+            '<span class="text-[11px] font-mono text-sky-300">Search by Username or UID</span>' +
+          '</div>' +
+          '<form onsubmit="return window.triggerAdminMemberSearchSubmit(event)" class="flex flex-wrap sm:flex-nowrap gap-2">' +
+            '<input id="master-admin-search-input" value="' + escHtml(adminSearchTerm) + '" ' +
+              'oninput="window.handleAdminMemberSearchInput(this.value)" ' +
+              'placeholder="Enter Member Username or UID..." ' +
+              'class="input-box flex-1 rounded-xl px-3.5 py-2.5 font-mono text-xs" />' +
+            '<button type="submit" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold text-xs shrink-0">Search</button>' +
+            (adminActiveFilterTerm
+              ? '<button type="button" onclick="window.clearAdminMemberSearch()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 border border-sky-500/30 text-slate-200 font-bold text-xs shrink-0">Reset</button>'
+              : '') +
+          '</form>' +
+          '<div id="master-admin-search-results">' +
+            renderAdminSearchResultsListHtml(adminActiveFilterTerm) +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  // Always use our working search + profile + wallet editor when Admin / Master Admin is authenticated
+  window.renderMasterAdminPanelScreen = function() {
+    if (isAdminSessionActive()) {
+      pushAdminNavSnapshot();
+      return renderAdminPanelWithSearchAndEdit();
+    }
+    if (typeof state !== "undefined") {
+      state.currentRoute = "master-admin";
+    }
+    return (
+      '<div class="min-h-[80vh] flex items-center justify-center py-6 px-3">' +
+        '<div class="max-w-md w-full account-solid-panel rounded-2xl p-6 space-y-4 text-xs border border-amber-400/50">' +
+          '<div class="text-center">' +
+            '<div class="text-xl font-extrabold text-sky-400">NFX <span class="text-white">Treading</span></div>' +
+            '<h1 class="text-lg font-extrabold text-amber-300 mt-1">Admin & Master Admin Login</h1>' +
+            '<p class="text-[11px] text-slate-300 mt-0.5">Sign in with Username & Password</p>' +
+          '</div>' +
+          '<form onsubmit="return window.submitAdminLogin(event)" class="space-y-3">' +
+            '<div>' +
+              '<label class="text-slate-300 block mb-1">Admin / Master Admin Username</label>' +
+              '<input id="adm-login-email" required placeholder="Enter Username" class="input-box w-full rounded-lg px-3 py-2.5" />' +
+            '</div>' +
+            '<div>' +
+              '<label class="text-slate-300 block mb-1">Password</label>' +
+              '<div class="relative flex items-center">' +
+                '<input type="password" id="adm-login-pw" required placeholder="Enter Password" class="input-box w-full rounded-lg px-3 py-2.5 pr-10" />' +
+                '<button type="button" onclick="if(typeof togglePasswordEye==='function')togglePasswordEye('adm-login-pw',this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm">👁</button>' +
+              '</div>' +
+            '</div>' +
+            '<button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg">SECURE LOGIN</button>' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+    );
+  };
+
+  window.pushImmediateMemberUpdate = function(targetUid, patchObj) {
+    if (typeof state === "undefined" || !Array.isArray(state.members)) return null;
+    var uidClean = String(targetUid || "").trim();
+    var idx = state.members.findIndex(function(m) {
+      return m && (norm(m.uid) === norm(uidClean) || (patchObj && patchObj.username && norm(m.username) === norm(patchObj.username)));
+    });
+    if (idx === -1) return null;
+
+    var mem = state.members[idx];
+    var prevUid = mem.uid;
+
+    if (patchObj && typeof patchObj === "object") {
+      Object.keys(patchObj).forEach(function(k) {
+        var v = patchObj[k];
+        if (v !== undefined) {
+          if (["balance", "yourInvest", "teamInvest", "totalProfit", "referralBonus", "aMembersInvest", "bMembersInvest", "cMembersInvest"].indexOf(k) !== -1) {
+            var num = parseFloat(String(v).replace(/[^0-9.\-]/g, ""));
+            mem[k] = isNaN(num) ? 0 : Number(num.toFixed(2));
+          } else {
+            mem[k] = v;
           }
-          return false;
         }
+      });
+    }
 
-        var matched = ADMIN_ACCOUNTS.find(function(acc) {
-          return acc.user === uVal && acc.pass === pVal;
-        });
+    if (mem.uid && prevUid && mem.uid !== prevUid) {
+      if (state.currentUserUid === prevUid) state.currentUserUid = mem.uid;
+      if (adminInspectedUid === prevUid) adminInspectedUid = mem.uid;
+      if (state.adminEditSaveSelectedUid === prevUid) state.adminEditSaveSelectedUid = mem.uid;
+      if (state.adminUmSelectedUid === prevUid) state.adminUmSelectedUid = mem.uid;
+    }
 
-        if (!matched) {
-          if (typeof showToast === "function") {
-            showToast("Login Failed", "Invalid Username or Password.", "error");
-          }
-          return false;
-        }
+    if (state.currentUserUid === mem.uid && state.extraData) {
+      if (patchObj && patchObj.balance !== undefined) {
+        state.extraData.availableBalance = Number(mem.balance || 0);
+        state.extraData.totalBalanceWallet = Number(mem.balance || 0);
+      }
+      if (patchObj && patchObj.totalProfit !== undefined) {
+        state.extraData.totalProfitWallet = Number(mem.totalProfit || 0);
+      }
+    }
 
+    syncEverythingToStorage();
+
+    try {
+      var fb = window.NFXFirebase;
+      if (fb && fb.db && typeof fb.setDoc === "function" && mem.uid) {
+        var fsPayload = {
+          uid: mem.uid,
+          username: mem.username || "",
+          email: mem.email || "",
+          mobile: mem.mobile || "",
+          country: mem.country || "",
+          balance: Number(mem.balance || 0),
+          yourInvest: Number(mem.yourInvest || 0),
+          teamInvest: Number(mem.teamInvest || 0),
+          totalProfit: Number(mem.totalProfit || 0),
+          referralBonus: Number(mem.referralBonus || 0),
+          status: mem.status || "Active",
+          kycStatus: mem.kycStatus || "Unverified",
+          updatedAt: Date.now()
+        };
+        fb.setDoc(fb.doc(fb.db, "users", mem.uid), fsPayload, { merge: true }).catch(function() {});
+      }
+    } catch (e) {}
+
+    return mem;
+  };
+
+  window.goBackStep = function() {
+    if (isAdminSessionActive() && state.currentRoute === "master-admin") {
+      if (adminInspectedUid) {
+        adminInspectedUid = null;
         if (typeof state !== "undefined") {
-          state.admin = state.admin || {};
-          state.admin.authenticated = true;
-          state.admin.role = matched.role;
-          state.admin.username = matched.user;
-          state.admin.email = matched.user;
-          state.admin.pendingOtp = null;
-          state.adminMenuTab = "overview";
-          state.adminPage = "dashboard";
+          state.adminEditSaveSelectedUid = null;
+          state.adminUmSelectedUid = null;
+        }
+        syncEverythingToStorage();
+        if (typeof renderAll === "function") renderAll();
+        var mv1 = document.getElementById("main-view");
+        if (mv1) mv1.innerHTML = renderAdminPanelWithSearchAndEdit();
+        return;
+      }
+      var curSnap = snapshotAdminViewState();
+      if (adminNavStack.length > 0) {
+        var top = adminNavStack[adminNavStack.length - 1];
+        if (top.page === curSnap.page && top.menuTab === curSnap.menuTab && top.editUid === curSnap.editUid && top.umUid === curSnap.umUid && top.inspUid === curSnap.inspUid) {
+          adminNavStack.pop();
+        }
+      }
+      if (adminNavStack.length > 0) {
+        applyAdminViewState(adminNavStack.pop());
+        syncEverythingToStorage();
+        if (typeof renderAll === "function") renderAll();
+        return;
+      }
+      state.currentRoute = "master-admin";
+      if (typeof renderAll === "function") renderAll();
+      return;
+    }
+
+    if (memberNavStack.length > 0) {
+      var prevRoute = memberNavStack.pop();
+      persistNavStacks();
+      if (prevRoute && prevRoute !== state.currentRoute) {
+        state.currentRoute = prevRoute;
+        syncEverythingToStorage();
+        if (typeof renderAll === "function") renderAll();
+        return;
+      }
+    }
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory) && routeHistory.length > 0) {
+      var rPrev = routeHistory.pop();
+      state.currentRoute = rPrev;
+      syncEverythingToStorage();
+      if (typeof renderAll === "function") renderAll();
+      return;
+    }
+    if (state.currentRoute !== "dashboard") {
+      state.currentRoute = "dashboard";
+      syncEverythingToStorage();
+      if (typeof renderAll === "function") renderAll();
+    }
+  };
+
+  window.isInsideInnerOption = function() {
+    if (isAdminSessionActive() && state.currentRoute === "master-admin") {
+      return Boolean(adminInspectedUid || adminNavStack.length > 0);
+    }
+    return Boolean(
+      memberNavStack.length > 0 ||
+      (typeof routeHistory !== "undefined" && Array.isArray(routeHistory) && routeHistory.length > 0) ||
+      (state.currentRoute && ["register", "login", "dashboard"].indexOf(state.currentRoute) === -1)
+    );
+  };
+
+  window.submitAdminLogin = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    restoreEverythingFromStorage();
+
+    var uEl = document.getElementById("adm-login-email");
+    var pEl = document.getElementById("adm-login-pw");
+    var uVal = (uEl && uEl.value ? uEl.value : "").trim();
+    var pVal = pEl && pEl.value ? pEl.value : "";
+
+    if (!uVal || !pVal) {
+      if (typeof showToast === "function") showToast("Required", "Please enter Username and Password.", "error");
+      return false;
+    }
+
+    var matched = ADMIN_CREDENTIALS.find(function(c) {
+      return c.user === uVal && c.pass === pVal;
+    });
+
+    if (!matched) {
+      if (typeof showToast === "function") showToast("Login Failed", "Invalid Username or Password.", "error");
+      return false;
+    }
+
+    state.admin = state.admin || {};
+    state.admin.authenticated = true;
+    state.admin.role = matched.role;
+    state.admin.username = matched.user;
+    state.admin.email = matched.user;
+    state.admin.pendingOtp = null;
+    state.adminPage = "dashboard";
+    state.adminMenuTab = "overview";
+    adminInspectedUid = null;
+    state.currentRoute = "master-admin";
+    state.isLoggedIn = true;
+
+    adminNavStack = [{ page: "dashboard", menuTab: "overview", editUid: null, umUid: null, inspUid: null }];
+    syncEverythingToStorage();
+
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (errR) {}
+    }
+    var mv = document.getElementById("main-view");
+    if (mv) {
+      mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s(matched.title.toUpperCase() + " UNLOCKED", "Logged in as " + matched.user);
+    }
+    return false;
+  };
+
+  window.handleRegisterSubmit = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    restoreEverythingFromStorage();
+
+    var uname = (document.getElementById("rg-user") && document.getElementById("rg-user").value ? document.getElementById("rg-user").value : "").trim();
+    var country = (document.getElementById("rg-country") && document.getElementById("rg-country").value ? document.getElementById("rg-country").value : "");
+    var mobile = (document.getElementById("rg-mobile") && document.getElementById("rg-mobile").value ? document.getElementById("rg-mobile").value : "").trim();
+    var email = (document.getElementById("rg-email") && document.getElementById("rg-email").value ? document.getElementById("rg-email").value : "").trim();
+    var pw = (document.getElementById("rg-pw") && document.getElementById("rg-pw").value ? document.getElementById("rg-pw").value : "");
+    var cpw = (document.getElementById("rg-cpw") && document.getElementById("rg-cpw").value ? document.getElementById("rg-cpw").value : "");
+    var inv = (document.getElementById("rg-inv") && document.getElementById("rg-inv").value ? document.getElementById("rg-inv").value : "").trim();
+
+    if (!uname || uname.length < 2) {
+      if (typeof showToast === "function") showToast("Username Required", "Please enter a valid Username.", "error");
+      return false;
+    }
+    if (!pw || pw.length < 4) {
+      if (typeof showToast === "function") showToast("Password Required", "Please enter a Password.", "error");
+      return false;
+    }
+    if (cpw && pw !== cpw) {
+      if (typeof showToast === "function") showToast("Password Mismatch", "Password and Confirm Password must match.", "error");
+      return false;
+    }
+
+    state.members = Array.isArray(state.members) ? state.members : [];
+    var dup = state.members.find(function(m) {
+      if (!m) return false;
+      var sameE = email && m.email && norm(m.email) === norm(email);
+      var sameM = digits(mobile).length >= 6 && digits(m.mobile) === digits(mobile);
+      var sameU = uname && m.username && norm(m.username) === norm(uname);
+      return Boolean(sameE || sameM || sameU);
+    });
+
+    if (dup) {
+      if (typeof showToast === "function") {
+        showToast("Already Registered", "An account with this Email, Mobile or Username already exists. Please Login.", "error");
+      }
+      return false;
+    }
+
+    var uid = typeof createDistinctAlphanum8 === "function"
+      ? createDistinctAlphanum8(new Set(state.members.map(function(x) { return String(x.uid || ""); })))
+      : ("M" + Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(7, "8"));
+
+    var refCode = typeof createDistinctAlphanum8 === "function"
+      ? createDistinctAlphanum8(new Set([uid].concat(state.members.map(function(x) { return String(x.referralCode || ""); }))))
+      : ("R" + Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(7, "3"));
+
+    var uniqueKey = typeof generateUniqueBase32Key === "function"
+      ? generateUniqueBase32Key(uid + "_" + uname + "_" + Date.now())
+      : "JBSWY3DPEHPK3PXP9NFX" + String(Date.now()).slice(-6);
+
+    var newMem = {
+      uid: uid,
+      username: uname,
+      email: email,
+      mobile: mobile,
+      country: country,
+      password: pw,
+      avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
+      authenticatorBound: false,
+      authenticatorSecret: uniqueKey,
+      referralCode: refCode,
+      referredBy: inv || null,
+      referralBonus: 0,
+      balance: 0,
+      yourInvest: 0,
+      teamInvest: 0,
+      aMembersCount: 0,
+      aMembersInvest: 0,
+      bMembersCount: 0,
+      bMembersInvest: 0,
+      cMembersCount: 0,
+      cMembersInvest: 0,
+      totalProfit: 0,
+      investmentId: "#INV2026" + uid.slice(-4),
+      planName: "None",
+      registeredAt: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      startDate: "-",
+      endDate: "-",
+      status: "Active",
+      kycStatus: "Unverified",
+      withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null }
+    };
+
+    if (state.admin) {
+      state.admin.authenticated = false;
+    }
+    state.members.push(newMem);
+    state.currentUserUid = uid;
+    state.isLoggedIn = true;
+    state.showForgetInLogin = false;
+    state.sentRegisterCode = null;
+    memberNavStack = [];
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+      routeHistory.length = 0;
+    }
+    state.currentRoute = "dashboard";
+
+    syncEverythingToStorage();
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) {}
+    }
+    var mv = document.getElementById("main-view");
+    if (mv && typeof window.renderDashboardScreen === "function") {
+      var curU = typeof activeMember === "function" ? activeMember() : newMem;
+      mv.innerHTML = window.renderDashboardScreen(curU);
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Registered!", "Welcome to NFX Treading, " + uname + "!");
+    }
+    return false;
+  };
+
+  window.handleLoginSubmit = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    restoreEverythingFromStorage();
+
+    var idEl = document.getElementById("lg-user");
+    var pwEl = document.getElementById("lg-pw");
+    var idVal = (idEl && idEl.value ? idEl.value : "").trim();
+    var pwVal = pwEl && pwEl.value ? pwEl.value : "";
+
+    if (!idVal || !pwVal) {
+      if (typeof showToast === "function") showToast("Credentials Required", "Enter Username/Mobile/Email and Password.", "error");
+      return false;
+    }
+
+    var idLow = norm(idVal);
+    var idDig = digits(idVal);
+
+    var matched = (state.members || []).find(function(m) {
+      if (!m) return false;
+      var uOk = m.username && norm(m.username) === idLow;
+      var eOk = m.email && norm(m.email) === idLow;
+      var pOk = idDig.length >= 6 && digits(m.mobile) === idDig;
+      var uidOk = m.uid && norm(m.uid) === idLow;
+      return Boolean(uOk || eOk || pOk || uidOk);
+    });
+
+    if (!matched) {
+      if (typeof showToast === "function") showToast("Account Not Found", "No registered account found for this Username or Mobile Number.", "error");
+      return false;
+    }
+
+    if (matched.password && pwVal !== matched.password) {
+      if (typeof showToast === "function") showToast("Incorrect Password", "Password does not match. Please try again.", "error");
+      return false;
+    }
+
+    if (state.admin) {
+      state.admin.authenticated = false;
+    }
+    state.currentUserUid = matched.uid;
+    state.isLoggedIn = true;
+    state.showForgetInLogin = false;
+    memberNavStack = [];
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+      routeHistory.length = 0;
+    }
+    state.currentRoute = "dashboard";
+
+    syncEverythingToStorage();
+
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) {}
+    }
+    var mv = document.getElementById("main-view");
+    if (mv && typeof window.renderDashboardScreen === "function") {
+      var curU = typeof activeMember === "function" ? activeMember() : matched;
+      mv.innerHTML = window.renderDashboardScreen(curU);
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Logged In!", "Welcome back, " + (matched.username || matched.uid) + "!");
+    }
+    return false;
+  };
+
+  window.logoutMemberAccount = function() {
+    var card = document.getElementById("top-account-card");
+    if (card) card.classList.add("hidden");
+    if (typeof closeReferralBonusPopup === "function") closeReferralBonusPopup();
+
+    if (typeof state !== "undefined") {
+      state.isLoggedIn = false;
+      if (state.admin) {
+        state.admin.authenticated = false;
+        state.admin.pendingOtp = null;
+      }
+      adminInspectedUid = null;
+      memberNavStack = [];
+      adminNavStack = [];
+      if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+        routeHistory.length = 0;
+      }
+      state.currentRoute = isAdminHashUrl() ? "master-admin" : "login";
+    }
+
+    syncEverythingToStorage();
+
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) {}
+    }
+    if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") {
+      toggleMobileSidebar(false);
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Logged Out!", "You have been logged out safely.");
+    }
+    return false;
+  };
+
+  var origNavigateTo = window.navigateTo;
+  window.navigateTo = function(route, isBack) {
+    if (route === "logout") {
+      return window.logoutMemberAccount();
+    }
+    if (!isBack && typeof state !== "undefined" && state.currentRoute && state.currentRoute !== route) {
+      if (["register", "login", "dashboard", "master-admin"].indexOf(route) !== -1) {
+        memberNavStack = [];
+      } else {
+        memberNavStack.push(state.currentRoute);
+      }
+      persistNavStacks();
+    }
+    if (typeof origNavigateTo === "function") {
+      var out = origNavigateTo.call(this, route, isBack);
+      syncEverythingToStorage();
+      return out;
+    }
+  };
+
+  var origRenderAllFinal = window.renderAll;
+  window.renderAll = function() {
+    if (typeof state !== "undefined") {
+      if (isAdminSessionActive()) {
+        state.isLoggedIn = true;
+        if (state.currentRoute === "register" || state.currentRoute === "login") {
           state.currentRoute = "master-admin";
-          state.isLoggedIn = true;
         }
+      } else if (isAdminHashUrl()) {
+        state.currentRoute = "master-admin";
+      } else if (!state.isLoggedIn) {
+        if (state.currentRoute === "master-admin") {
+          state.currentRoute = "master-admin";
+        } else if (["register", "login"].indexOf(state.currentRoute) === -1) {
+          var hasReg = Array.isArray(state.members) && state.members.some(function(m) {
+            return m && (String(m.username || "").trim() || String(m.email || "").trim() || digits(m.mobile).length >= 6);
+          });
+          state.currentRoute = hasReg ? "login" : "register";
+        }
+      }
+    }
+    var ret = typeof origRenderAllFinal === "function" ? origRenderAllFinal.apply(this, arguments) : undefined;
+    if (isAdminSessionActive() && state.currentRoute === "master-admin") {
+      var mv = document.getElementById("main-view");
+      if (mv) {
+        mv.innerHTML = renderAdminPanelWithSearchAndEdit();
+      }
+    }
+    return ret;
+  };
 
-        if (typeof saveSessionState === "function") {
-          try { saveSessionState(); } catch (err1) {}
-        }
-        if (typeof renderAll === "function") {
-          try { renderAll(); } catch (err2) {}
-        }
-        if (typeof showSuccessPopup2s === "function") {
-          showSuccessPopup2s(matched.title.toUpperCase() + " UNLOCKED", "Logged in as " + matched.user);
-        }
-        return false;
-      };
+  function bootRestoreAndSync() {
+    restoreEverythingFromStorage();
+    if (typeof state !== "undefined") {
+      if (isAdminSessionActive() || isAdminHashUrl()) {
+        state.currentRoute = "master-admin";
+      } else if (!state.isLoggedIn && ["register", "login"].indexOf(state.currentRoute) === -1) {
+        var hasReg = Array.isArray(state.members) && state.members.some(function(m) {
+          return m && (String(m.username || "").trim() || String(m.email || "").trim() || digits(m.mobile).length >= 6);
+        });
+        state.currentRoute = hasReg ? "login" : "register";
+      }
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) {}
+    }
+  }
 
-      removeOtpUiCompletely();
-      setInterval(removeOtpUiCompletely, 200);
-    })();
-  </script>
+  bootRestoreAndSync();
+  window.addEventListener("DOMContentLoaded", bootRestoreAndSync);
+  window.addEventListener("hashchange", function() {
+    if (isAdminHashUrl() && typeof state !== "undefined") {
+      state.currentRoute = "master-admin";
+      if (typeof renderAll === "function") renderAll();
+    }
+  });
+})();
+</script>
 </body>
 </html>
