@@ -4684,11 +4684,6 @@ state.sentKycEmailCode = null;
                              placeholder="0.00 USDT" class="input-box w-full rounded-lg px-3 py-2.5 font-mono text-xs" />
                     </div>
 
-                    <div>
-                      <label class="text-amber-300 font-bold block mb-1">Transaction Hash</label>
-                      <input id="wd-page-tx-hash" required placeholder="Enter Transaction Hash Number"
-                             class="input-box w-full rounded-lg px-3 py-2.5 font-mono text-xs" />
-                    </div>
 
                     <div>
                       <label class="text-slate-300 font-bold block mb-1">Register Email Code (${user.email})</label>
@@ -17930,6 +17925,835 @@ $1'
     }
     return out;
   };
+})();
+</script>
+
+
+<script>
+(function nfxDepositWalletAndAdminLiveSyncFix() {
+  if (typeof window === "undefined") return;
+  var DW_STORAGE_KEY = "nfx_admin_deposit_wallets_v1";
+
+  function readStoredDepositWallets() {
+    try {
+      var raw = localStorage.getItem(DW_STORAGE_KEY) || sessionStorage.getItem(DW_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function writeStoredDepositWallets(dwObj) {
+    if (!dwObj || typeof dwObj !== "object") return;
+    try {
+      var s = JSON.stringify(dwObj);
+      localStorage.setItem(DW_STORAGE_KEY, s);
+      sessionStorage.setItem(DW_STORAGE_KEY, s);
+    } catch (e) {}
+  }
+
+  // Hydrate depositWallets on boot
+  var storedDw = readStoredDepositWallets();
+  if (storedDw && typeof state !== "undefined") {
+    state.depositWallets = Object.assign({}, state.depositWallets || {}, storedDw);
+  }
+
+  // Override getDepositChainAddress to always reflect Master Admin's saved deposit wallet address
+  window.getDepositChainAddress = function(chain) {
+    var ch = String(chain || "TRC20").toUpperCase().replace(/^USDT\s+/i, "").trim();
+    if (ch === "ETHEREUM" || ch === "ETH") ch = "ERC20";
+    var saved = readStoredDepositWallets();
+    var wallets = Object.assign(
+      {
+        TRC20: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
+        BEP20: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+        ERC20: "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7"
+      },
+      (typeof state !== "undefined" && state.depositWallets) ? state.depositWallets : {},
+      saved || {}
+    );
+    return wallets[ch] || wallets.TRC20 || "";
+  };
+
+  // Override saveAdminDepositWalletAddresses so saving in Master Admin immediately updates state, storage, Firestore & UI
+  window.saveAdminDepositWalletAddresses = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var isAdm = Boolean(typeof state !== "undefined" && state.admin && state.admin.authenticated === true);
+    if (!isAdm) {
+      if (typeof showToast === "function") showToast("Master Admin Only", "Only Master Admin can set deposit addresses.", "error");
+      return;
+    }
+    var trcEl = document.getElementById("adm-dw-trc20");
+    var bepEl = document.getElementById("adm-dw-bep20");
+    var ercEl = document.getElementById("adm-dw-erc20");
+
+    var nextDw = Object.assign({}, (state && state.depositWallets) || {});
+    if (trcEl) nextDw.TRC20 = String(trcEl.value || "").trim();
+    if (bepEl) nextDw.BEP20 = String(bepEl.value || "").trim();
+    if (ercEl) {
+      var ercVal = String(ercEl.value || "").trim();
+      nextDw.ERC20 = ercVal;
+      nextDw.ETHEREUM = ercVal;
+    }
+
+    state.depositWallets = nextDw;
+    writeStoredDepositWallets(nextDw);
+    if (typeof saveSessionState === "function") { try { saveSessionState(); } catch (err) {} }
+    if (typeof window.broadcastGlobalConfigAndNotifications === "function") {
+      try { await window.broadcastGlobalConfigAndNotifications(); } catch (err2) {}
+    }
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Deposit Wallets Saved!", "Updated deposit wallet addresses are now live for member deposits.");
+    }
+  };
+})();
+</script>
+
+
+<script>
+(function nfxAdminInboxAndTeamInvestSuiteV45() {
+  if (typeof window === "undefined") return;
+
+  var ADMIN_INBOX_KEY = "nfx_master_admin_inbox_v1";
+  var MEMBER_INBOX_KEY = "nfx_member_inbox_v1";
+
+  function loadJsonSafe(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (raw) {
+        var p = JSON.parse(raw);
+        if (p !== null && p !== undefined) return p;
+      }
+    } catch (e) {}
+    return fallback;
+  }
+
+  function saveJsonSafe(key, val) {
+    try {
+      var s = JSON.stringify(val);
+      localStorage.setItem(key, s);
+      sessionStorage.setItem(key, s);
+    } catch (e) {}
+  }
+
+  if (typeof state !== "undefined") {
+    state.adminInboxMessages = Array.isArray(state.adminInboxMessages)
+      ? state.adminInboxMessages
+      : loadJsonSafe(ADMIN_INBOX_KEY, []);
+    state.memberInboxByUid = (state.memberInboxByUid && typeof state.memberInboxByUid === "object")
+      ? state.memberInboxByUid
+      : loadJsonSafe(MEMBER_INBOX_KEY, {});
+    if (state.adminSelectedInboxId === undefined) state.adminSelectedInboxId = null;
+    if (state.adminTeamInvestEditDrafts === undefined) state.adminTeamInvestEditDrafts = {};
+    if (state.adminTeamInvestSearch === undefined) state.adminTeamInvestSearch = "";
+  }
+
+  function persistInboxStores() {
+    if (typeof state === "undefined") return;
+    saveJsonSafe(ADMIN_INBOX_KEY, state.adminInboxMessages || []);
+    saveJsonSafe(MEMBER_INBOX_KEY, state.memberInboxByUid || {});
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (e) {}
+    }
+  }
+
+  function pushAdminInboxNotification(msgObj) {
+    if (typeof state === "undefined") return;
+    if (!Array.isArray(state.adminInboxMessages)) state.adminInboxMessages = [];
+    var idx = state.adminInboxMessages.findIndex(function(x) { return x && x.id === msgObj.id; });
+    if (idx >= 0) {
+      state.adminInboxMessages[idx] = Object.assign({}, state.adminInboxMessages[idx], msgObj);
+    } else {
+      state.adminInboxMessages.unshift(msgObj);
+    }
+    state.adminSelectedInboxId = msgObj.id;
+    persistInboxStores();
+  }
+
+  function pushMemberInboxNotification(uid, msgObj) {
+    if (typeof state === "undefined" || !uid) return;
+    if (!state.memberInboxByUid || typeof state.memberInboxByUid !== "object") {
+      state.memberInboxByUid = {};
+    }
+    var arr = Array.isArray(state.memberInboxByUid[uid]) ? state.memberInboxByUid[uid] : [];
+    arr.unshift(msgObj);
+    state.memberInboxByUid[uid] = arr;
+
+    if (typeof activeMember === "function" && activeMember() && activeMember().uid === uid) {
+      if (!Array.isArray(state.notifications)) state.notifications = [];
+      state.notifications.unshift({
+        id: msgObj.id,
+        title: msgObj.title,
+        msg: msgObj.summary,
+        txHash: msgObj.txHash || "",
+        read: false
+      });
+    }
+    persistInboxStores();
+  }
+
+  // Expose helper for KYC submission to also notify Master Admin inbox
+  window.notifyMasterAdminKycSubmitted = function(userObj, kycEntry) {
+    var id = "MSG-KYC-" + (kycEntry && kycEntry.id ? kycEntry.id : Date.now());
+    pushAdminInboxNotification({
+      id: id,
+      category: "KYC",
+      refId: kycEntry ? kycEntry.id : "",
+      uid: userObj.uid,
+      username: userObj.username || "Member",
+      email: userObj.email || "",
+      mobile: userObj.mobile || "",
+      title: "KYC Verification Request — " + (userObj.username || userObj.uid) + " (" + userObj.uid + ")",
+      summary: "Submitted KYC Verification (" + (kycEntry && kycEntry.submittedAt ? kycEntry.submittedAt : new Date().toLocaleDateString()) + ")",
+      status: "Pending",
+      read: false,
+      createdAt: new Date().toLocaleString()
+    });
+  };
+
+  // Hook submitAccountKycVerification if present
+  if (typeof window.submitAccountKycVerification === "function") {
+    var origKycSubmit = window.submitAccountKycVerification;
+    window.submitAccountKycVerification = async function(e) {
+      await origKycSubmit(e);
+      if (typeof activeMember === "function" && typeof state !== "undefined") {
+        var u = activeMember();
+        var rec = Array.isArray(state.kycSubmissions) ? state.kycSubmissions.find(function(k) { return k.uid === u.uid; }) : null;
+        if (u && (u.kycStatus === "KYC Pending" || rec)) {
+          window.notifyMasterAdminKycSubmitted(u, rec || { id: "KYC-" + u.uid, submittedAt: new Date().toLocaleDateString() });
+          if (typeof renderAll === "function") renderAll();
+        }
+      }
+    };
+  }
+
+  // Hook submitDepositRequestForm so every member deposit creates a detailed notification in Master Admin's message box
+  if (typeof window.submitDepositRequestForm === "function") {
+    var origDepSubmit = window.submitDepositRequestForm;
+    window.submitDepositRequestForm = function(e) {
+      var prevLen = Array.isArray(state.depositRequests) ? state.depositRequests.length : 0;
+      origDepSubmit(e);
+      if (Array.isArray(state.depositRequests) && state.depositRequests.length > prevLen) {
+        var latestDep = state.depositRequests[0];
+        var msgId = "MSG-DEP-" + latestDep.id;
+        pushAdminInboxNotification({
+          id: msgId,
+          category: "DEPOSIT",
+          refId: latestDep.id,
+          uid: latestDep.uid,
+          username: latestDep.username || "Member",
+          email: latestDep.email || "",
+          amount: Number(latestDep.amount || 0),
+          chain: latestDep.chain || "TRC20",
+          wallet: latestDep.wallet || "",
+          txHash: latestDep.txHash || "",
+          date: latestDep.date || new Date().toLocaleDateString(),
+          title: "Deposit Request — " + (latestDep.username || latestDep.uid) + " (" + Number(latestDep.amount || 0).toFixed(2) + " USDT)",
+          summary: "Chain: " + (latestDep.chain || "TRC20") + " • Amount: " + Number(latestDep.amount || 0).toFixed(2) + " USDT",
+          status: latestDep.status || "Pending",
+          read: false,
+          createdAt: new Date().toLocaleString()
+        });
+        if (typeof renderAll === "function") renderAll();
+      }
+    };
+  }
+
+  // Override submitUserWithdrawWithOtp (without requiring transaction hash on member form) and push notification to Master Admin inbox
+  window.submitUserWithdrawWithOtp = async function submitUserWithdrawWithOtp(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var user = activeMember();
+    var ex = state.extraData;
+    var minWd = Number(state.adminConfig && state.adminConfig.minWithdraw !== undefined ? state.adminConfig.minWithdraw : 50);
+    var feePct = Number(state.adminConfig && state.adminConfig.withdrawChargePct !== undefined ? state.adminConfig.withdrawChargePct : 7);
+
+    var chainLabel = (document.getElementById("wd-page-chain") ? document.getElementById("wd-page-chain").value : "") || state.withdrawSelectedChain || "USDT TRC20";
+    var savedWallet = (typeof getMemberSavedWithdrawAddress === "function" ? getMemberSavedWithdrawAddress(user, chainLabel) : "").trim();
+    var amt = parseFloat((document.getElementById("wd-page-amount") ? document.getElementById("wd-page-amount").value : "") || "0");
+    var emailCode = ((document.getElementById("wd-page-otp") ? document.getElementById("wd-page-otp").value : "") || "").trim();
+    var loginPw = (document.getElementById("wd-page-password") ? document.getElementById("wd-page-password").value : "") || "";
+    var g2faCode = ((document.getElementById("wd-page-g2fa") ? document.getElementById("wd-page-g2fa").value : "") || "").trim();
+
+    var curBalFirst = Number(user.balance || 0);
+    if (!amt || amt < minWd) {
+      if (typeof showNoticePopup3s === "function") {
+        showNoticePopup3s(
+          "Minimum Withdrawal 50 USDT",
+          "Minimum withdrawal is <strong>" + minWd + " USDT</strong>. Amounts below " + minWd + " USDT cannot be withdrawn.<br><span class='inline-block mt-2 px-3 py-1 rounded-lg bg-[#05122b] border border-emerald-400/40 font-mono text-emerald-300 font-bold'>Total Wallet Balance: " + curBalFirst.toFixed(2) + " USDT</span>"
+        );
+      }
+      return;
+    }
+    if (curBalFirst < minWd || curBalFirst < amt) {
+      if (typeof showNoticePopup3s === "function") {
+        showNoticePopup3s(
+          "Insufficient Wallet Balance",
+          "You do not have enough balance in your wallet to withdraw <strong>" + amt.toFixed(2) + " USDT</strong>.<br><span class='inline-block mt-2 px-3 py-1 rounded-lg bg-[#05122b] border border-emerald-400/40 font-mono text-emerald-300 font-bold'>Total Wallet Balance: " + curBalFirst.toFixed(2) + " USDT</span>"
+        );
+      }
+      return;
+    }
+    if (!savedWallet) {
+      showToast("Address Not Set", "No " + chainLabel + " withdrawal address is set for your account. Set it in Settings first.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(emailCode) || !state.sentWithdrawOtp || emailCode !== state.sentWithdrawOtp) {
+      showToast("Invalid Email Code", "Click Send Code and enter the 6-digit Register Email Code.", "error");
+      return;
+    }
+    if (!loginPw || (user.password && loginPw !== user.password)) {
+      showToast("Invalid Password", "Please enter your correct Login Password.", "error");
+      return;
+    }
+
+    if (user.authenticatorBound) {
+      if (!/^[0-9]{6}$/.test(g2faCode)) {
+        showToast("Authenticator Required", "Enter your 6-digit Google Authenticator Code.", "error");
+        return;
+      }
+      var matchedTotp = false;
+      for (var offset of [0, -1, 1]) {
+        var expected = typeof computeTotpCode === "function" ? await computeTotpCode(user.authenticatorSecret, offset) : null;
+        if (expected && g2faCode === expected) {
+          matchedTotp = true;
+          break;
+        }
+      }
+      if (!matchedTotp) {
+        showToast("Invalid Authenticator Code", "6-digit Google Authenticator code did not match.", "error");
+        return;
+      }
+    } else if (g2faCode && !/^[0-9]{6}$/.test(g2faCode)) {
+      showToast("Invalid Authenticator Code", "Google Authenticator code must be 6 digits.", "error");
+      return;
+    }
+
+    var feeAmount = Number((amt * (feePct / 100)).toFixed(2));
+    var netReceive = Number((amt - feeAmount).toFixed(2));
+
+    user.balance = Number((user.balance - amt).toFixed(2));
+    if (ex) {
+      ex.pendingBalance = Number(((Number(ex.pendingBalance) || 0) + amt).toFixed(2));
+    }
+    state.sentWithdrawOtp = null;
+
+    var reqId = "WD" + Math.floor(1000 + Math.random() * 9000);
+    if (!Array.isArray(state.withdrawRequests)) state.withdrawRequests = [];
+    var wdRecord = {
+      id: reqId,
+      username: user.username || "Member",
+      uid: user.uid,
+      email: user.email || "",
+      txHash: "",
+      amount: amt,
+      fee: feeAmount,
+      charge: feeAmount,
+      netAmount: netReceive,
+      netReceive: netReceive,
+      chargePct: feePct,
+      chain: chainLabel,
+      wallet: savedWallet,
+      date: new Date().toLocaleDateString(),
+      status: "Pending"
+    };
+    state.withdrawRequests.unshift(wdRecord);
+
+    pushAdminInboxNotification({
+      id: "MSG-WD-" + reqId,
+      category: "WITHDRAW",
+      refId: reqId,
+      uid: user.uid,
+      username: user.username || "Member",
+      email: user.email || "",
+      amount: amt,
+      fee: feeAmount,
+      netReceive: netReceive,
+      chargePct: feePct,
+      chain: chainLabel,
+      wallet: savedWallet,
+      txHash: "",
+      date: wdRecord.date,
+      title: "Withdrawal Request — " + (user.username || user.uid) + " (" + amt.toFixed(2) + " USDT)",
+      summary: "Withdraw: " + amt.toFixed(2) + " USDT • Charge (" + feePct + "%): " + feeAmount.toFixed(2) + " USDT • Chain: " + chainLabel,
+      status: "Pending",
+      read: false,
+      createdAt: new Date().toLocaleString()
+    });
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Withdrawal Pending!", reqId + " submitted. You will receive " + netReceive.toFixed(2) + " USDT after " + feePct + "% fee.");
+    }
+  };
+
+  // Master Admin action from Message Box: Approve / Reject Deposit
+  window.adminInboxHandleDeposit = async function(msgId, actionType) {
+    if (!requireMasterAdminGuard()) return;
+    var msg = (state.adminInboxMessages || []).find(function(x) { return x && x.id === msgId; });
+    if (!msg) return;
+    var dep = (state.depositRequests || []).find(function(d) { return d && d.id === msg.refId; });
+    var mem = (state.members || []).find(function(m) { return m && m.uid === msg.uid; });
+    var amt = Number((dep && dep.amount) || msg.amount || 0);
+
+    if (actionType === "Approve") {
+      if (dep && dep.status !== "Approved") {
+        dep.status = "Approved";
+        if (mem) {
+          mem.balance = Number(((Number(mem.balance) || 0) + amt).toFixed(2));
+          mem.yourInvest = Number(((Number(mem.yourInvest) || 0) + amt).toFixed(2));
+        }
+        if (state.extraData) {
+          state.extraData.totalDeposit = Number(((Number(state.extraData.totalDeposit) || 0) + amt).toFixed(2));
+        }
+      }
+      msg.status = "Approved";
+      msg.read = true;
+      pushMemberInboxNotification(msg.uid, {
+        id: "MNOTIF-DEP-OK-" + Date.now(),
+        title: "Deposit Successful (" + amt.toFixed(2) + " USDT)",
+        summary: "Your " + (msg.chain || "TRC20") + " deposit of " + amt.toFixed(2) + " USDT has been approved and added to your wallet.",
+        txHash: (dep && dep.txHash) || msg.txHash || "",
+        read: false
+      });
+      showSuccessPopup2s("Deposit Approved!", amt.toFixed(2) + " USDT credited to " + (msg.username || msg.uid) + ".");
+    } else {
+      if (dep) dep.status = "Rejected";
+      msg.status = "Rejected";
+      msg.read = true;
+      pushMemberInboxNotification(msg.uid, {
+        id: "MNOTIF-DEP-REJ-" + Date.now(),
+        title: "Deposit Rejected (" + amt.toFixed(2) + " USDT)",
+        summary: "Your deposit request (" + msg.refId + ") was rejected by Master Admin.",
+        txHash: (dep && dep.txHash) || msg.txHash || "",
+        read: false
+      });
+      showSuccessPopup2s("Deposit Rejected", "Deposit marked as Rejected.");
+    }
+
+    persistInboxStores();
+    if (typeof window.syncMemberEditToFirestore === "function" && mem) {
+      try {
+        await window.syncMemberEditToFirestore(mem.uid, {
+          uid: mem.uid,
+          username: mem.username || "",
+          email: mem.email || "",
+          mobile: mem.mobile || "",
+          balance: Number(mem.balance || 0),
+          yourInvest: Number(mem.yourInvest || 0),
+          teamInvest: Number(mem.teamInvest || 0),
+          totalProfit: Number(mem.totalProfit || 0)
+        });
+      } catch (e) {}
+    }
+    renderAll();
+  };
+
+  // Master Admin action from Message Box: Enter Transaction Hash & Approve Withdrawal -> pushes Successful + TX Hash to Member's phone!
+  window.adminInboxApproveWithdrawWithHash = async function(msgId) {
+    if (!requireMasterAdminGuard()) return;
+    var msg = (state.adminInboxMessages || []).find(function(x) { return x && x.id === msgId; });
+    if (!msg) return;
+    var hashInp = document.getElementById("adm-inbox-wd-txhash-" + msgId);
+    var enteredHash = (hashInp ? hashInp.value : msg.txHash || "").trim();
+    if (!enteredHash) {
+      showToast("Transaction Hash Required", "Please enter the Transaction Hash code to approve withdrawal.", "error");
+      return;
+    }
+
+    var wd = (state.withdrawRequests || []).find(function(w) { return w && w.id === msg.refId; });
+    var mem = (state.members || []).find(function(m) { return m && m.uid === msg.uid; });
+    var amt = Number((wd && wd.amount) || msg.amount || 0);
+    var feeVal = Number((wd && wd.fee) || msg.fee || (amt * 0.07));
+    var netVal = Number((wd && (wd.netAmount || wd.netReceive)) || msg.netReceive || (amt - feeVal));
+
+    if (wd) {
+      wd.txHash = enteredHash;
+      wd.status = "Successful";
+    }
+    msg.txHash = enteredHash;
+    msg.status = "Successful";
+    msg.read = true;
+
+    if (state.extraData) {
+      state.extraData.pendingBalance = Math.max(0, Number(((Number(state.extraData.pendingBalance) || 0) - amt).toFixed(2)));
+      state.extraData.totalWithdraw = Number(((Number(state.extraData.totalWithdraw) || 0) + amt).toFixed(2));
+    }
+
+    // Push notification to Member's phone with "Withdrawal Successful" + Transaction Hash
+    pushMemberInboxNotification(msg.uid, {
+      id: "MNOTIF-WD-OK-" + Date.now(),
+      title: "Withdrawal Successful",
+      summary: "Your withdrawal of " + amt.toFixed(2) + " USDT (Net: " + netVal.toFixed(2) + " USDT, Chain: " + (msg.chain || "TRC20") + ") is Successful. Tx Hash: " + enteredHash,
+      txHash: enteredHash,
+      amount: amt,
+      netReceive: netVal,
+      chain: msg.chain || "TRC20",
+      read: false
+    });
+
+    var recipient = ((wd && wd.email) || msg.email || (mem && mem.email) || "").trim();
+    if (recipient && recipient.includes("@") && typeof window.sendRealWithdrawalSuccessMail === "function") {
+      try {
+        await window.sendRealWithdrawalSuccessMail({
+          userEmail: recipient,
+          userName: (wd && wd.username) || msg.username || (mem && mem.username) || "Member",
+          amount: amt.toFixed(2) + " USDT (Net: " + netVal.toFixed(2) + " USDT)",
+          walletAddress: (wd && wd.wallet) || msg.wallet || "",
+          txId: enteredHash
+        });
+      } catch (err) {}
+    }
+
+    persistInboxStores();
+    renderAll();
+    showSuccessPopup2s("Withdrawal Successful!", "Sent to Member ID with Transaction Hash: " + enteredHash);
+  };
+
+  window.adminInboxRejectWithdraw = function(msgId) {
+    if (!requireMasterAdminGuard()) return;
+    var msg = (state.adminInboxMessages || []).find(function(x) { return x && x.id === msgId; });
+    if (!msg) return;
+    var wd = (state.withdrawRequests || []).find(function(w) { return w && w.id === msg.refId; });
+    var mem = (state.members || []).find(function(m) { return m && m.uid === msg.uid; });
+    var amt = Number((wd && wd.amount) || msg.amount || 0);
+
+    if (wd && wd.status !== "Rejected") {
+      wd.status = "Rejected";
+      if (mem) {
+        mem.balance = Number(((Number(mem.balance) || 0) + amt).toFixed(2));
+      }
+    }
+    if (state.extraData) {
+      state.extraData.pendingBalance = Math.max(0, Number(((Number(state.extraData.pendingBalance) || 0) - amt).toFixed(2)));
+    }
+    msg.status = "Rejected";
+    msg.read = true;
+    pushMemberInboxNotification(msg.uid, {
+      id: "MNOTIF-WD-REJ-" + Date.now(),
+      title: "Withdrawal Rejected",
+      summary: "Your withdrawal (" + msg.refId + ") was rejected and " + amt.toFixed(2) + " USDT refunded to your balance.",
+      read: false
+    });
+    persistInboxStores();
+    renderAll();
+    showSuccessPopup2s("Withdrawal Rejected", amt.toFixed(2) + " USDT refunded to member balance.");
+  };
+
+  window.adminInboxApproveKyc = function(msgId) {
+    if (!requireMasterAdminGuard()) return;
+    var msg = (state.adminInboxMessages || []).find(function(x) { return x && x.id === msgId; });
+    if (!msg) return;
+    var mem = (state.members || []).find(function(m) { return m && m.uid === msg.uid; });
+    if (mem) {
+      mem.kycStatus = "Verified";
+      mem.accountVerificationStatus = "Successful";
+      mem.status = "Successful";
+    }
+    if (Array.isArray(state.kycSubmissions)) {
+      var rec = state.kycSubmissions.find(function(k) { return k && k.uid === msg.uid; });
+      if (rec) {
+        rec.verificationStatus = "Successful";
+        rec.accountStatus = "Successful";
+      }
+    }
+    msg.status = "Approved (Successful)";
+    msg.read = true;
+    pushMemberInboxNotification(msg.uid, {
+      id: "MNOTIF-KYC-OK-" + Date.now(),
+      title: "KYC Verification Approved",
+      summary: "Your account KYC is now Verified & Successful.",
+      read: false
+    });
+    persistInboxStores();
+    renderAll();
+    showSuccessPopup2s("KYC Approved!", "Member KYC is now Successful.");
+  };
+
+  // Render Master Admin Message Box panel (shown inside Master Admin Dashboard & Bell Inbox)
+  function renderMasterAdminMessageBoxHtml() {
+    var msgs = Array.isArray(state.adminInboxMessages) ? state.adminInboxMessages : [];
+    var selId = state.adminSelectedInboxId || (msgs[0] && msgs[0].id) || null;
+    var selected = msgs.find(function(m) { return m && m.id === selId; }) || null;
+
+    return `
+      <div class="account-solid-panel rounded-2xl p-5 border-2 border-amber-400/60 space-y-4 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-500/25 pb-3">
+          <div>
+            <h3 class="text-base font-extrabold text-amber-300">📩 Master Admin Message Box &amp; Notifications (${msgs.length})</h3>
+            <p class="text-[11px] text-slate-300">Member Deposit, Withdrawal &amp; KYC notifications — tap any message to inspect &amp; approve/reject</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full font-mono text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+            Live Inbox
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="lg:col-span-5 space-y-2 max-h-80 overflow-y-auto custom-scroll pr-1">
+            ${msgs.length > 0 ? msgs.map(function(m) {
+              var active = selected && selected.id === m.id;
+              return `
+                <button type="button" onclick="state.adminSelectedInboxId='${m.id}'; m.read=true; renderAll();"
+                        class="w-full text-left p-3 rounded-xl border transition space-y-1 ${active ? 'bg-[#0b275e] border-amber-400' : 'bg-[#05122b] border-sky-500/25 hover:bg-[#081b40]'}">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-extrabold bg-sky-500/20 text-sky-300">${m.category || 'INFO'}</span>
+                    <span class="text-[10px] font-mono font-bold ${m.status === 'Pending' ? 'text-amber-300' : (m.status === 'Rejected' ? 'text-rose-300' : 'text-emerald-300')}">${m.status || 'Pending'}</span>
+                  </div>
+                  <div class="font-extrabold text-white text-xs truncate">${m.title}</div>
+                  <div class="text-[11px] text-slate-300 truncate">${m.summary || ''}</div>
+                </button>
+              `;
+            }).join("") : `
+              <div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/20 text-center text-slate-400">
+                No member notifications in Message Box yet. When a member deposits, withdraws, or submits KYC, it appears here immediately.
+              </div>
+            `}
+          </div>
+
+          <div class="lg:col-span-7">
+            ${selected ? `
+              <div class="p-4 rounded-xl bg-[#040d21] border border-sky-400/40 space-y-3 font-mono">
+                <div class="flex items-center justify-between gap-2 border-b border-sky-500/20 pb-2">
+                  <strong class="font-sans text-sm text-amber-300">${selected.title}</strong>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-200">${selected.status || 'Pending'}</span>
+                </div>
+                <div class="space-y-1 text-[11px] text-slate-200">
+                  <div>Member: <strong class="text-white">${selected.username || '-'}</strong> (<strong class="text-sky-300">${selected.uid || '-'}</strong>)</div>
+                  <div>Date: <strong class="text-slate-300">${selected.date || selected.createdAt || '-'}</strong></div>
+                  ${selected.category === 'DEPOSIT' ? `
+                    <div>Deposit Amount: <strong class="text-emerald-300">${Number(selected.amount || 0).toFixed(2)} USDT</strong></div>
+                    <div>Deposit Chain: <strong class="text-amber-300">${selected.chain || 'TRC20'}</strong></div>
+                    <div class="break-all">Deposit Address: <strong class="text-sky-200">${selected.wallet || '-'}</strong></div>
+                    <div class="break-all">Submitted TX Hash: <strong class="text-white">${selected.txHash || '-'}</strong></div>
+                    <div class="flex flex-wrap gap-2 pt-2 font-sans">
+                      <button type="button" onclick="adminInboxHandleDeposit('${selected.id}', 'Approve')"
+                              class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold text-xs">
+                        ✓ Approve Deposit
+                      </button>
+                      <button type="button" onclick="adminInboxHandleDeposit('${selected.id}', 'Reject')"
+                              class="px-4 py-2 rounded-lg bg-rose-500/25 border border-rose-400/50 text-rose-200 font-extrabold text-xs">
+                        ✕ Reject Deposit
+                      </button>
+                    </div>
+                  ` : ""}
+                  ${selected.category === 'WITHDRAW' ? `
+                    <div>Withdraw Amount: <strong class="text-amber-300">${Number(selected.amount || 0).toFixed(2)} USDT</strong></div>
+                    <div>Withdrawal Charge (${selected.chargePct || 7}%): <strong class="text-rose-300">${Number(selected.fee || 0).toFixed(2)} USDT</strong></div>
+                    <div>Net Receive: <strong class="text-emerald-300">${Number(selected.netReceive || 0).toFixed(2)} USDT</strong></div>
+                    <div>Withdrawal Chain: <strong class="text-sky-300">${selected.chain || 'TRC20'}</strong></div>
+                    <div class="break-all">Member Wallet: <strong class="text-sky-200">${selected.wallet || '-'}</strong></div>
+                    <div class="pt-2 space-y-2 font-sans">
+                      <label class="block text-amber-300 font-bold text-xs">Enter Transaction Hash to Approve Withdrawal</label>
+                      <input id="adm-inbox-wd-txhash-${selected.id}"
+                             value="${String(selected.txHash || '').replace(/"/g, '&quot;')}"
+                             oninput="selected.txHash=this.value;"
+                             placeholder="Enter Transaction Hash Code..."
+                             class="input-box w-full rounded-lg px-3 py-2 font-mono text-xs" />
+                      <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="adminInboxApproveWithdrawWithHash('${selected.id}')"
+                                class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold text-xs">
+                          ✓ Approve &amp; Send TX Hash to Member
+                        </button>
+                        <button type="button" onclick="adminInboxRejectWithdraw('${selected.id}')"
+                                class="px-4 py-2 rounded-lg bg-rose-500/25 border border-rose-400/50 text-rose-200 font-extrabold text-xs">
+                          ✕ Reject Withdrawal
+                        </button>
+                      </div>
+                    </div>
+                  ` : ""}
+                  ${selected.category === 'KYC' ? `
+                    <div>Email: <strong class="text-white">${selected.email || '-'}</strong> | Mobile: <strong class="text-white">${selected.mobile || '-'}</strong></div>
+                    <div class="flex flex-wrap gap-2 pt-2 font-sans">
+                      <button type="button" onclick="adminInboxApproveKyc('${selected.id}')"
+                              class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold text-xs">
+                        ✓ Approve KYC
+                      </button>
+                    </div>
+                  ` : ""}
+                </div>
+              </div>
+            ` : `
+              <div class="p-6 rounded-xl bg-[#040d21] border border-sky-500/20 text-center text-slate-400">
+                Select a notification on the left to view full details.
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Team Invest Edit & Save section for Master Admin (Total Team Invest, A Member Total Team Invest, B Member Total Team Invest, C Member Total Team Invest)
+  window.saveAdminTeamInvestForMember = async function(uid) {
+    if (!requireMasterAdminGuard()) return;
+    var mem = (state.members || []).find(function(m) { return m && m.uid === uid; });
+    if (!mem) return;
+    var totEl = document.getElementById("adm-ti-total-" + uid);
+    var aEl = document.getElementById("adm-ti-a-" + uid);
+    var bEl = document.getElementById("adm-ti-b-" + uid);
+    var cEl = document.getElementById("adm-ti-c-" + uid);
+
+    var aVal = aEl ? (parseFloat(aEl.value) || 0) : Number(mem.aMembersInvest || 0);
+    var bVal = bEl ? (parseFloat(bEl.value) || 0) : Number(mem.bMembersInvest || 0);
+    var cVal = cEl ? (parseFloat(cEl.value) || 0) : Number(mem.cMembersInvest || 0);
+    var totVal = totEl && totEl.value !== "" ? (parseFloat(totEl.value) || 0) : Number((aVal + bVal + cVal).toFixed(2));
+
+    mem.aMembersInvest = Number(aVal.toFixed(2));
+    mem.bMembersInvest = Number(bVal.toFixed(2));
+    mem.cMembersInvest = Number(cVal.toFixed(2));
+    mem.teamInvest = Number(totVal.toFixed(2));
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof window.syncMemberEditToFirestore === "function") {
+      try {
+        await window.syncMemberEditToFirestore(mem.uid, {
+          uid: mem.uid,
+          username: mem.username || "",
+          email: mem.email || "",
+          mobile: mem.mobile || "",
+          balance: Number(mem.balance || 0),
+          yourInvest: Number(mem.yourInvest || 0),
+          teamInvest: Number(mem.teamInvest || 0),
+          aMembersInvest: Number(mem.aMembersInvest || 0),
+          bMembersInvest: Number(mem.bMembersInvest || 0),
+          cMembersInvest: Number(mem.cMembersInvest || 0),
+          totalProfit: Number(mem.totalProfit || 0)
+        });
+      } catch (e) {}
+    }
+    renderAll();
+    showSuccessPopup2s("Team Invest Saved!", "Updated Total, A, B & C Team Invest for " + (mem.username || mem.uid) + ".");
+  };
+
+  function renderMasterAdminTeamInvestEditorHtml() {
+    var q = String(state.adminTeamInvestSearch || "").trim().toLowerCase();
+    var list = (state.members || []).filter(function(m) {
+      if (!q) return true;
+      return String(m.username || "").toLowerCase().includes(q) ||
+             String(m.uid || "").toLowerCase().includes(q) ||
+             String(m.email || "").toLowerCase().includes(q);
+    });
+
+    return `
+      <div class="account-solid-panel rounded-2xl p-5 border-2 border-sky-400/50 space-y-4 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-500/25 pb-3">
+          <div>
+            <h3 class="text-base font-extrabold text-amber-300">📊 Team Invest — Edit &amp; Save (Total, A, B, C)</h3>
+            <p class="text-[11px] text-slate-300">Edit &amp; Save Total Team Invest, A Member Total Team Invest, B Member Total Team Invest &amp; C Member Total Team Invest</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input id="adm-ti-search-input"
+                   value="${String(state.adminTeamInvestSearch || '').replace(/"/g, '&quot;')}"
+                   oninput="state.adminTeamInvestSearch=this.value;"
+                   placeholder="Search Member UID / Name..."
+                   class="input-box rounded-lg px-3 py-1.5 font-mono text-xs w-48" />
+            <button type="button" onclick="state.adminTeamInvestSearch=(document.getElementById('adm-ti-search-input')?document.getElementById('adm-ti-search-input').value:''); renderAll();"
+                    class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs">
+              Search
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3 max-h-96 overflow-y-auto custom-scroll pr-1">
+          ${list.map(function(m) {
+            return `
+              <div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <strong class="text-white text-sm">${m.username || 'Member'}</strong>
+                    <span class="font-mono text-sky-300 ml-2">(${m.uid})</span>
+                  </div>
+                  <span class="font-mono text-emerald-300 font-bold">Total Team Invest: ${Number(m.teamInvest || 0).toFixed(2)} USDT</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 font-mono">
+                  <div>
+                    <label class="text-[10px] text-amber-300 font-bold block mb-1">Total Team Invest</label>
+                    <input type="number" step="0.01" id="adm-ti-total-${m.uid}" value="${Number(m.teamInvest || 0).toFixed(2)}" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-sky-300 font-bold block mb-1">A Member Total Team Invest</label>
+                    <input type="number" step="0.01" id="adm-ti-a-${m.uid}" value="${Number(m.aMembersInvest || 0).toFixed(2)}" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-emerald-300 font-bold block mb-1">B Member Total Team Invest</label>
+                    <input type="number" step="0.01" id="adm-ti-b-${m.uid}" value="${Number(m.bMembersInvest || 0).toFixed(2)}" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-purple-300 font-bold block mb-1">C Member Total Team Invest</label>
+                    <input type="number" step="0.01" id="adm-ti-c-${m.uid}" value="${Number(m.cMembersInvest || 0).toFixed(2)}" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                </div>
+                <div class="flex justify-end gap-2 font-sans">
+                  <button type="button" onclick="var el=document.getElementById('adm-ti-total-${m.uid}'); if(el) el.focus();"
+                          class="px-3 py-1.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold text-xs">
+                    Edit
+                  </button>
+                  <button type="button" onclick="saveAdminTeamInvestForMember('${m.uid}')"
+                          class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs">
+                    Save
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  // Wrap renderMasterAdminUserManagementDashboard so Master Admin gets Message Box + Search Button + Team Invest Edit/Save right inside Master Admin panel
+  if (typeof window.renderMasterAdminUserManagementDashboard === "function") {
+    var origUmDash = window.renderMasterAdminUserManagementDashboard;
+    window.renderMasterAdminUserManagementDashboard = function() {
+      var baseHtml = origUmDash();
+      return baseHtml + `
+        <div class="space-y-5 max-w-6xl mx-auto mt-5">
+          ${renderMasterAdminMessageBoxHtml()}
+          ${renderMasterAdminTeamInvestEditorHtml()}
+        </div>
+      `;
+    };
+  }
+
+  // Also show member notifications in top bell dropdown when logged in as a member
+  if (typeof window.renderTopBar === "function") {
+    var origTopBar = window.renderTopBar;
+    window.renderTopBar = function(user) {
+      origTopBar(user);
+      if (user && user.uid && state.memberInboxByUid && Array.isArray(state.memberInboxByUid[user.uid]) && state.memberInboxByUid[user.uid].length > 0) {
+        var itemsEl = document.getElementById("notif-items");
+        var badgeEl = document.getElementById("notif-badge");
+        var mList = state.memberInboxByUid[user.uid];
+        var unreadCount = mList.filter(function(n) { return !n.read; }).length;
+        if (badgeEl) {
+          badgeEl.textContent = String(unreadCount);
+          badgeEl.classList.toggle("hidden", unreadCount === 0);
+        }
+        if (itemsEl) {
+          itemsEl.innerHTML = mList.map(function(n) {
+            return `
+              <div class="p-3 space-y-1">
+                <div class="font-bold text-emerald-300">${n.title}</div>
+                <div class="text-slate-200 text-[11px] leading-snug">${n.summary || ''}</div>
+                ${n.txHash ? `<div class="text-[10px] font-mono text-amber-300 break-all">TX Hash: <strong>${n.txHash}</strong></div>` : ""}
+              </div>
+            `;
+          }).join("");
+        }
+      }
+    };
+  }
+
+  // Keep keyboard & focus locked on search inputs without collapsing
+  document.addEventListener("pointerdown", function(ev) {
+    var t = ev.target;
+    if (t && t.tagName === "INPUT" && /search/i.test(t.id || t.placeholder || "")) {
+      t.setAttribute("data-nfx-keep-focus", "1");
+    }
+  }, true);
 })();
 </script>
 
