@@ -14042,6 +14042,66 @@ state.sentKycEmailCode = null;
   </script>
 
 
+  <script>
+    (function ensureAdminEmailBoxAlwaysVisible() {
+      function mountAdminEmailInput() {
+        var pwInput = document.getElementById("adm-login-pw");
+        if (!pwInput) return;
+        var form = pwInput.closest("form");
+        if (!form) return;
+        if (document.getElementById("adm-login-otp-email")) return;
+
+        var savedEmail = "";
+        try {
+          if (typeof state !== "undefined" && state.admin && state.admin.otpEmail) {
+            savedEmail = String(state.admin.otpEmail).trim();
+          }
+        } catch (e) {}
+
+        var row = document.createElement("div");
+        row.id = "adm-otp-email-row";
+        row.className = "space-y-1";
+        row.innerHTML =
+          '<label for="adm-login-otp-email" class="text-slate-300 block mb-1">Admin Email (OTP will be sent here)</label>' +
+          '<input type="email" id="adm-login-otp-email" required value="' + savedEmail.replace(/"/g, "&quot;") + '" ' +
+          'placeholder="Enter active Email Address to receive 6-digit OTP" ' +
+          'oninput="if(typeof state!=='undefined'){state.admin=state.admin||{};state.admin.otpEmail=this.value.trim();}" ' +
+          'class="input-box w-full rounded-lg px-3 py-2.5 text-xs" />';
+
+        var otpInp = document.getElementById("adm-login-otp");
+        var otpWrap = otpInp ? (otpInp.closest("div.flex") ? otpInp.closest("div.flex").parentElement : otpInp.parentElement) : null;
+        if (otpWrap && otpWrap.parentElement === form) {
+          form.insertBefore(row, otpWrap);
+        } else {
+          var submitBtn = form.querySelector("button[type='submit']");
+          if (submitBtn && submitBtn.parentElement === form) {
+            form.insertBefore(row, submitBtn);
+          } else {
+            form.appendChild(row);
+          }
+        }
+      }
+
+      var prevRender = window.renderAll;
+      if (typeof prevRender === "function" && !window.__nfxAdminEmailBoxHooked) {
+        window.renderAll = function() {
+          var out = prevRender.apply(this, arguments);
+          mountAdminEmailInput();
+          return out;
+        };
+        window.__nfxAdminEmailBoxHooked = true;
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", mountAdminEmailInput);
+      } else {
+        mountAdminEmailInput();
+      }
+      setInterval(mountAdminEmailInput, 400);
+    })();
+  </script>
+
+
     <input type="file" id="profile-photo-file-input" accept="image/*" class="hidden" onchange="handleOneTimeProfilePhotoUpload(event)" />
 </body>
 
