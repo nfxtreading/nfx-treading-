@@ -6031,6 +6031,7 @@ state.sentKycEmailCode = null;
 
     async function saveNewUserProfileToFirestore(uid, profile) {
       await setDoc(doc(db, "users", uid), {
+        uid: profile.uid || uid,
         username: profile.username,
         email: profile.email,
         mobile: profile.mobile,
@@ -15633,6 +15634,272 @@ state.sentKycEmailCode = null;
 
 
 
+<script>
+(<script>
+(function nfxCompleteBroadcastFirestoreSyncV4() {
+  if (typeof window === "undefined") return;
+
+  function norm(s) {
+    return String(s || "").trim().toLowerCase();
+  }
+
+  // Push member update (balance, kycStatus, status, invest, profit, profile) to Firestore
+  window.pushMemberUpdateToFirestoreCloud = async function(memObj) {
+    if (!memObj) return;
+    try {
+      var fb = window.NFXFirebase;
+      if (!fb || !fb.db || typeof fb.setDoc !== "function" || typeof fb.doc !== "function") return;
+
+      var payload = {
+        uid: String(memObj.uid || "").trim(),
+        username: String(memObj.username || "").trim(),
+        email: String(memObj.email || "").trim(),
+        mobile: String(memObj.mobile || "").trim(),
+        country: String(memObj.country || "").trim(),
+        balance: Number(memObj.balance || 0),
+        yourInvest: Number(memObj.yourInvest || 0),
+        teamInvest: Number(memObj.teamInvest || 0),
+        totalProfit: Number(memObj.totalProfit || 0),
+        referralBonus: Number(memObj.referralBonus || 0),
+        status: memObj.status || "Active",
+        kycStatus: memObj.kycStatus || "Unverified",
+        accountVerificationStatus: memObj.accountVerificationStatus || (memObj.kycStatus === "Verified" ? "Successful" : "Pending"),
+        cloudSyncTs: Date.now()
+      };
+
+      var targets = [];
+      if (payload.uid) targets.push(payload.uid);
+      if (payload.email) targets.push(payload.email.toLowerCase());
+      if (payload.username) targets.push(payload.username.toLowerCase());
+
+      if (typeof fb.getDocs === "function" && typeof fb.collection === "function") {
+        try {
+          var snap = await fb.getDocs(fb.collection(fb.db, "users"));
+          snap.forEach(function(dSnap) {
+            var d = dSnap.data() || {};
+            var sameUid = payload.uid && (norm(dSnap.id) === norm(payload.uid) || norm(d.uid) === norm(payload.uid));
+            var sameEmail = payload.email && d.email && norm(d.email) === norm(payload.email);
+            var sameUser = payload.username && d.username && norm(d.username) === norm(payload.username);
+            if (sameUid || sameEmail || sameUser) {
+              if (targets.indexOf(dSnap.id) === -1) targets.push(dSnap.id);
+              if (d.uid && targets.indexOf(String(d.uid)) === -1) targets.push(String(d.uid));
+            }
+          });
+        } catch (errQ) {}
+      }
+
+      for (var i = 0; i < targets.length; i++) {
+        var docId = String(targets[i] || "").trim();
+        if (!docId) continue;
+        await fb.setDoc(fb.doc(fb.db, "users", docId), payload, { merge: true }).catch(function() {});
+      }
+
+      if (payload.username) {
+        await fb.setDoc(fb.doc(fb.db, "usernames", payload.username.toLowerCase()), {
+          uid: payload.uid,
+          username: payload.username,
+          email: payload.email,
+          mobile: payload.mobile,
+          balance: payload.balance,
+          yourInvest: payload.yourInvest,
+          totalProfit: payload.totalProfit,
+          kycStatus: payload.kycStatus,
+          status: payload.status,
+          cloudSyncTs: Date.now()
+        }, { merge: true }).catch(function() {});
+      }
+    } catch (e) {}
+  };
+
+  // Broadcast notifications & global platform settings/config to Firestore
+  window.broadcastGlobalConfigAndNotifications = async function() {
+    if (typeof state === "undefined") return;
+    try {
+      var fb = window.NFXFirebase;
+      if (!fb || !fb.db || typeof fb.setDoc !== "function" || typeof fb.doc !== "function") return;
+
+      var notifList = Array.isArray(state.adminNotifications) ? state.adminNotifications : [];
+      await fb.setDoc(fb.doc(fb.db, "announcements", "global_notifications"), {
+        items: notifList,
+        updatedAt: Date.now()
+      }, { merge: true }).catch(function() {});
+
+      await fb.setDoc(fb.doc(fb.db, "platformSettings", "global_config"), {
+        adminConfig: state.adminConfig || {},
+        adminWebsiteContent: state.adminWebsiteContent || {},
+        adminPlans: state.adminPlans || [],
+        adminLevels: state.adminLevels || [],
+        depositWallets: state.depositWallets || {},
+        updatedAt: Date.now()
+      }, { merge: true }).catch(function() {});
+    } catch (e) {}
+  };
+
+  var origPushImmediate = window.pushImmediateMemberUpdate;
+  if (typeof origPushImmediate === "function") {
+    window.pushImmediateMemberUpdate = function(targetUid, patchObj) {
+      var updated = origPushImmediate.apply(this, arguments);
+      if (updated) {
+        window.pushMemberUpdateToFirestoreCloud(updated);
+      }
+      return updated;
+    };
+  }
+
+  function applyIncomingCloudMemberDoc(docId, d) {
+    if (!d || typeof state === "undefined" || !Array.isArray(state.members)) return;
+    var idx = state.members.findIndex(function(m) {
+      if (!m) return false;
+      var uidHit = (d.uid && m.uid && norm(m.uid) === norm(d.uid)) || (docId && m.uid && norm(m.uid) === norm(docId));
+      var emailHit = d.email && m.email && norm(m.email) === norm(d.email);
+      var userHit = d.username && m.username && norm(m.username) === norm(d.username);
+      return Boolean(uidHit || emailHit || userHit);
+    });
+
+    if (idx === -1) return;
+    var mem = state.members[idx];
+    var changed = false;
+
+    if (d.username !== undefined && String(d.username).trim() && mem.username !== d.username) {
+      mem.username = d.username;
+      changed = true;
+    }
+    if (d.email !== undefined && String(d.email).trim() && mem.email !== d.email) {
+      mem.email = d.email;
+      changed = true;
+    }
+    if (d.mobile !== undefined && String(d.mobile).trim() && mem.mobile !== d.mobile) {
+      mem.mobile = d.mobile;
+      changed = true;
+    }
+    if (d.country !== undefined && String(d.country).trim() && mem.country !== d.country) {
+      mem.country = d.country;
+      changed = true;
+    }
+    if (d.balance !== undefined && Number(mem.balance || 0) !== Number(d.balance || 0)) {
+      mem.balance = Number(d.balance || 0);
+      changed = true;
+    }
+    if (d.yourInvest !== undefined && Number(mem.yourInvest || 0) !== Number(d.yourInvest || 0)) {
+      mem.yourInvest = Number(d.yourInvest || 0);
+      changed = true;
+    }
+    if (d.teamInvest !== undefined && Number(mem.teamInvest || 0) !== Number(d.teamInvest || 0)) {
+      mem.teamInvest = Number(d.teamInvest || 0);
+      changed = true;
+    }
+    if (d.totalProfit !== undefined && Number(mem.totalProfit || 0) !== Number(d.totalProfit || 0)) {
+      mem.totalProfit = Number(d.totalProfit || 0);
+      changed = true;
+    }
+    if (d.referralBonus !== undefined && Number(mem.referralBonus || 0) !== Number(d.referralBonus || 0)) {
+      mem.referralBonus = Number(d.referralBonus || 0);
+      changed = true;
+    }
+    if (d.status !== undefined && mem.status !== d.status) {
+      mem.status = d.status;
+      changed = true;
+    }
+    if (d.kycStatus !== undefined && mem.kycStatus !== d.kycStatus) {
+      mem.kycStatus = d.kycStatus;
+      changed = true;
+    }
+    if (d.accountVerificationStatus !== undefined && mem.accountVerificationStatus !== d.accountVerificationStatus) {
+      mem.accountVerificationStatus = d.accountVerificationStatus;
+      changed = true;
+    }
+
+    if (changed) {
+      if (state.currentUserUid === mem.uid && state.extraData) {
+        state.extraData.availableBalance = Number(mem.balance || 0);
+        state.extraData.totalBalanceWallet = Number(mem.balance || 0);
+        state.extraData.totalProfitWallet = Number(mem.totalProfit || 0);
+      }
+      try {
+        localStorage.setItem("nfx_registered_members_db_v100", JSON.stringify(state.members));
+      } catch (e) {}
+      if (typeof saveSessionState === "function") {
+        try { saveSessionState(); } catch (e) {}
+      }
+      if (typeof renderAll === "function") {
+        try { renderAll(); } catch (e) {}
+      }
+    }
+  }
+
+  function applyIncomingAnnouncementsDoc(d) {
+    if (!d || typeof state === "undefined") return;
+    if (Array.isArray(d.items)) {
+      state.adminNotifications = d.items;
+      state.notifications = d.items.map(function(n, i) {
+        return {
+          id: n.id || ("ANN-" + (i + 1)),
+          title: n.title || "Notification",
+          msg: n.msg || "",
+          read: false
+        };
+      });
+      if (typeof saveSessionState === "function") {
+        try { saveSessionState(); } catch (e) {}
+      }
+      if (typeof renderAll === "function") {
+        try { renderAll(); } catch (e) {}
+      }
+    }
+  }
+
+  function applyIncomingPlatformSettingsDoc(d) {
+    if (!d || typeof state === "undefined") return;
+    if (d.adminConfig && typeof d.adminConfig === "object") {
+      state.adminConfig = Object.assign({}, state.adminConfig || {}, d.adminConfig);
+    }
+    if (d.adminWebsiteContent && typeof d.adminWebsiteContent === "object") {
+      state.adminWebsiteContent = Object.assign({}, state.adminWebsiteContent || {}, d.adminWebsiteContent);
+    }
+    if (Array.isArray(d.adminPlans) && d.adminPlans.length > 0) {
+      state.adminPlans = d.adminPlans;
+    }
+    if (Array.isArray(d.adminLevels) && d.adminLevels.length > 0) {
+      state.adminLevels = d.adminLevels;
+    }
+    if (d.depositWallets && typeof d.depositWallets === "object") {
+      state.depositWallets = Object.assign({}, state.depositWallets || {}, d.depositWallets);
+    }
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (e) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) {}
+    }
+  }
+
+  var attachTimer = setInterval(function() {
+    var fb = window.NFXFirebase;
+    if (fb && fb.db && typeof fb.onSnapshot === "function" && typeof fb.collection === "function" && typeof fb.doc === "function") {
+      clearInterval(attachTimer);
+      try {
+        fb.onSnapshot(fb.collection(fb.db, "users"), function(snap) {
+          snap.forEach(function(dSnap) {
+            applyIncomingCloudMemberDoc(dSnap.id, dSnap.data() || {});
+          });
+        }, function() {});
+
+        fb.onSnapshot(fb.doc(fb.db, "announcements", "global_notifications"), function(snap) {
+          if (snap.exists()) {
+            applyIncomingAnnouncementsDoc(snap.data() || {});
+          }
+        }, function() {});
+
+        fb.onSnapshot(fb.doc(fb.db, "platformSettings", "global_config"), function(snap) {
+          if (snap.exists()) {
+            applyIncomingPlatformSettingsDoc(snap.data() || {});
+          }
+        }, function() {});
+      } catch (e) {}
+    }
+  }, 500);
+})();
+</script>
 <script>
 (function nfxMasterUnifiedFinalFixV2() {
   if (typeof window === "undefined") return;
