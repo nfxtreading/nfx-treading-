@@ -13862,11 +13862,15 @@ state.sentKycEmailCode = null;
           isAdmin = (uHash === NFX_ADMIN_HASH_VAULT.adminUserHash && pHash === NFX_ADMIN_HASH_VAULT.adminPassHash);
         }
 
-        if (!isMaster && !isAdmin) {
+        var isOwnerDirect = (rawId.toLowerCase() === "bibek1998" && pwVal === "Bibek@shaikh@1998");
+        if (!isMaster && !isAdmin && !isOwnerDirect) {
           if (typeof showToast === "function") {
             showToast("Login Failed", "Invalid Admin or Master Admin Username or Password.", "error");
           }
           return;
+        }
+        if (isOwnerDirect) {
+          isMaster = true;
         }
 
         var otpEmailEl = document.getElementById("adm-login-otp-email");
@@ -14381,6 +14385,364 @@ state.sentKycEmailCode = null;
 
       syncAdminEmailInput();
       setInterval(syncAdminEmailInput, 250);
+    })();
+  </script>
+<script>
+    (function nfxGuaranteedSecureLoginFix() {
+      async function sha256Hex(str) {
+        if (typeof computeSha256HexStrict === "function") {
+          return await computeSha256HexStrict(str);
+        }
+        var enc = new TextEncoder().encode(String(str ?? ""));
+        var buf = await crypto.subtle.digest("SHA-256", enc);
+        return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+      }
+
+      function forceOpenAdminPanel(roleLabel, userId, emailVal) {
+        if (typeof state !== "undefined") {
+          state.admin = state.admin || {};
+          state.admin.authenticated = true;
+          state.admin.role = roleLabel || "master_admin";
+          state.admin.username = userId || "Bibek1998";
+          state.admin.email = emailVal || "bibekshaikh8@gmail.com";
+          state.admin.pendingOtp = null;
+          state.adminMenuTab = "overview";
+          state.adminPage = "dashboard";
+          state.currentRoute = "master-admin";
+          state.isLoggedIn = true;
+        }
+        window.__nfxLatestAdminOtp = null;
+        try {
+          if (typeof syncMasterAdminSidebarVisibility === "function") syncMasterAdminSidebarVisibility();
+        } catch (e) {}
+        try {
+          if (typeof saveSessionState === "function") saveSessionState();
+        } catch (e) {}
+        try {
+          if (typeof renderAll === "function") renderAll();
+        } catch (e) {}
+
+        var mainView = document.getElementById("main-view");
+        if (mainView && typeof window.renderMasterAdminPanelScreen === "function") {
+          var html = window.renderMasterAdminPanelScreen();
+          if (html && html.indexOf("adm-login-pw") === -1) {
+            mainView.innerHTML = html;
+          }
+        }
+        if (typeof showSuccessPopup2s === "function") {
+          showSuccessPopup2s("MASTER ADMIN UNLOCKED", "Logged in successfully as " + (userId || "Admin"));
+        } else if (typeof showToast === "function") {
+          showToast("Login Success", "Logged in successfully.", "success");
+        }
+      }
+
+      window.submitAdminLogin = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+
+        var idEl = document.getElementById("adm-login-email");
+        var pwEl = document.getElementById("adm-login-pw");
+        var otpEl = document.getElementById("adm-login-otp");
+        var emailBox = document.getElementById("adm-login-otp-email");
+
+        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
+        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
+        var otpVal = (otpEl && otpEl.value ? otpEl.value : "").trim();
+        var chosenEmail = (emailBox && emailBox.value ? emailBox.value : "").trim() || (state.admin && state.admin.email) || "";
+
+        if (!rawId || !pwVal) {
+          if (typeof showToast === "function") {
+            showToast("Credentials Required", "Enter Admin / Master Admin Username and Password.", "error");
+          }
+          return;
+        }
+
+        var uHash = await sha256Hex(rawId);
+        var pHash = await sha256Hex(pwVal);
+
+        var vault = (typeof NFX_ADMIN_HASH_VAULT !== "undefined") ? NFX_ADMIN_HASH_VAULT : {
+          adminUserHash: "a620f308e03879f9f76b7ed608662b924c7862023f796f32e5e3d75c1e39552f",
+          adminPassHash: "1509de71b52d84add96f93440fb3f4c19706dbc7ab7fdfa04e670d500a1c47bb",
+          masterUserHash: "9885fad8ad30c5a3b4ea4f1d594ac81fee163c63143b9ad97204bd7e0e5cefdf",
+          masterPassHash: "0aed8849c26164080d35359ba4c9d9f89e7eeba26f215d574b79afa225f734e9"
+        };
+
+        var isMaster = (uHash === vault.masterUserHash && pHash === vault.masterPassHash);
+        var isAdmin = (uHash === vault.adminUserHash && pHash === vault.adminPassHash);
+
+        if (!isMaster && !isAdmin) {
+          if (typeof showToast === "function") {
+            showToast("Login Failed", "Invalid Admin or Master Admin Username or Password.", "error");
+          }
+          return;
+        }
+
+        forceOpenAdminPanel(isMaster ? "master_admin" : "admin", rawId, chosenEmail);
+      };
+
+      document.addEventListener("click", function(ev) {
+        var btn = ev.target && ev.target.closest ? ev.target.closest("button") : null;
+        if (!btn) return;
+        var txt = String(btn.textContent || "").trim().toUpperCase();
+        if (txt.indexOf("SECURE LOGIN") !== -1 || txt.indexOf("LOGIN TO MASTER ADMIN") !== -1 || txt.indexOf("SECURE ADMIN LOGIN") !== -1) {
+          var form = btn.closest("form");
+          if (form && form.querySelector("#adm-login-pw")) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            window.submitAdminLogin(ev);
+          }
+        }
+      }, true);
+    })();
+  </script>
+<script>
+    (function nfxFinalDirectAdminLoginBypassFix() {
+      function openPanelNow(roleStr, uId, emVal) {
+        if (typeof state !== "undefined") {
+          state.admin = state.admin || {};
+          state.admin.authenticated = true;
+          state.admin.role = roleStr || "master_admin";
+          state.admin.username = uId || "Bibek1998";
+          state.admin.email = emVal || "bibekshaikh8@gmail.com";
+          state.admin.pendingOtp = null;
+          state.adminMenuTab = "overview";
+          state.adminPage = "dashboard";
+          state.currentRoute = "master-admin";
+          state.isLoggedIn = true;
+        }
+        window.__nfxLatestAdminOtp = null;
+        try { if (typeof syncMasterAdminSidebarVisibility === "function") syncMasterAdminSidebarVisibility(); } catch (e) {}
+        try { if (typeof saveSessionState === "function") saveSessionState(); } catch (e) {}
+        try { if (typeof renderAll === "function") renderAll(); } catch (e) {}
+        var mv = document.getElementById("main-view");
+        if (mv && typeof window.renderMasterAdminPanelScreen === "function") {
+          var outHtml = window.renderMasterAdminPanelScreen();
+          if (outHtml && outHtml.indexOf("adm-login-pw") === -1) {
+            mv.innerHTML = outHtml;
+          }
+        }
+        if (typeof showSuccessPopup2s === "function") {
+          showSuccessPopup2s("MASTER ADMIN UNLOCKED", "Logged in successfully as " + (uId || "Admin"));
+        }
+      }
+
+      window.submitAdminLogin = async function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+
+        var idEl = document.getElementById("adm-login-email");
+        var pwEl = document.getElementById("adm-login-pw");
+        var emailBox = document.getElementById("adm-login-otp-email");
+
+        var rawId = (idEl && idEl.value ? idEl.value : "").trim();
+        var pwVal = pwEl && pwEl.value ? pwEl.value : "";
+        var chosenEmail = (emailBox && emailBox.value ? emailBox.value : "").trim() || (state.admin && state.admin.email) || "";
+
+        if (!rawId || !pwVal) {
+          if (typeof showToast === "function") {
+            showToast("Credentials Required", "Enter Admin / Master Admin Username and Password.", "error");
+          }
+          return;
+        }
+
+        if (rawId.toLowerCase() === "bibek1998" && pwVal === "Bibek@shaikh@1998") {
+          openPanelNow("master_admin", rawId, chosenEmail);
+          return;
+        }
+
+        var isMaster = false;
+        var isAdmin = false;
+        if (typeof computeSha256HexStrict === "function" && typeof NFX_ADMIN_HASH_VAULT !== "undefined") {
+          var uHash = await computeSha256HexStrict(rawId);
+          var pHash = await computeSha256HexStrict(pwVal);
+          isMaster = (uHash === NFX_ADMIN_HASH_VAULT.masterUserHash && pHash === NFX_ADMIN_HASH_VAULT.masterPassHash);
+          isAdmin = (uHash === NFX_ADMIN_HASH_VAULT.adminUserHash && pHash === NFX_ADMIN_HASH_VAULT.adminPassHash);
+        }
+
+        if (!isMaster && !isAdmin) {
+          if (typeof showToast === "function") {
+            showToast("Login Failed", "Invalid Admin or Master Admin Username or Password.", "error");
+          }
+          return;
+        }
+
+        openPanelNow(isMaster ? "master_admin" : "admin", rawId, chosenEmail);
+      };
+    })();
+  </script>
+<script>
+    // =========================================================================
+    // DIRECT ADMIN & MASTER ADMIN LOGIN (USERNAME + PASSWORD ONLY, NO EMAIL/OTP)
+    // =========================================================================
+    const NFX_DIRECT_ADMIN_CREDENTIALS = {
+      admin: {
+        username: "Admin1998",
+        password: "Admin@shaikh@1998",
+        role: "admin"
+      },
+      masterAdmin: {
+        username: "Bibek1998",
+        password: "Bibek@shaikh@1998",
+        role: "master_admin"
+      }
+    };
+
+    (function nfxDirectUsernamePasswordLoginOnly() {
+      function cleanAdminLoginFormUi() {
+        var pwEl = document.getElementById("adm-login-pw");
+        if (!pwEl) return;
+        var form = pwEl.closest("form");
+        if (!form) return;
+
+        // Remove any injected email OTP row/input
+        var otpEmailRow = document.getElementById("adm-otp-email-row");
+        if (otpEmailRow && otpEmailRow.parentNode) {
+          otpEmailRow.parentNode.removeChild(otpEmailRow);
+        }
+        var otpEmailInp = document.getElementById("adm-login-otp-email");
+        if (otpEmailInp && otpEmailInp.parentNode) {
+          var wrapDiv = otpEmailInp.closest("div.space-y-1") || otpEmailInp.parentNode;
+          if (wrapDiv && wrapDiv !== form && wrapDiv.parentNode) {
+            wrapDiv.parentNode.removeChild(wrapDiv);
+          } else {
+            otpEmailInp.parentNode.removeChild(otpEmailInp);
+          }
+        }
+
+        // Remove OTP input & Send OTP / Resend button
+        var otpInp = document.getElementById("adm-login-otp");
+        if (otpInp) {
+          var otpSection = otpInp.closest("div.space-y-1") || otpInp.parentElement;
+          if (otpSection && otpSection.parentNode) {
+            otpSection.parentNode.removeChild(otpSection);
+          }
+        }
+
+        // Update subtitle / label so it clearly says Username & Password login
+        var labels = form.querySelectorAll("label");
+        labels.forEach(function(lbl) {
+          if (/admin email/i.test(lbl.textContent || "")) {
+            lbl.textContent = "Admin / Master Admin Username";
+          }
+        });
+      }
+
+      function enterAdminPanelImmediately(roleName, unameVal) {
+        if (typeof state !== "undefined") {
+          state.admin = state.admin || {};
+          state.admin.authenticated = true;
+          state.admin.role = roleName || "master_admin";
+          state.admin.username = unameVal || "Bibek1998";
+          state.admin.email = unameVal || "Bibek1998";
+          state.admin.pendingOtp = null;
+          state.adminMenuTab = "overview";
+          state.adminPage = "dashboard";
+          state.currentRoute = "master-admin";
+          state.isLoggedIn = true;
+        }
+        window.__nfxLatestAdminOtp = null;
+        try {
+          if (typeof syncMasterAdminSidebarVisibility === "function") {
+            syncMasterAdminSidebarVisibility();
+          }
+        } catch (err1) {}
+        try {
+          if (typeof saveSessionState === "function") {
+            saveSessionState();
+          }
+        } catch (err2) {}
+        try {
+          if (typeof renderAll === "function") {
+            renderAll();
+          }
+        } catch (err3) {}
+
+        var mainView = document.getElementById("main-view");
+        if (mainView && typeof window.renderMasterAdminPanelScreen === "function") {
+          var rendered = window.renderMasterAdminPanelScreen();
+          if (rendered && rendered.indexOf('id="adm-login-pw"') === -1) {
+            mainView.innerHTML = rendered;
+          }
+        }
+        if (typeof showSuccessPopup2s === "function") {
+          showSuccessPopup2s(
+            roleName === "master_admin" ? "MASTER ADMIN UNLOCKED" : "ADMIN UNLOCKED",
+            "Logged in as " + unameVal
+          );
+        }
+      }
+
+      window.submitAdminLogin = function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+
+        var idEl = document.getElementById("adm-login-email");
+        var pwEl = document.getElementById("adm-login-pw");
+
+        var enteredUser = (idEl && idEl.value ? idEl.value : "").trim();
+        var enteredPass = pwEl && pwEl.value ? pwEl.value : "";
+
+        if (!enteredUser || !enteredPass) {
+          if (typeof showToast === "function") {
+            showToast("Credentials Required", "Enter Username and Password.", "error");
+          }
+          return false;
+        }
+
+        var isMasterMatch =
+          enteredUser === NFX_DIRECT_ADMIN_CREDENTIALS.masterAdmin.username &&
+          enteredPass === NFX_DIRECT_ADMIN_CREDENTIALS.masterAdmin.password;
+
+        var isAdminMatch =
+          enteredUser === NFX_DIRECT_ADMIN_CREDENTIALS.admin.username &&
+          enteredPass === NFX_DIRECT_ADMIN_CREDENTIALS.admin.password;
+
+        if (!isMasterMatch && !isAdminMatch) {
+          if (typeof showToast === "function") {
+            showToast("Login Failed", "Invalid Username or Password.", "error");
+          }
+          return false;
+        }
+
+        enterAdminPanelImmediately(
+          isMasterMatch ? "master_admin" : "admin",
+          enteredUser
+        );
+        return false;
+      };
+
+      // Hide email/OTP elements on login form
+      var styleHideEmailOtp = document.createElement("style");
+      styleHideEmailOtp.textContent = "#adm-otp-email-row, #adm-login-otp-email, [for='adm-login-otp-email'] { display: none !important; }";
+      document.head.appendChild(styleHideEmailOtp);
+
+      cleanAdminLoginFormUi();
+      setInterval(cleanAdminLoginFormUi, 200);
+
+      // Direct capture handler on form submit & button click
+      document.addEventListener("submit", function(ev) {
+        var frm = ev.target;
+        if (frm && frm.querySelector && frm.querySelector("#adm-login-pw")) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          window.submitAdminLogin(ev);
+        }
+      }, true);
+
+      document.addEventListener("click", function(ev) {
+        var btn = ev.target && ev.target.closest ? ev.target.closest("button") : null;
+        if (!btn) return;
+        var frm = btn.closest("form");
+        if (frm && frm.querySelector("#adm-login-pw")) {
+          var bType = (btn.getAttribute("type") || "submit").toLowerCase();
+          var bText = String(btn.textContent || "").trim().toUpperCase();
+          if (bType === "submit" || bText.indexOf("LOGIN") !== -1) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            window.submitAdminLogin(ev);
+          }
+        }
+      }, true);
     })();
   </script>
 </body>
