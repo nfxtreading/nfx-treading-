@@ -9308,7 +9308,165 @@ state.sentKycEmailCode = null;
     bootV64();
   }
 })();
-</script>
 
+
+(function nfxRegisterDraftPersistenceV67() {
+  if (typeof window === "undefined") return;
+
+  var REG_DRAFT_KEY = "nfx_register_form_draft_v67";
+  var FIELD_IDS = ["rg-user", "rg-country", "rg-mobile", "rg-email", "rg-code", "rg-pw", "rg-cpw", "rg-inv"];
+
+  function readDraftFromStorage() {
+    try {
+      var raw = localStorage.getItem(REG_DRAFT_KEY);
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === "object") ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeDraftToStorage(obj) {
+    try {
+      localStorage.setItem(REG_DRAFT_KEY, JSON.stringify(obj || {}));
+    } catch (e) {}
+  }
+
+  function captureRegisterFormInputs() {
+    var draft = readDraftFromStorage();
+    var touched = false;
+    FIELD_IDS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        draft[id] = el.value;
+        touched = true;
+      }
+    });
+    if (touched) {
+      writeDraftToStorage(draft);
+    }
+  }
+
+  function restoreRegisterFormInputs() {
+    var draft = readDraftFromStorage();
+    if (!draft || typeof draft !== "object") return;
+
+    // Also pick up URL referral param (?ref=... or #ref=...) if invite field is empty
+    var urlRef = "";
+    try {
+      var h = window.location.hash || "";
+      if (h.indexOf("#ref=") === 0) {
+        urlRef = decodeURIComponent(h.replace("#ref=", "").split("&")[0]).trim();
+      } else if (h.indexOf("#invite=") === 0) {
+        urlRef = decodeURIComponent(h.replace("#invite=", "").split("&")[0]).trim();
+      }
+      if (!urlRef && window.location.search) {
+        var sp = new URLSearchParams(window.location.search);
+        urlRef = (sp.get("ref") || sp.get("invite") || "").trim();
+      }
+    } catch (e) {}
+
+    FIELD_IDS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (id === "rg-inv" && urlRef && !draft[id]) {
+        el.value = urlRef;
+        draft[id] = urlRef;
+      } else if (Object.prototype.hasOwnProperty.call(draft, id) && draft[id] !== undefined && draft[id] !== null && draft[id] !== "") {
+        el.value = draft[id];
+      }
+    });
+    writeDraftToStorage(draft);
+  }
+
+  function clearRegisterFormDraft() {
+    try {
+      localStorage.removeItem(REG_DRAFT_KEY);
+    } catch (e) {}
+  }
+
+  // Save on every input/change in the register form
+  document.addEventListener("input", function(ev) {
+    if (ev && ev.target && FIELD_IDS.indexOf(ev.target.id) !== -1) {
+      captureRegisterFormInputs();
+    }
+  }, true);
+
+  document.addEventListener("change", function(ev) {
+    if (ev && ev.target && FIELD_IDS.indexOf(ev.target.id) !== -1) {
+      captureRegisterFormInputs();
+    }
+  }, true);
+
+  // Save when user switches tabs/apps or leaves page to fetch OTP, and restore when coming back
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      captureRegisterFormInputs();
+    } else {
+      restoreRegisterFormInputs();
+    }
+  });
+
+  window.addEventListener("pagehide", captureRegisterFormInputs);
+  window.addEventListener("pageshow", restoreRegisterFormInputs);
+  window.addEventListener("focus", restoreRegisterFormInputs);
+
+  // Wrap sendEmailCode so form data is always saved before/after clicking Send Code
+  var prevSendEmailCodeV67 = window.sendEmailCode;
+  if (typeof prevSendEmailCodeV67 === "function") {
+    window.sendEmailCode = async function(mode, explicitEmail, btnEl) {
+      if (mode === "register") {
+        captureRegisterFormInputs();
+      }
+      var res = await prevSendEmailCodeV67(mode, explicitEmail, btnEl);
+      if (mode === "register") {
+        restoreRegisterFormInputs();
+      }
+      return res;
+    };
+  }
+
+  // Wrap renderAll so whenever the Register form is rendered or re-rendered, saved inputs stay intact
+  var prevRenderAllV67 = window.renderAll;
+  if (typeof prevRenderAllV67 === "function") {
+    window.renderAll = function() {
+      if (typeof state !== "undefined" && state.currentRoute === "register") {
+        captureRegisterFormInputs();
+      }
+      var out = prevRenderAllV67.apply(this, arguments);
+      if (typeof state !== "undefined" && state.currentRoute === "register") {
+        restoreRegisterFormInputs();
+      }
+      return out;
+    };
+  }
+
+  // Clear saved draft only after successful registration completes
+  var prevHandleRegisterV67 = window.handleRegisterSubmit;
+  if (typeof prevHandleRegisterV67 === "function") {
+    window.handleRegisterSubmit = async function(e) {
+      captureRegisterFormInputs();
+      var prevRoute = typeof state !== "undefined" ? state.currentRoute : "register";
+      var prevLoggedIn = typeof state !== "undefined" ? Boolean(state.isLoggedIn) : false;
+      var result = await prevHandleRegisterV67(e);
+      if (typeof state !== "undefined" && (state.isLoggedIn || state.currentRoute !== prevRoute)) {
+        clearRegisterFormDraft();
+      } else if (!prevLoggedIn) {
+        restoreRegisterFormInputs();
+      }
+      return result;
+    };
+  }
+
+  // Restore immediately on load if on register route
+  setTimeout(function() {
+    if (typeof state !== "undefined" && state.currentRoute === "register") {
+      restoreRegisterFormInputs();
+    }
+  }, 50);
+})();
+
+</script>
 </body>
 </html>
