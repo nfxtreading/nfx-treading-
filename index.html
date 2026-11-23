@@ -22932,7 +22932,6 @@ $1'
 
   function getIstDateKeyAndTime(dateObj) {
     var d = dateObj instanceof Date ? dateObj : new Date();
-    // Convert to Indian Standard Time (UTC+5:30)
     var utcMs = d.getTime() + (d.getTimezoneOffset() * 60000);
     var istDate = new Date(utcMs + (5.5 * 3600000));
     var yyyy = istDate.getUTCFullYear();
@@ -23016,7 +23015,6 @@ $1'
     return m.activePlansList;
   }
 
-  // Run daily percentage profit payout at IST 12:00 AM (00:00 IST) for all members with any purchased plan
   function processIstMidnightDailyProfitPayout(forceCheck = false) {
     var ist = getIstDateKeyAndTime(new Date());
     if (!forceCheck && !ist.isMidnightWindow) return 0;
@@ -23103,7 +23101,6 @@ $1'
 
   window.runIstMidnightDailyProfitCheck = processIstMidnightDailyProfitPayout;
 
-  // Immediate referral registration counter (Register count increases right away when someone registers with a member's referral)
   function syncImmediateReferralRegisterRecord(inviterCodeOrUid, newMemberObj) {
     if (typeof ensureReferralStore === "function") ensureReferralStore();
     state.referralHistoryRecords = Array.isArray(state.referralHistoryRecords) ? state.referralHistoryRecords : [];
@@ -23141,7 +23138,6 @@ $1'
       state.referralHistoryRecords.unshift(rec);
     }
 
-    // Count all A-level registered referrals accurately without double counting
     var inviterRefs = state.referralHistoryRecords.filter(function(r) {
       return r.inviterUid === inviter.uid || normCode(r.inviterCode) === normCode(inviter.referralCode || inviter.uid);
     });
@@ -23152,7 +23148,6 @@ $1'
     syncImmediateReferralRegisterRecord(inviterCodeOrUid, newMemberObj);
   };
 
-  // Immediate Active Member + Bonus Wallet Credit when referred member invests
   window.awardReferralJoiningBonusOnInvest = function(investorMember, investedAmount) {
     if (typeof ensureReferralStore === "function") ensureReferralStore();
     state.referralHistoryRecords = Array.isArray(state.referralHistoryRecords) ? state.referralHistoryRecords : [];
@@ -23239,7 +23234,6 @@ $1'
     return bonusAmt;
   };
 
-  // Keep Team Active Members & Referral counts live in Team screen and Referral Program
   var origRenderTeamScreenV54 = window.renderTeamScreen;
   if (typeof origRenderTeamScreenV54 === "function") {
     window.renderTeamScreen = function(user) {
@@ -23250,7 +23244,6 @@ $1'
     };
   }
 
-  // Check every 15 seconds so exact IST 12:00 AM (00:00 IST) triggers automatically
   setInterval(function() {
     processIstMidnightDailyProfitPayout(false);
   }, 15000);
@@ -23261,6 +23254,388 @@ $1'
     });
   } else {
     processIstMidnightDailyProfitPayout(false);
+  }
+})();
+</script>
+
+<script>
+(function nfxUnifiedAuthAndPersistenceFixV55() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  var UNIFIED_USERS_KEY = "nfx_unified_registered_users_v55";
+  var SESSION_STORAGE_KEYS = [
+    "nfx_member_original_creds_v53",
+    "nfx_treading_session_v16",
+    "nfx_member_session_v50",
+    "nfx_members_db_v50",
+    "nfx_session_db_v50"
+  ];
+
+  function norm(v) {
+    return String(v || "").trim().toLowerCase();
+  }
+
+  function digits(v) {
+    return String(v || "").replace(/[^0-9]/g, "");
+  }
+
+  function isRealMemberRecord(m) {
+    if (!m || typeof m !== "object") return false;
+    var hasIdentity = Boolean(
+      (m.username && String(m.username).trim()) ||
+      (m.email && String(m.email).trim()) ||
+      (m.mobile && digits(m.mobile).length >= 6)
+    );
+    var hasPw = Boolean(m.password && String(m.password).length > 0);
+    return hasIdentity && hasPw;
+  }
+
+  function readAllStoredUsers() {
+    var mapByKey = {};
+
+    function addRecord(m) {
+      if (!isRealMemberRecord(m)) return;
+      var key = (m.uid && String(m.uid).trim()) ||
+                (m.email && norm(m.email)) ||
+                (m.username && norm(m.username)) ||
+                (m.mobile && digits(m.mobile));
+      if (!key) return;
+      if (mapByKey[key]) {
+        // Preserve existing non-empty password & fields cleanly
+        var prev = mapByKey[key];
+        mapByKey[key] = Object.assign({}, prev, m, {
+          password: m.password || prev.password,
+          username: m.username || prev.username,
+          email: m.email || prev.email,
+          mobile: m.mobile || prev.mobile
+        });
+      } else {
+        mapByKey[key] = Object.assign({}, m);
+      }
+    }
+
+    // 1. Read from unified V55 registry
+    try {
+      var raw55 = localStorage.getItem(UNIFIED_USERS_KEY);
+      if (raw55) {
+        var parsed55 = JSON.parse(raw55);
+        if (Array.isArray(parsed55)) parsed55.forEach(addRecord);
+      }
+    } catch (e) {}
+
+    // 2. Read from V53 vault
+    try {
+      var raw53 = localStorage.getItem("nfx_member_original_creds_v53");
+      if (raw53) {
+        var parsed53 = JSON.parse(raw53);
+        if (parsed53 && typeof parsed53 === "object") {
+          Object.keys(parsed53).forEach(function(k) { addRecord(parsed53[k]); });
+        }
+      }
+    } catch (e) {}
+
+    // 3. Read from V16 session
+    try {
+      var raw16 = localStorage.getItem("nfx_treading_session_v16");
+      if (raw16) {
+        var parsed16 = JSON.parse(raw16);
+        if (parsed16 && Array.isArray(parsed16.members)) parsed16.members.forEach(addRecord);
+      }
+    } catch (e) {}
+
+    // 4. Read from current runtime state.members
+    if (Array.isArray(state.members)) {
+      state.members.forEach(addRecord);
+    }
+
+    return Object.keys(mapByKey).map(function(k) { return mapByKey[k]; });
+  }
+
+  function writeAllStoredUsers(userList) {
+    var cleanList = Array.isArray(userList) ? userList.filter(isRealMemberRecord) : [];
+    try {
+      localStorage.setItem(UNIFIED_USERS_KEY, JSON.stringify(cleanList));
+    } catch (e) {}
+
+    // Also sync to V53 vault so every lookup source stays in sync
+    try {
+      var v53Obj = {};
+      cleanList.forEach(function(m) {
+        var entry = {
+          uid: m.uid || "",
+          username: m.username || "",
+          email: m.email || "",
+          mobile: m.mobile || "",
+          country: m.country || "",
+          password: m.password || "",
+          referralCode: m.referralCode || "",
+          referredBy: m.referredBy || null,
+          updatedAt: Date.now()
+        };
+        if (m.uid) v53Obj["uid:" + norm(m.uid)] = entry;
+        if (m.username) v53Obj["user:" + norm(m.username)] = entry;
+        if (m.email) v53Obj["email:" + norm(m.email)] = entry;
+        if (m.mobile && digits(m.mobile).length >= 6) v53Obj["mob:" + digits(m.mobile)] = entry;
+      });
+      localStorage.setItem("nfx_member_original_creds_v53", JSON.stringify(v53Obj));
+    } catch (e) {}
+
+    // Sync into state.members without wiping non-registered template slot
+    state.members = Array.isArray(state.members) ? state.members : [];
+    cleanList.forEach(function(u) {
+      var idx = state.members.findIndex(function(m) {
+        return (u.uid && m.uid && norm(m.uid) === norm(u.uid)) ||
+               (u.username && m.username && norm(m.username) === norm(u.username)) ||
+               (u.email && m.email && norm(m.email) === norm(u.email));
+      });
+      if (idx >= 0) {
+        state.members[idx] = Object.assign({}, state.members[idx], u, {
+          password: u.password || state.members[idx].password
+        });
+      } else {
+        state.members.push(u);
+      }
+    });
+  }
+
+  function findMemberByIdentifier(identifier) {
+    var idLow = norm(identifier);
+    var idDig = digits(identifier);
+    if (!idLow && !idDig) return null;
+
+    var pool = readAllStoredUsers();
+    return pool.find(function(m) {
+      if (!m) return false;
+      var uMatch = m.username && norm(m.username) === idLow;
+      var eMatch = m.email && norm(m.email) === idLow;
+      var uidMatch = m.uid && norm(m.uid) === idLow;
+      var pMatch = idDig.length >= 6 && m.mobile && digits(m.mobile) === idDig;
+      return Boolean(uMatch || eMatch || uidMatch || pMatch);
+    }) || null;
+  }
+
+  // Ensure restoreSessionState never erases saved users or overwrites their passwords
+  var origRestoreV55 = window.restoreSessionState;
+  window.restoreSessionState = function() {
+    var ok = typeof origRestoreV55 === "function" ? origRestoreV55.apply(this, arguments) : false;
+    var stored = readAllStoredUsers();
+    if (stored.length > 0) {
+      writeAllStoredUsers(stored);
+      return true;
+    }
+    return ok;
+  };
+
+  // Authoritative Register Handler: saves exact username, email, mobile, password & opens Dashboard directly
+  window.handleRegisterSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var uname = (document.getElementById("rg-user")?.value || "").trim();
+    var country = (document.getElementById("rg-country")?.value || "").trim();
+    var mobile = (document.getElementById("rg-mobile")?.value || "").trim();
+    var email = (document.getElementById("rg-email")?.value || "").trim();
+    var pw = document.getElementById("rg-pw")?.value || "";
+    var cpw = document.getElementById("rg-cpw")?.value || "";
+    var inv = (document.getElementById("rg-inv")?.value || "").trim();
+
+    if (!uname) {
+      if (typeof showToast === "function") showToast("Username Required", "Please enter a Username.", "error");
+      return false;
+    }
+    if (!pw || pw.length < 4) {
+      if (typeof showToast === "function") showToast("Password Required", "Please enter a Password.", "error");
+      return false;
+    }
+    if (cpw && pw !== cpw) {
+      if (typeof showToast === "function") showToast("Password Mismatch", "Password and Confirm Password must match.", "error");
+      return false;
+    }
+
+    var existing = (uname && findMemberByIdentifier(uname)) ||
+                   (email && findMemberByIdentifier(email)) ||
+                   (mobile && digits(mobile).length >= 6 && findMemberByIdentifier(mobile)) ||
+                   null;
+
+    var uid = (existing && existing.uid) || ("NFX-" + Math.floor(2000 + Math.random() * 7999));
+    var secretKey = (existing && existing.authenticatorSecret) ||
+      (typeof generateUniqueBase32Key === "function" ? generateUniqueBase32Key(uid + "_" + uname) : ("JBSWY3DPEHPK3PXP" + String(Date.now()).slice(-6)));
+
+    var newMember = Object.assign({}, existing || {}, {
+      uid: uid,
+      username: uname,
+      email: email || (existing && existing.email) || "",
+      mobile: mobile || (existing && existing.mobile) || "",
+      country: country || (existing && existing.country) || "",
+      password: pw,
+      avatar: (existing && existing.avatar) || (typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : ""),
+      authenticatorBound: Boolean(existing && existing.authenticatorBound),
+      authenticatorSecret: secretKey,
+      referralCode: (existing && existing.referralCode) || uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
+      referredBy: inv || (existing && existing.referredBy) || null,
+      referralBonus: Number((existing && existing.referralBonus) || 0),
+      balance: Number((existing && existing.balance) || 0),
+      yourInvest: Number((existing && existing.yourInvest) || 0),
+      teamInvest: Number((existing && existing.teamInvest) || 0),
+      aMembersCount: Number((existing && existing.aMembersCount) || 0),
+      aMembersInvest: Number((existing && existing.aMembersInvest) || 0),
+      bMembersCount: Number((existing && existing.bMembersCount) || 0),
+      bMembersInvest: Number((existing && existing.bMembersInvest) || 0),
+      cMembersCount: Number((existing && existing.cMembersCount) || 0),
+      cMembersInvest: Number((existing && existing.cMembersInvest) || 0),
+      totalProfit: Number((existing && existing.totalProfit) || 0),
+      investmentId: (existing && existing.investmentId) || ("#INV2026" + uid.slice(-4)),
+      planName: (existing && existing.planName) || "None",
+      startDate: (existing && existing.startDate) || "-",
+      endDate: (existing && existing.endDate) || "-",
+      status: (existing && existing.status) || "Inactive",
+      kycStatus: (existing && existing.kycStatus) || "Unverified",
+      withdrawWallets: (existing && existing.withdrawWallets) || { BEP20: null, TRC20: null, ERC20: null }
+    });
+
+    var allUsers = readAllStoredUsers().filter(function(u) {
+      return u.uid !== newMember.uid &&
+             (!uname || norm(u.username) !== norm(uname)) &&
+             (!email || norm(u.email) !== norm(email));
+    });
+    allUsers.push(newMember);
+    writeAllStoredUsers(allUsers);
+
+    if (inv && typeof registerReferralMemberRecord === "function") {
+      try { registerReferralMemberRecord(inv, newMember); } catch (errRef) {}
+    }
+
+    if (state.admin) {
+      state.admin.authenticated = false;
+      state.admin.pendingOtp = null;
+    }
+    state.currentUserUid = newMember.uid;
+    state.isLoggedIn = true;
+    state.showForgetInLogin = false;
+    state.currentRoute = "dashboard";
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
+
+    try {
+      localStorage.removeItem("nfx_explicit_logout_v50");
+      sessionStorage.removeItem("nfx_explicit_logout_v50");
+      localStorage.setItem("nfx_member_session_v50", JSON.stringify({
+        isLoggedIn: true,
+        currentUserUid: newMember.uid,
+        currentRoute: "dashboard",
+        savedAt: Date.now()
+      }));
+      sessionStorage.setItem("nfx_member_session_v50", JSON.stringify({
+        isLoggedIn: true,
+        currentUserUid: newMember.uid,
+        currentRoute: "dashboard",
+        savedAt: Date.now()
+      }));
+    } catch (e) {}
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (errS) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (errR) {}
+    }
+    var mv = document.getElementById("main-view");
+    if (mv && typeof window.renderDashboardScreen === "function") {
+      var curU = typeof activeMember === "function" ? activeMember() : newMember;
+      mv.innerHTML = window.renderDashboardScreen(curU);
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Registered!", "Welcome to NFX Treading, " + uname + "!");
+    }
+    return false;
+  };
+
+  // Authoritative Login Handler: matches registered Username / Mobile / Email / UID + Password cleanly
+  window.handleLoginSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var idEl = document.getElementById("lg-user");
+    var pwEl = document.getElementById("lg-pw");
+    var idVal = (idEl && idEl.value ? idEl.value : "").trim();
+    var pwVal = pwEl && pwEl.value ? pwEl.value : "";
+
+    if (!idVal || !pwVal) {
+      if (typeof showToast === "function") {
+        showToast("Login Required", "Please enter your registered Username and Password.", "error");
+      }
+      return false;
+    }
+
+    // Hydrate state.members from all stored sources first
+    var allUsers = readAllStoredUsers();
+    writeAllStoredUsers(allUsers);
+
+    var matched = findMemberByIdentifier(idVal);
+    if (!matched) {
+      if (typeof showToast === "function") {
+        showToast("Account Not Found", "No registered account found for this username.", "error");
+      }
+      return false;
+    }
+
+    var savedPw = String(matched.password || "");
+    var passwordOk = (pwVal === savedPw) || (pwVal.trim() === savedPw.trim());
+
+    if (!passwordOk) {
+      if (typeof showToast === "function") {
+        showToast("Incorrect Password", "Password does not match. Please try again.", "error");
+      }
+      return false;
+    }
+
+    if (state.admin) {
+      state.admin.authenticated = false;
+      state.admin.pendingOtp = null;
+    }
+    state.currentUserUid = matched.uid;
+    state.isLoggedIn = true;
+    state.showForgetInLogin = false;
+    state.currentRoute = "dashboard";
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
+
+    try {
+      localStorage.removeItem("nfx_explicit_logout_v50");
+      sessionStorage.removeItem("nfx_explicit_logout_v50");
+      localStorage.setItem("nfx_member_session_v50", JSON.stringify({
+        isLoggedIn: true,
+        currentUserUid: matched.uid,
+        currentRoute: "dashboard",
+        savedAt: Date.now()
+      }));
+      sessionStorage.setItem("nfx_member_session_v50", JSON.stringify({
+        isLoggedIn: true,
+        currentUserUid: matched.uid,
+        currentRoute: "dashboard",
+        savedAt: Date.now()
+      }));
+    } catch (e) {}
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (errS) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (errR) {}
+    }
+    var mv = document.getElementById("main-view");
+    if (mv && typeof window.renderDashboardScreen === "function") {
+      var curU = typeof activeMember === "function" ? activeMember() : matched;
+      mv.innerHTML = window.renderDashboardScreen(curU);
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Logged In!", "Welcome back, " + (matched.username || matched.uid) + "!");
+    }
+    return false;
+  };
+
+  // Initial sync on load
+  var initialUsers = readAllStoredUsers();
+  if (initialUsers.length > 0) {
+    writeAllStoredUsers(initialUsers);
   }
 })();
 </script>
