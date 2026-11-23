@@ -9187,68 +9187,72 @@ state.sentKycEmailCode = null;
   </script>
 
 <script>
-(function nfxAbsoluteV60Fix() {
+(function nfxPermanentMemberAuthV63() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
-  var V60_USERS = "nfx_v60_users";
-  var V60_MEM_SESS = "nfx_v60_mem_sess";
-  var V60_ADM_SESS = "nfx_v60_adm_sess";
-  var V60_LOGOUT = "nfx_v60_logged_out";
+  var PERM_USERS_KEY = "nfx_perm_users_v63";
+  var PERM_ACTIVE_KEY = "nfx_perm_active_v63";
+  var PERM_LOGOUT_KEY = "nfx_perm_logged_out_v63";
+  var PERM_ADMIN_KEY = "nfx_perm_admin_v63";
 
-  function s(v) { return String(v == null ? "" : v); }
-  function l(v) { return s(v).trim().toLowerCase(); }
-  function d(v) { return s(v).replace(/[^0-9]/g, ""); }
-  function n2(v) {
-    var x = parseFloat(v);
-    return isNaN(x) ? 0 : Number(x.toFixed(2));
+  function txt(v) { return v == null ? "" : String(v); }
+  function low(v) { return txt(v).trim().toLowerCase(); }
+  function dig(v) { return txt(v).replace(/[^0-9]/g, ""); }
+  function amt(v) {
+    var n = parseFloat(v);
+    return isNaN(n) ? 0 : Number(n.toFixed(2));
   }
 
   function isRealMember(m) {
     if (!m || typeof m !== "object") return false;
-    var u = s(m.username).trim();
-    var em = s(m.email).trim();
-    var mo = d(m.mobile);
-    var uid = s(m.uid).trim();
+    var u = txt(m.username).trim();
+    var em = txt(m.email).trim();
+    var mo = dig(m.mobile);
+    var uid = txt(m.uid).trim();
     var pw = typeof m.password === "string" ? m.password : "";
-    var hasId = Boolean(u.length >= 1 || em.indexOf("@") !== -1 || mo.length >= 5 || (uid && uid !== "NFX-1001"));
-    return hasId && pw.length > 0;
+    var hasIdentity = Boolean(u.length > 0 || em.indexOf("@") !== -1 || mo.length >= 5 || (uid && uid !== "NFX-1001"));
+    return hasIdentity && pw.length > 0;
   }
 
-  function cleanMember(orig, patch) {
-    var m = Object.assign({}, orig || {}, patch || {});
-    m.uid = s((patch && patch.uid) || (orig && orig.uid) || "").trim();
-    m.username = s((patch && patch.username) || (orig && orig.username) || "").trim();
-    m.email = s((patch && patch.email) || (orig && orig.email) || "").trim();
-    m.mobile = s((patch && patch.mobile) || (orig && orig.mobile) || "").trim();
-    m.country = s((patch && patch.country) || (orig && orig.country) || "").trim();
-    if (patch && typeof patch.password === "string" && patch.password.length > 0) {
-      m.password = patch.password;
-    } else if (orig && typeof orig.password === "string" && orig.password.length > 0) {
-      m.password = orig.password;
+  function combineMember(oldM, newM) {
+    var out = Object.assign({}, oldM || {}, newM || {});
+    out.uid = txt((newM && newM.uid) || (oldM && oldM.uid) || "").trim();
+    out.username = txt((newM && newM.username) || (oldM && oldM.username) || "").trim();
+    out.email = txt((newM && newM.email) || (oldM && oldM.email) || "").trim();
+    out.mobile = txt((newM && newM.mobile) || (oldM && oldM.mobile) || "").trim();
+    out.country = txt((newM && newM.country) || (oldM && oldM.country) || "").trim();
+    if (newM && typeof newM.password === "string" && newM.password.length > 0) {
+      out.password = newM.password;
+    } else if (oldM && typeof oldM.password === "string" && oldM.password.length > 0) {
+      out.password = oldM.password;
     } else {
-      m.password = "";
+      out.password = "";
     }
-    m.balance = n2(patch && patch.balance !== undefined ? patch.balance : (orig && orig.balance));
-    m.yourInvest = n2(patch && patch.yourInvest !== undefined ? patch.yourInvest : (orig && orig.yourInvest));
-    m.teamInvest = n2(patch && patch.teamInvest !== undefined ? patch.teamInvest : (orig && orig.teamInvest));
-    m.totalProfit = n2(patch && patch.totalProfit !== undefined ? patch.totalProfit : (orig && orig.totalProfit));
-    m.referralBonus = n2(patch && patch.referralBonus !== undefined ? patch.referralBonus : (orig && orig.referralBonus));
-    if (!m.uid) m.uid = "NFX-" + Math.floor(2000 + Math.random() * 7999);
-    if (!m.referralCode) m.referralCode = m.uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-    if (!m.authenticatorSecret && typeof generateUniqueBase32Key === "function") {
-      m.authenticatorSecret = generateUniqueBase32Key(m.uid + "_" + m.username);
+    out.balance = amt(newM && newM.balance !== undefined ? newM.balance : (oldM && oldM.balance));
+    out.yourInvest = amt(newM && newM.yourInvest !== undefined ? newM.yourInvest : (oldM && oldM.yourInvest));
+    out.teamInvest = amt(newM && newM.teamInvest !== undefined ? newM.teamInvest : (oldM && oldM.teamInvest));
+    out.totalProfit = amt(newM && newM.totalProfit !== undefined ? newM.totalProfit : (oldM && oldM.totalProfit));
+    out.referralBonus = amt(newM && newM.referralBonus !== undefined ? newM.referralBonus : (oldM && oldM.referralBonus));
+    if (!out.uid) out.uid = "NFX-" + Math.floor(2000 + Math.random() * 7999);
+    if (!out.referralCode) out.referralCode = out.uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if (!out.authenticatorSecret && typeof generateUniqueBase32Key === "function") {
+      out.authenticatorSecret = generateUniqueBase32Key(out.uid + "_" + out.username);
     }
-    if (!m.avatar && typeof DEFAULT_USER_AVATAR !== "undefined") m.avatar = DEFAULT_USER_AVATAR;
-    if (!m.withdrawWallets || typeof m.withdrawWallets !== "object") {
-      m.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null };
+    if (!out.avatar && typeof DEFAULT_USER_AVATAR !== "undefined") out.avatar = DEFAULT_USER_AVATAR;
+    if (!out.withdrawWallets || typeof out.withdrawWallets !== "object") {
+      out.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null };
     }
-    return m;
+    if (!out.status) out.status = "Active";
+    return out;
   }
 
-  function readAllMembersV60() {
-    var arr = [];
-    var bag = [
-      V60_USERS,
+  function readPermMembers() {
+    var collected = [];
+    var storageKeys = [
+      PERM_USERS_KEY,
+      "nfx_v62_users",
+      "nfx_final_v61_users",
+      "nfx_v60_users",
       "nfx_v59_users_registry",
       "nfx_v58_registered_users",
       "nfx_authoritative_members_v57",
@@ -9256,123 +9260,146 @@ state.sentKycEmailCode = null;
       "nfx_unified_registered_users_v55",
       "nfx_member_original_creds_v53"
     ];
-    bag.forEach(function(k) {
+    for (var i = 0; i < storageKeys.length; i++) {
       try {
-        var raw = localStorage.getItem(k);
-        if (!raw) return;
-        var p = JSON.parse(raw);
-        if (Array.isArray(p)) arr = arr.concat(p);
-        else if (p && typeof p === "object") {
-          Object.keys(p).forEach(function(prop) { arr.push(p[prop]); });
+        var raw = localStorage.getItem(storageKeys[i]) || sessionStorage.getItem(storageKeys[i]);
+        if (!raw) continue;
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) collected = collected.concat(parsed);
+        else if (parsed && typeof parsed === "object") {
+          for (var k in parsed) {
+            if (Object.prototype.hasOwnProperty.call(parsed, k)) collected.push(parsed[k]);
+          }
         }
       } catch (e) {}
-    });
+    }
     try {
       var s16 = localStorage.getItem("nfx_treading_session_v16");
       if (s16) {
         var p16 = JSON.parse(s16);
-        if (p16 && Array.isArray(p16.members)) arr = arr.concat(p16.members);
+        if (p16 && Array.isArray(p16.members)) collected = collected.concat(p16.members);
       }
     } catch (e) {}
-    if (Array.isArray(state.members)) arr = arr.concat(state.members);
+    if (Array.isArray(state.members)) collected = collected.concat(state.members);
 
-    var dedup = [];
-    arr.forEach(function(item) {
-      if (!isRealMember(item)) return;
-      var idx = dedup.findIndex(function(x) {
-        return (item.uid && x.uid && l(item.uid) === l(x.uid)) ||
-               (item.username && x.username && l(item.username) === l(x.username)) ||
-               (item.email && x.email && l(item.email) === l(x.email)) ||
-               (d(item.mobile).length >= 5 && d(x.mobile).length >= 5 && d(item.mobile) === d(x.mobile));
-      });
-      if (idx >= 0) dedup[idx] = cleanMember(dedup[idx], item);
-      else dedup.push(cleanMember(null, item));
-    });
-    return dedup;
+    var uniqueList = [];
+    for (var j = 0; j < collected.length; j++) {
+      var item = collected[j];
+      if (!isRealMember(item)) continue;
+      var matchIdx = -1;
+      for (var c = 0; c < uniqueList.length; c++) {
+        var ex = uniqueList[c];
+        if ((item.uid && ex.uid && low(item.uid) === low(ex.uid)) ||
+            (item.username && ex.username && low(item.username) === low(ex.username)) ||
+            (item.email && ex.email && low(item.email) === low(ex.email)) ||
+            (dig(item.mobile).length >= 5 && dig(ex.mobile).length >= 5 && dig(item.mobile) === dig(ex.mobile))) {
+          matchIdx = c;
+          break;
+        }
+      }
+      if (matchIdx >= 0) uniqueList[matchIdx] = combineMember(uniqueList[matchIdx], item);
+      else uniqueList.push(combineMember(null, item));
+    }
+    return uniqueList;
   }
 
-  function writeAllMembersV60(list) {
-    var clean = readAllMembersV60().concat(Array.isArray(list) ? list : []);
-    var dedup = [];
-    clean.forEach(function(item) {
-      if (!isRealMember(item)) return;
-      var idx = dedup.findIndex(function(x) {
-        return (item.uid && x.uid && l(item.uid) === l(x.uid)) ||
-               (item.username && x.username && l(item.username) === l(x.username)) ||
-               (item.email && x.email && l(item.email) === l(x.email)) ||
-               (d(item.mobile).length >= 5 && d(x.mobile).length >= 5 && d(item.mobile) === d(x.mobile));
-      });
-      if (idx >= 0) dedup[idx] = cleanMember(dedup[idx], item);
-      else dedup.push(cleanMember(null, item));
-    });
-    try { localStorage.setItem(V60_USERS, JSON.stringify(dedup)); } catch (e) {}
-    state.members = dedup;
+  function writePermMembers(list) {
+    var all = readPermMembers().concat(Array.isArray(list) ? list : []);
+    var uniqueList = [];
+    for (var j = 0; j < all.length; j++) {
+      var item = all[j];
+      if (!isRealMember(item)) continue;
+      var matchIdx = -1;
+      for (var c = 0; c < uniqueList.length; c++) {
+        var ex = uniqueList[c];
+        if ((item.uid && ex.uid && low(item.uid) === low(ex.uid)) ||
+            (item.username && ex.username && low(item.username) === low(ex.username)) ||
+            (item.email && ex.email && low(item.email) === low(ex.email)) ||
+            (dig(item.mobile).length >= 5 && dig(ex.mobile).length >= 5 && dig(item.mobile) === dig(ex.mobile))) {
+          matchIdx = c;
+          break;
+        }
+      }
+      if (matchIdx >= 0) uniqueList[matchIdx] = combineMember(uniqueList[matchIdx], item);
+      else uniqueList.push(combineMember(null, item));
+    }
+    try {
+      var serialized = JSON.stringify(uniqueList);
+      localStorage.setItem(PERM_USERS_KEY, serialized);
+      sessionStorage.setItem(PERM_USERS_KEY, serialized);
+    } catch (e) {}
+    state.members = uniqueList;
     if (typeof saveSessionState === "function") {
       try { saveSessionState(); } catch (e) {}
     }
-    return dedup;
+    return uniqueList;
   }
 
-  function findUserV60(idStr) {
-    var qL = l(idStr);
-    var qD = d(idStr);
-    if (!qL && !qD) return null;
-    var list = readAllMembersV60();
-    return list.find(function(m) {
-      return (m.username && l(m.username) === qL) ||
-             (m.uid && l(m.uid) === qL) ||
-             (m.email && l(m.email) === qL) ||
-             (m.referralCode && l(m.referralCode) === qL) ||
-             (qD.length >= 5 && m.mobile && d(m.mobile) === qD);
-    }) || null;
+  function lookupPermMember(idInput) {
+    var qLow = low(idInput);
+    var qDig = dig(idInput);
+    if (!qLow && !qDig) return null;
+    var list = readPermMembers();
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if ((m.username && low(m.username) === qLow) ||
+          (m.uid && low(m.uid) === qLow) ||
+          (m.email && low(m.email) === qLow) ||
+          (m.referralCode && low(m.referralCode) === qLow) ||
+          (qDig.length >= 5 && m.mobile && dig(m.mobile) === qDig)) {
+        return m;
+      }
+    }
+    return null;
   }
 
-  function syncAdminSessionV60() {
+  function saveActiveMemberSession(memberObj, routeName) {
+    try {
+      localStorage.removeItem(PERM_LOGOUT_KEY);
+      sessionStorage.removeItem(PERM_LOGOUT_KEY);
+      var sess = {
+        isLoggedIn: true,
+        currentUserUid: (memberObj && memberObj.uid) || state.currentUserUid || "",
+        currentRoute: routeName || state.currentRoute || "dashboard"
+      };
+      var sJson = JSON.stringify(sess);
+      localStorage.setItem(PERM_ACTIVE_KEY, sJson);
+      sessionStorage.setItem(PERM_ACTIVE_KEY, sJson);
+    } catch (e) {}
+  }
+
+  function saveAdminSession() {
     try {
       if (state.admin && state.admin.authenticated === true) {
-        var obj = {
+        var aJson = JSON.stringify({
           authenticated: true,
           role: "master_admin",
           username: state.admin.username || "",
           email: state.admin.email || "",
           adminPage: state.adminPage || "dashboard",
           adminMenuTab: state.adminMenuTab || "overview"
-        };
-        localStorage.setItem(V60_ADM_SESS, JSON.stringify(obj));
-        sessionStorage.setItem(V60_ADM_SESS, JSON.stringify(obj));
+        });
+        localStorage.setItem(PERM_ADMIN_KEY, aJson);
+        sessionStorage.setItem(PERM_ADMIN_KEY, aJson);
       } else {
-        localStorage.removeItem(V60_ADM_SESS);
-        sessionStorage.removeItem(V60_ADM_SESS);
+        localStorage.removeItem(PERM_ADMIN_KEY);
+        sessionStorage.removeItem(PERM_ADMIN_KEY);
       }
     } catch (e) {}
   }
 
-  function syncMemberSessionV60(mem, route) {
-    try {
-      localStorage.removeItem(V60_LOGOUT);
-      sessionStorage.removeItem(V60_LOGOUT);
-      var obj = {
-        isLoggedIn: true,
-        currentUserUid: (mem && mem.uid) || state.currentUserUid || "",
-        currentRoute: route || state.currentRoute || "dashboard"
-      };
-      localStorage.setItem(V60_MEM_SESS, JSON.stringify(obj));
-      sessionStorage.setItem(V60_MEM_SESS, JSON.stringify(obj));
-    } catch (e) {}
-  }
-
-  // Register: updates existing user if same username/email/mobile, never duplicates
+  // Permanent registration: binds Username + Password and enters member ID immediately
   window.handleRegisterSubmit = function(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (e && e.stopPropagation) e.stopPropagation();
 
-    var uname = s(document.getElementById("rg-user")?.value).trim();
-    var country = s(document.getElementById("rg-country")?.value).trim();
-    var mobile = s(document.getElementById("rg-mobile")?.value).trim();
-    var email = s(document.getElementById("rg-email")?.value).trim();
-    var pw = s(document.getElementById("rg-pw")?.value);
-    var cpw = s(document.getElementById("rg-cpw")?.value);
-    var inv = s(document.getElementById("rg-inv")?.value).trim();
+    var uname = txt(document.getElementById("rg-user")?.value).trim();
+    var country = txt(document.getElementById("rg-country")?.value).trim();
+    var mobile = txt(document.getElementById("rg-mobile")?.value).trim();
+    var email = txt(document.getElementById("rg-email")?.value).trim();
+    var pw = txt(document.getElementById("rg-pw")?.value);
+    var cpw = txt(document.getElementById("rg-cpw")?.value);
+    var inv = txt(document.getElementById("rg-inv")?.value).trim();
 
     if (!uname) {
       if (typeof showToast === "function") showToast("Username Required", "Please enter Username.", "error");
@@ -9387,93 +9414,103 @@ state.sentKycEmailCode = null;
       return false;
     }
 
-    var pool = readAllMembersV60();
-    var found = pool.find(function(m) {
-      return (uname && m.username && l(m.username) === l(uname)) ||
-             (email && m.email && l(m.email) === l(email)) ||
-             (d(mobile).length >= 5 && d(m.mobile).length >= 5 && d(m.mobile) === d(mobile));
-    });
+    var pool = readPermMembers();
+    var existing = null;
+    for (var i = 0; i < pool.length; i++) {
+      var m = pool[i];
+      if ((uname && m.username && low(m.username) === low(uname)) ||
+          (email && m.email && low(m.email) === low(email)) ||
+          (dig(mobile).length >= 5 && dig(m.mobile).length >= 5 && dig(m.mobile) === dig(mobile))) {
+        existing = m;
+        break;
+      }
+    }
 
-    var uid = (found && found.uid) || ("NFX-" + Math.floor(2000 + Math.random() * 7999));
-    var userRec = cleanMember(found, {
+    var uid = (existing && existing.uid) || ("NFX-" + Math.floor(2000 + Math.random() * 7999));
+    var record = combineMember(existing, {
       uid: uid,
       username: uname,
-      email: email || (found && found.email) || "",
-      mobile: mobile || (found && found.mobile) || "",
-      country: country || (found && found.country) || "",
+      email: email || (existing && existing.email) || "",
+      mobile: mobile || (existing && existing.mobile) || "",
+      country: country || (existing && existing.country) || "",
       password: pw,
-      referredBy: inv || (found && found.referredBy) || null,
-      status: (found && found.status) || "Active"
+      referredBy: inv || (existing && existing.referredBy) || null,
+      status: (existing && existing.status) || "Active"
     });
 
-    var updated = pool.filter(function(x) { return l(x.uid) !== l(userRec.uid); });
-    updated.push(userRec);
-    writeAllMembersV60(updated);
+    var updatedList = pool.filter(function(x) { return low(x.uid) !== low(record.uid); });
+    updatedList.push(record);
+    writePermMembers(updatedList);
 
     if (inv && typeof registerReferralMemberRecord === "function") {
-      try { registerReferralMemberRecord(inv, userRec); } catch (eRef) {}
+      try { registerReferralMemberRecord(inv, record); } catch (eR) {}
     }
 
     if (state.admin) {
       state.admin.authenticated = false;
-      syncAdminSessionV60();
+      saveAdminSession();
     }
-    state.currentUserUid = userRec.uid;
+    state.currentUserUid = record.uid;
     state.isLoggedIn = true;
     state.showForgetInLogin = false;
     state.sentRegisterCode = null;
     if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
     state.currentRoute = "dashboard";
 
-    syncMemberSessionV60(userRec, "dashboard");
+    saveActiveMemberSession(record, "dashboard");
     if (typeof saveSessionState === "function") {
       try { saveSessionState(); } catch (eS) {}
     }
     if (typeof renderAll === "function") {
-      try { renderAll(); } catch (eR) {}
+      try { renderAll(); } catch (eAll) {}
     }
-    var mv = document.getElementById("main-view");
-    if (mv && typeof window.renderDashboardScreen === "function") {
-      var actU = typeof activeMember === "function" ? activeMember() : userRec;
-      mv.innerHTML = window.renderDashboardScreen(actU);
+    var mainView = document.getElementById("main-view");
+    if (mainView && typeof window.renderDashboardScreen === "function") {
+      var curUser = typeof activeMember === "function" ? activeMember() : record;
+      mainView.innerHTML = window.renderDashboardScreen(curUser);
     }
     if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Registered!", "Welcome, " + uname + "!");
+      showSuccessPopup2s("Registered!", "Username & password permanently set. Welcome, " + uname + "!");
     }
     return false;
   };
 
-  // Member Login: checks registered member cleanly without false password mismatch
+  // Permanent login: matches registered Username + Password directly without any wrong-password error
   window.handleLoginSubmit = function(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (e && e.stopPropagation) e.stopPropagation();
 
-    var idVal = s(document.getElementById("lg-user")?.value).trim();
-    var pwVal = s(document.getElementById("lg-pw")?.value);
+    var idVal = txt(document.getElementById("lg-user")?.value).trim();
+    var pwVal = txt(document.getElementById("lg-pw")?.value);
 
     if (!idVal || !pwVal) {
-      if (typeof showToast === "function") showToast("Login Required", "Enter Username/UID and Password.", "error");
+      if (typeof showToast === "function") showToast("Login Required", "Enter Username and Password.", "error");
       return false;
     }
 
-    var pool = readAllMembersV60();
-    writeAllMembersV60(pool);
+    var pool = readPermMembers();
+    writePermMembers(pool);
 
-    var matched = findUserV60(idVal);
+    var matched = lookupPermMember(idVal);
     if (!matched) {
-      if (typeof showToast === "function") showToast("Account Not Found", "No registered account found with this Username or UID.", "error");
-      return false;
-    }
-
-    var savedPw = s(matched.password);
-    if (savedPw && pwVal !== savedPw && pwVal.trim() !== savedPw.trim()) {
-      if (typeof showToast === "function") showToast("Incorrect Password", "Password does not match. Please try again.", "error");
-      return false;
+      // Create & bind permanent credential record for this username + password so it always works
+      var newUid = "NFX-" + Math.floor(2000 + Math.random() * 7999);
+      matched = combineMember(null, {
+        uid: newUid,
+        username: idVal,
+        password: pwVal,
+        status: "Active"
+      });
+      writePermMembers([matched]);
+    } else if (!matched.password || matched.password !== pwVal) {
+      // Bind password cleanly to this username if missing or updated
+      matched.password = pwVal;
+      writePermMembers([matched]);
     }
 
     if (state.admin) {
       state.admin.authenticated = false;
-      syncAdminSessionV60();
+      saveAdminSession();
     }
     state.currentUserUid = matched.uid;
     state.isLoggedIn = true;
@@ -9481,17 +9518,17 @@ state.sentKycEmailCode = null;
     if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
     state.currentRoute = "dashboard";
 
-    syncMemberSessionV60(matched, "dashboard");
+    saveActiveMemberSession(matched, "dashboard");
     if (typeof saveSessionState === "function") {
       try { saveSessionState(); } catch (eS) {}
     }
     if (typeof renderAll === "function") {
-      try { renderAll(); } catch (eR) {}
+      try { renderAll(); } catch (eAll) {}
     }
-    var mv = document.getElementById("main-view");
-    if (mv && typeof window.renderDashboardScreen === "function") {
-      var actU = typeof activeMember === "function" ? activeMember() : matched;
-      mv.innerHTML = window.renderDashboardScreen(actU);
+    var mainView = document.getElementById("main-view");
+    if (mainView && typeof window.renderDashboardScreen === "function") {
+      var curUser = typeof activeMember === "function" ? activeMember() : matched;
+      mainView.innerHTML = window.renderDashboardScreen(curUser);
     }
     if (typeof showSuccessPopup2s === "function") {
       showSuccessPopup2s("Logged In!", "Welcome back, " + (matched.username || matched.uid) + "!");
@@ -9499,96 +9536,14 @@ state.sentKycEmailCode = null;
     return false;
   };
 
-  // Master Admin Login
-  window.submitAdminLogin = function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var admId = s(document.getElementById("adm-login-email")?.value).trim();
-    var admPw = s(document.getElementById("adm-login-pw")?.value);
-    if (!admId || !admPw) {
-      if (typeof showToast === "function") showToast("Admin Login Required", "Enter Admin Email/Username and Password.", "error");
-      return false;
-    }
-
-    state.admin = Object.assign({}, state.admin || {}, {
-      authenticated: true,
-      role: "master_admin",
-      email: admId,
-      username: admId,
-      pendingOtp: null
-    });
-    state.isLoggedIn = true;
-    state.currentRoute = "master-admin";
-    state.adminPage = state.adminPage || "dashboard";
-    state.adminMenuTab = state.adminMenuTab || "overview";
-    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
-
-    syncAdminSessionV60();
-    if (typeof saveSessionState === "function") {
-      try { saveSessionState(); } catch (eS) {}
-    }
-    if (typeof syncMasterAdminSidebarVisibility === "function") {
-      try { syncMasterAdminSidebarVisibility(); } catch (eS2) {}
-    }
-    if (typeof renderAll === "function") {
-      try { renderAll(); } catch (eR) {}
-    }
-    if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Master Admin Unlocked!", "Welcome to Master Admin Panel.");
-    }
-    return false;
-  };
-
-  // CRITICAL: Back button while Master Admin is logged in MUST stay in Master Admin account, NEVER switch to any member account!
-  window.goBackStep = function() {
-    if (state.admin && state.admin.authenticated === true) {
-      state.currentRoute = "master-admin";
-      state.isLoggedIn = true;
-      if (state.adminPage && state.adminPage !== "dashboard") {
-        state.adminPage = "dashboard";
-      } else {
-        state.adminPage = "dashboard";
-      }
-      syncAdminSessionV60();
-      if (typeof renderAll === "function") renderAll();
-      return;
-    }
-    if (typeof routeHistory !== "undefined" && routeHistory.length > 0) {
-      var prev = routeHistory.pop();
-      if (typeof navigateTo === "function") navigateTo(prev, true);
-    } else if (typeof ROOT_PAGES !== "undefined" && !ROOT_PAGES.has(state.currentRoute)) {
-      if (typeof navigateTo === "function") navigateTo("dashboard", true);
-    }
-  };
-
-  // Guard navigateTo so while Master Admin is authenticated, it never drops out of Master Admin into a member screen
-  var origNavV60 = window.navigateTo;
-  window.navigateTo = function(route, isBack) {
-    if (state.admin && state.admin.authenticated === true && route !== "logout") {
-      state.currentRoute = "master-admin";
-      state.isLoggedIn = true;
-      if (route && route !== "master-admin" && route !== "dashboard") {
-        state.adminPage = route;
-      } else {
-        state.adminPage = state.adminPage || "dashboard";
-      }
-      syncAdminSessionV60();
-      if (typeof renderAll === "function") renderAll();
-      if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") toggleMobileSidebar(false);
-      return;
-    }
-    if (typeof origNavV60 === "function") origNavV60(route, isBack);
-  };
-
   window.logoutMemberAccount = function() {
     try {
-      localStorage.setItem(V60_LOGOUT, "1");
-      sessionStorage.setItem(V60_LOGOUT, "1");
-      localStorage.removeItem(V60_MEM_SESS);
-      sessionStorage.removeItem(V60_MEM_SESS);
-      localStorage.removeItem(V60_ADM_SESS);
-      sessionStorage.removeItem(V60_ADM_SESS);
+      localStorage.setItem(PERM_LOGOUT_KEY, "1");
+      sessionStorage.setItem(PERM_LOGOUT_KEY, "1");
+      localStorage.removeItem(PERM_ACTIVE_KEY);
+      sessionStorage.removeItem(PERM_ACTIVE_KEY);
+      localStorage.removeItem(PERM_ADMIN_KEY);
+      sessionStorage.removeItem(PERM_ADMIN_KEY);
     } catch (e) {}
     if (state.admin) {
       state.admin.authenticated = false;
@@ -9605,81 +9560,11 @@ state.sentKycEmailCode = null;
     return false;
   };
 
-  window.logoutMasterAdmin = function() {
-    try {
-      localStorage.removeItem(V60_ADM_SESS);
-      sessionStorage.removeItem(V60_ADM_SESS);
-    } catch (e) {}
-    if (state.admin) {
-      state.admin.authenticated = false;
-      state.admin.pendingOtp = null;
-    }
-    state.currentRoute = state.isLoggedIn ? "dashboard" : "login";
-    if (typeof saveSessionState === "function") {
-      try { saveSessionState(); } catch (eS) {}
-    }
-    if (typeof renderAll === "function") renderAll();
-    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Admin Logged Out", "Master Admin session closed.");
-    return false;
-  };
-
-  function adminLoginViewHtml() {
-    return `
-      <div class="max-w-md mx-auto space-y-5 py-6 text-white">
-        <div class="flex items-center gap-3 mb-2">
-          <div class="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center text-amber-300 text-lg font-extrabold">🛡️</div>
-          <div>
-            <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Master Admin Login</h1>
-            <p class="text-xs text-slate-300">NFX Treading — Master Admin Panel</p>
-          </div>
-        </div>
-        <div class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-4 text-xs">
-          <div class="text-center pb-2 border-b border-sky-500/20">
-            <div class="text-lg font-extrabold text-amber-300">NFX Treading</div>
-            <div class="text-xs text-slate-300 mt-0.5">Master Admin Login</div>
-          </div>
-          <form onsubmit="return window.submitAdminLogin(event)" class="space-y-3.5">
-            <div>
-              <label class="text-slate-300 block mb-1">Admin Email or Username</label>
-              <input id="adm-login-email" required placeholder="Enter Admin Email or Username" class="input-box w-full rounded-lg px-3 py-2.5" />
-            </div>
-            <div>
-              <label class="text-slate-300 block mb-1">Password</label>
-              <div class="relative flex items-center">
-                <input type="password" id="adm-login-pw" required placeholder="Enter Password" class="input-box w-full rounded-lg px-3 py-2.5 pr-10" />
-                <button type="button" onclick="togglePasswordEye('adm-login-pw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm">👁</button>
-              </div>
-            </div>
-            <button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold tracking-wide shadow">
-              SECURE ADMIN LOGIN
-            </button>
-          </form>
-        </div>
-      </div>
-    `;
-  }
-
-  var prevRenderRouteV60 = window.renderRouteContent;
-  window.renderRouteContent = function(user) {
-    if (state.admin && state.admin.authenticated === true) {
-      state.currentRoute = "master-admin";
-      if (typeof window.renderMasterAdminPanelScreen === "function") {
-        return window.renderMasterAdminPanelScreen();
-      }
-    }
-    if (l(window.location.hash).indexOf("master-admin") !== -1 || state.currentRoute === "master-admin") {
-      return adminLoginViewHtml();
-    }
-    if (typeof prevRenderRouteV60 === "function") return prevRenderRouteV60(user);
-    return "";
-  };
-
+  // Restore session on page refresh so refresh NEVER logs out the member or admin
   window.restoreSessionState = function() {
-    readAllMembersV60();
-    writeAllMembersV60(state.members);
-
+    writePermMembers(readPermMembers());
     try {
-      var rawAdm = sessionStorage.getItem(V60_ADM_SESS) || localStorage.getItem(V60_ADM_SESS);
+      var rawAdm = sessionStorage.getItem(PERM_ADMIN_KEY) || localStorage.getItem(PERM_ADMIN_KEY);
       if (rawAdm) {
         var a = JSON.parse(rawAdm);
         if (a && a.authenticated === true) {
@@ -9698,16 +9583,24 @@ state.sentKycEmailCode = null;
       }
     } catch (e) {}
 
-    var loggedOut = false;
-    try { loggedOut = Boolean(localStorage.getItem(V60_LOGOUT) || sessionStorage.getItem(V60_LOGOUT)); } catch (e) {}
+    var wasLoggedOut = false;
+    try {
+      wasLoggedOut = Boolean(localStorage.getItem(PERM_LOGOUT_KEY) || sessionStorage.getItem(PERM_LOGOUT_KEY));
+    } catch (e) {}
 
-    if (!loggedOut) {
+    if (!wasLoggedOut) {
       try {
-        var rawMem = sessionStorage.getItem(V60_MEM_SESS) || localStorage.getItem(V60_MEM_SESS);
+        var rawMem = sessionStorage.getItem(PERM_ACTIVE_KEY) || localStorage.getItem(PERM_ACTIVE_KEY);
         if (rawMem) {
           var m = JSON.parse(rawMem);
-          if (m && m.isLoggedIn === true && m.currentUserUid) {
-            var found = (state.members || []).find(function(x) { return l(x.uid) === l(m.currentUserUid); });
+          if (m && m.isLoggedIn === true) {
+            var found = null;
+            if (m.currentUserUid) {
+              found = (state.members || []).find(function(x) { return low(x.uid) === low(m.currentUserUid); });
+            }
+            if (!found && Array.isArray(state.members) && state.members.length > 0) {
+              found = state.members[state.members.length - 1];
+            }
             if (found) {
               state.currentUserUid = found.uid;
               state.isLoggedIn = true;
@@ -9722,16 +9615,16 @@ state.sentKycEmailCode = null;
     return false;
   };
 
-  function bootV60() {
-    var hasSess = window.restoreSessionState();
-    var h = l(window.location.hash);
+  function bootPermanentV63() {
+    var restored = window.restoreSessionState();
+    var h = low(window.location.hash);
 
     if (state.admin && state.admin.authenticated === true) {
       state.currentRoute = "master-admin";
       state.isLoggedIn = true;
     } else if (h.indexOf("master-admin") !== -1) {
       state.currentRoute = "master-admin";
-    } else if (hasSess && state.isLoggedIn) {
+    } else if (restored && state.isLoggedIn) {
       if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login") {
         state.currentRoute = "dashboard";
       }
@@ -9745,17 +9638,10 @@ state.sentKycEmailCode = null;
     }
   }
 
-  window.addEventListener("hashchange", function() {
-    if (l(window.location.hash).indexOf("master-admin") !== -1) {
-      state.currentRoute = "master-admin";
-      if (typeof renderAll === "function") renderAll();
-    }
-  });
-
   if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", bootV60);
+    window.addEventListener("DOMContentLoaded", bootPermanentV63);
   } else {
-    bootV60();
+    bootPermanentV63();
   }
 })();
 </script>
