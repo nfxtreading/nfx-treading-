@@ -22617,5 +22617,653 @@ $1'
 })();
 </script>
 
+<script>
+(function nfxOriginalLoginPasswordFixV53() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  var CREDS_VAULT_KEY = "nfx_member_original_creds_v53";
+  var MEMBER_PERSIST_KEY = "nfx_member_session_v50";
+  var EXPLICIT_LOGOUT_KEY = "nfx_explicit_logout_v50";
+
+  function norm(v) {
+    return String(v || "").trim().toLowerCase();
+  }
+
+  function digits(v) {
+    return String(v || "").replace(/[^0-9]/g, "");
+  }
+
+  function loadCredsVault() {
+    try {
+      var raw = localStorage.getItem(CREDS_VAULT_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  function saveCredsVault(vault) {
+    try {
+      localStorage.setItem(CREDS_VAULT_KEY, JSON.stringify(vault || {}));
+    } catch (e) {}
+  }
+
+  function recordOriginalMemberCreds(mem) {
+    if (!mem || typeof mem !== "object") return;
+    var vault = loadCredsVault();
+    var entry = {
+      uid: String(mem.uid || "").trim(),
+      username: String(mem.username || "").trim(),
+      email: String(mem.email || "").trim(),
+      mobile: String(mem.mobile || "").trim(),
+      password: String(mem.password || ""),
+      updatedAt: Date.now()
+    };
+    if (!entry.password) return;
+    if (entry.uid) vault["uid:" + norm(entry.uid)] = entry;
+    if (entry.username) vault["user:" + norm(entry.username)] = entry;
+    if (entry.email) vault["email:" + norm(entry.email)] = entry;
+    if (entry.mobile && digits(entry.mobile).length >= 6) vault["mob:" + digits(entry.mobile)] = entry;
+    saveCredsVault(vault);
+  }
+
+  // Seed vault from any existing state.members
+  if (Array.isArray(state.members)) {
+    state.members.forEach(function(m) {
+      if (m && m.password) recordOriginalMemberCreds(m);
+    });
+  }
+
+  // Wrap handleRegisterSubmit so the original registered username & password are always saved cleanly
+  var origRegV53 = window.handleRegisterSubmit;
+  window.handleRegisterSubmit = function(e) {
+    var typedUser = (document.getElementById("rg-user")?.value || "").trim();
+    var typedEmail = (document.getElementById("rg-email")?.value || "").trim();
+    var typedMobile = (document.getElementById("rg-mobile")?.value || "").trim();
+    var typedPw = document.getElementById("rg-pw")?.value || "";
+
+    var res = typeof origRegV53 === "function" ? origRegV53.apply(this, arguments) : undefined;
+
+    try {
+      var cur = typeof activeMember === "function" ? activeMember() : null;
+      if (typedUser && typedPw) {
+        var target = (state.members || []).find(function(m) {
+          return (m && m.username && norm(m.username) === norm(typedUser)) ||
+                 (typedEmail && m && m.email && norm(m.email) === norm(typedEmail)) ||
+                 (cur && m && m.uid === cur.uid);
+        });
+        if (target) {
+          target.username = typedUser;
+          if (typedEmail) target.email = typedEmail;
+          if (typedMobile) target.mobile = typedMobile;
+          target.password = typedPw;
+          recordOriginalMemberCreds(target);
+        } else {
+          recordOriginalMemberCreds({
+            uid: (cur && cur.uid) || ("NFX-" + Math.floor(2000 + Math.random() * 7999)),
+            username: typedUser,
+            email: typedEmail,
+            mobile: typedMobile,
+            password: typedPw
+          });
+        }
+        if (typeof saveSessionState === "function") saveSessionState();
+      }
+    } catch (errR) {}
+    return res;
+  };
+
+  // Wrap handleForgetAndLoginSubmit so password reset also updates original password in vault & member record
+  var origForgetV53 = window.handleForgetAndLoginSubmit;
+  if (typeof origForgetV53 === "function") {
+    window.handleForgetAndLoginSubmit = function(e) {
+      var fgId = (document.getElementById("fg-id")?.value || "").trim();
+      var fgNewPw = document.getElementById("fg-new-pw")?.value || "";
+      var res = origForgetV53.apply(this, arguments);
+      try {
+        var cur = typeof activeMember === "function" ? activeMember() : null;
+        if (cur && fgNewPw) {
+          cur.password = fgNewPw;
+          if (fgId) cur.username = fgId;
+          recordOriginalMemberCreds(cur);
+          if (typeof saveSessionState === "function") saveSessionState();
+        }
+      } catch (errF) {}
+      return res;
+    };
+  }
+
+  // Final authoritative Member Login Handler: verifies original username/email/mobile/UID + original password cleanly
+  window.handleLoginSubmit = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var idEl = document.getElementById("lg-user");
+    var pwEl = document.getElementById("lg-pw");
+    var idVal = (idEl && idEl.value ? idEl.value : "").trim();
+    var pwVal = pwEl && pwEl.value ? pwEl.value : "";
+
+    if (!idVal || !pwVal) {
+      if (typeof showToast === "function") {
+        showToast("Login Required", "Please enter your registered Username and Password.", "error");
+      }
+      return false;
+    }
+
+    var idLow = norm(idVal);
+    var idDig = digits(idVal);
+    var vault = loadCredsVault();
+
+    // First sync any vault credentials into state.members
+    state.members = Array.isArray(state.members) ? state.members : [];
+    Object.keys(vault).forEach(function(k) {
+      var vEntry = vault[k];
+      if (!vEntry || !vEntry.password) return;
+      var foundIdx = state.members.findIndex(function(m) {
+        return (vEntry.uid && m.uid && norm(m.uid) === norm(vEntry.uid)) ||
+               (vEntry.username && m.username && norm(m.username) === norm(vEntry.username)) ||
+               (vEntry.email && m.email && norm(m.email) === norm(vEntry.email));
+      });
+      if (foundIdx >= 0) {
+        if (!state.members[foundIdx].password) {
+          state.members[foundIdx].password = vEntry.password;
+        }
+        if (vEntry.username && !state.members[foundIdx].username) {
+          state.members[foundIdx].username = vEntry.username;
+        }
+      } else if (vEntry.username || vEntry.email || vEntry.mobile) {
+        state.members.push(Object.assign({
+          uid: vEntry.uid || ("NFX-" + Math.floor(2000 + Math.random() * 7999)),
+          username: vEntry.username || "",
+          email: vEntry.email || "",
+          mobile: vEntry.mobile || "",
+          country: "",
+          password: vEntry.password,
+          avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
+          authenticatorBound: false,
+          authenticatorSecret: typeof generateUniqueBase32Key === "function" ? generateUniqueBase32Key(vEntry.username || "USER") : "JBSWY3DPEHPK3PXP9NFX1001",
+          referralCode: (vEntry.uid || "NFX1001").replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
+          referralBonus: 0,
+          balance: 0,
+          yourInvest: 0,
+          teamInvest: 0,
+          aMembersCount: 0,
+          aMembersInvest: 0,
+          bMembersCount: 0,
+          bMembersInvest: 0,
+          cMembersCount: 0,
+          cMembersInvest: 0,
+          totalProfit: 0,
+          investmentId: "#INV2026111301",
+          planName: "None",
+          startDate: "-",
+          endDate: "-",
+          status: "Active",
+          kycStatus: "Unverified",
+          withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
+        }, vEntry));
+      }
+    });
+
+    var matched = state.members.find(function(m) {
+      if (!m) return false;
+      var uOk = m.username && norm(m.username) === idLow;
+      var eOk = m.email && norm(m.email) === idLow;
+      var pOk = idDig.length >= 6 && digits(m.mobile) === idDig;
+      var uidOk = m.uid && norm(m.uid) === idLow;
+      return Boolean(uOk || eOk || pOk || uidOk);
+    });
+
+    var vHit = vault["user:" + idLow] || vault["email:" + idLow] || vault["uid:" + idLow] || (idDig.length >= 6 ? vault["mob:" + idDig] : null);
+
+    if (!matched && vHit) {
+      matched = {
+        uid: vHit.uid || ("NFX-" + Math.floor(2000 + Math.random() * 7999)),
+        username: vHit.username || idVal,
+        email: vHit.email || "",
+        mobile: vHit.mobile || "",
+        country: "",
+        password: vHit.password,
+        avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
+        authenticatorBound: false,
+        authenticatorSecret: typeof generateUniqueBase32Key === "function" ? generateUniqueBase32Key(vHit.username || idVal) : "JBSWY3DPEHPK3PXP9NFX1001",
+        referralCode: (vHit.uid || "NFX1001").replace(/[^A-Za-z0-9]/g, "").toUpperCase(),
+        referralBonus: 0,
+        balance: 0,
+        yourInvest: 0,
+        teamInvest: 0,
+        aMembersCount: 0,
+        aMembersInvest: 0,
+        bMembersCount: 0,
+        bMembersInvest: 0,
+        cMembersCount: 0,
+        cMembersInvest: 0,
+        totalProfit: 0,
+        investmentId: "#INV2026111301",
+        planName: "None",
+        startDate: "-",
+        endDate: "-",
+        status: "Active",
+        kycStatus: "Unverified",
+        withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
+      };
+      state.members.push(matched);
+    }
+
+    if (!matched) {
+      if (typeof showToast === "function") {
+        showToast("Account Not Found", "No registered account found for this username.", "error");
+      }
+      return false;
+    }
+
+    var expectedPw = matched.password || (vHit && vHit.password) || "";
+    var pwMatches = (pwVal === expectedPw) || (pwVal.trim() === expectedPw.trim());
+
+    if (!pwMatches) {
+      if (typeof showToast === "function") {
+        showToast("Incorrect Password", "Password does not match. Please try again.", "error");
+      }
+      return false;
+    }
+
+    if (!matched.password && expectedPw) matched.password = expectedPw;
+    recordOriginalMemberCreds(matched);
+
+    if (state.admin) state.admin.authenticated = false;
+    state.currentUserUid = matched.uid;
+    state.isLoggedIn = true;
+    state.showForgetInLogin = false;
+    state.currentRoute = "dashboard";
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
+
+    try {
+      localStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+      sessionStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+      localStorage.setItem(MEMBER_PERSIST_KEY, JSON.stringify({
+        isLoggedIn: true,
+        currentUserUid: matched.uid,
+        currentRoute: "dashboard",
+        savedAt: Date.now()
+      }));
+      sessionStorage.setItem(MEMBER_PERSIST_KEY, JSON.stringify({
+        isLoggedIn: true,
+        currentUserUid: matched.uid,
+        currentRoute: "dashboard",
+        savedAt: Date.now()
+      }));
+    } catch (e) {}
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (errS) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (errR) {}
+    }
+    var mv = document.getElementById("main-view");
+    if (mv && typeof window.renderDashboardScreen === "function") {
+      var curU = typeof activeMember === "function" ? activeMember() : matched;
+      mv.innerHTML = window.renderDashboardScreen(curU);
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Logged In!", "Welcome back, " + (matched.username || matched.uid) + "!");
+    }
+    return false;
+  };
+})();
+</script>
+
+<script>
+(function nfxMidnightIstDailyProfitAndAutoReferralEngineV54() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  var DAILY_PROFIT_LEDGER_KEY = "nfx_ist_midnight_profit_ledger_v54";
+
+  function num(v) {
+    var n = parseFloat(v);
+    return isNaN(n) ? 0 : Number(n.toFixed(2));
+  }
+
+  function normCode(v) {
+    return String(v || "").trim().toUpperCase();
+  }
+
+  function getIstDateKeyAndTime(dateObj) {
+    var d = dateObj instanceof Date ? dateObj : new Date();
+    // Convert to Indian Standard Time (UTC+5:30)
+    var utcMs = d.getTime() + (d.getTimezoneOffset() * 60000);
+    var istDate = new Date(utcMs + (5.5 * 3600000));
+    var yyyy = istDate.getUTCFullYear();
+    var mm = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+    var dd = String(istDate.getUTCDate()).padStart(2, "0");
+    var hh = istDate.getUTCHours();
+    var min = istDate.getUTCMinutes();
+    var sec = istDate.getUTCSeconds();
+    var istDisplayDate = istDate.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC"
+    });
+    return {
+      dateKey: yyyy + "-" + mm + "-" + dd,
+      istDisplayDate: istDisplayDate,
+      hours: hh,
+      minutes: min,
+      seconds: sec,
+      isMidnightWindow: (hh === 0 && min === 0)
+    };
+  }
+
+  function loadProfitLedger() {
+    try {
+      var raw = localStorage.getItem(DAILY_PROFIT_LEDGER_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  function saveProfitLedger(ledger) {
+    try {
+      localStorage.setItem(DAILY_PROFIT_LEDGER_KEY, JSON.stringify(ledger || {}));
+    } catch (e) {}
+  }
+
+  function inferPlanRatePct(planObj) {
+    if (!planObj) return 1.8;
+    var r = parseFloat(planObj.dailyProfitPct);
+    if (!isNaN(r) && r > 0) return r;
+    var pName = String(planObj.planName || "").toLowerCase();
+    if (pName.indexOf("vip") !== -1) return 5.0;
+    if (pName.indexOf("premium") !== -1) return 3.0;
+    return 1.8;
+  }
+
+  function ensureMemberPlansInitialized(m) {
+    if (!m || typeof m !== "object") return [];
+    if (!Array.isArray(m.activePlansList)) {
+      m.activePlansList = [];
+    }
+    if (m.activePlansList.length === 0 && num(m.yourInvest) > 0) {
+      var invAmt = num(m.yourInvest);
+      var pName = (m.planName && m.planName !== "None") ? m.planName : "Basic Plan";
+      var rate = pName.toLowerCase().indexOf("vip") !== -1 ? 5.0 : (pName.toLowerCase().indexOf("premium") !== -1 ? 3.0 : 1.8);
+      var dProf = num(invAmt * (rate / 100));
+      var istNow = getIstDateKeyAndTime(new Date());
+      m.activePlansList.push({
+        investmentId: m.investmentId || ("#INV" + String(Date.now()).slice(-8)),
+        planName: pName,
+        investedAmount: invAmt,
+        dailyProfitPct: rate,
+        dailyProfitAmt: dProf,
+        totalProfitEarned: num(m.totalProfit || dProf),
+        startDate: (m.startDate && m.startDate !== "-") ? m.startDate : istNow.istDisplayDate,
+        endDate: (m.endDate && m.endDate !== "-") ? m.endDate : istNow.istDisplayDate,
+        durationDays: 30,
+        elapsedDays: 1,
+        status: "Active",
+        lastIstPayoutDateKey: istNow.dateKey,
+        incomeHistory: [
+          { date: istNow.istDisplayDate, amount: dProf, status: "Completed" }
+        ]
+      });
+    }
+    return m.activePlansList;
+  }
+
+  // Run daily percentage profit payout at IST 12:00 AM (00:00 IST) for all members with any purchased plan
+  function processIstMidnightDailyProfitPayout(forceCheck = false) {
+    var ist = getIstDateKeyAndTime(new Date());
+    if (!forceCheck && !ist.isMidnightWindow) return 0;
+
+    var ledger = loadProfitLedger();
+    var totalCreditedNow = 0;
+    var members = Array.isArray(state.members) ? state.members : [];
+
+    members.forEach(function(m) {
+      if (!m || !m.uid) return;
+      var plans = ensureMemberPlansInitialized(m);
+      var activePlans = plans.filter(function(pl) {
+        var st = String(pl && pl.status || "Active").toLowerCase();
+        return st === "active" || st === "running";
+      });
+      if (activePlans.length === 0) return;
+
+      var memberDailySum = 0;
+      activePlans.forEach(function(pl, idx) {
+        var invAmt = num(pl.investedAmount);
+        var ratePct = inferPlanRatePct(pl);
+        if (invAmt <= 0 || ratePct <= 0) return;
+
+        var planKey = (pl.investmentId || (m.uid + "_plan_" + idx)) + "::" + ist.dateKey;
+        if (ledger[planKey] || pl.lastIstPayoutDateKey === ist.dateKey) return;
+
+        var dailyProfit = num(invAmt * (ratePct / 100));
+        if (dailyProfit <= 0) return;
+
+        ledger[planKey] = true;
+        pl.lastIstPayoutDateKey = ist.dateKey;
+        pl.dailyProfitAmt = dailyProfit;
+        pl.totalProfitEarned = num(num(pl.totalProfitEarned) + dailyProfit);
+        pl.elapsedDays = (parseInt(pl.elapsedDays, 10) || 0) + 1;
+        if (!Array.isArray(pl.incomeHistory)) pl.incomeHistory = [];
+        pl.incomeHistory.unshift({
+          date: ist.istDisplayDate + " (12:00 AM IST)",
+          amount: dailyProfit,
+          status: "Completed"
+        });
+
+        memberDailySum = num(memberDailySum + dailyProfit);
+      });
+
+      if (memberDailySum > 0) {
+        m.balance = num(num(m.balance) + memberDailySum);
+        m.totalProfit = num(num(m.totalProfit) + memberDailySum);
+        if (m.wallet && typeof m.wallet === "object") {
+          m.wallet.balance = m.balance;
+          m.wallet.available = m.balance;
+        }
+        totalCreditedNow = num(totalCreditedNow + memberDailySum);
+
+        if (typeof state.notifications !== "undefined" && Array.isArray(state.notifications) && (!state.currentUserUid || m.uid === state.currentUserUid)) {
+          state.notifications.unshift({
+            id: "DP-" + Date.now() + "-" + m.uid,
+            title: "Daily Profit Credited (12:00 AM IST)",
+            msg: "+" + memberDailySum.toFixed(2) + " USDT daily plan profit added to your wallet.",
+            read: false
+          });
+        }
+      }
+    });
+
+    if (totalCreditedNow > 0) {
+      saveProfitLedger(ledger);
+      if (state.extraData) {
+        state.extraData.totalDailyIncome = num(num(state.extraData.totalDailyIncome) + totalCreditedNow);
+        state.extraData.myPastDayIncomeToday = num(num(state.extraData.myPastDayIncomeToday) + totalCreditedNow);
+        state.extraData.totalIncomeToday = num(num(state.extraData.totalIncomeToday) + totalCreditedNow);
+        state.extraData.comprehensiveIncomeToday = num(num(state.extraData.comprehensiveIncomeToday) + totalCreditedNow);
+        state.extraData.availableBalance = num(activeMember()?.balance);
+        state.extraData.totalBalanceWallet = num(activeMember()?.balance);
+      }
+      if (typeof saveSessionState === "function") {
+        try { saveSessionState(); } catch (eS) {}
+      }
+      if (typeof renderAll === "function") {
+        try { renderAll(); } catch (eR) {}
+      }
+    }
+    return totalCreditedNow;
+  }
+
+  window.runIstMidnightDailyProfitCheck = processIstMidnightDailyProfitPayout;
+
+  // Immediate referral registration counter (Register count increases right away when someone registers with a member's referral)
+  function syncImmediateReferralRegisterRecord(inviterCodeOrUid, newMemberObj) {
+    if (typeof ensureReferralStore === "function") ensureReferralStore();
+    state.referralHistoryRecords = Array.isArray(state.referralHistoryRecords) ? state.referralHistoryRecords : [];
+    state.referralCommissionRecords = Array.isArray(state.referralCommissionRecords) ? state.referralCommissionRecords : [];
+
+    var cleanInv = normCode(inviterCodeOrUid);
+    if (!cleanInv || !newMemberObj) return;
+
+    var inviter = (state.members || []).find(function(m) {
+      return normCode(m.referralCode) === cleanInv || normCode(m.uid) === cleanInv;
+    });
+    if (!inviter) return;
+
+    newMemberObj.referredBy = inviter.referralCode || inviter.uid;
+
+    var ist = getIstDateKeyAndTime(new Date());
+    var existingIdx = state.referralHistoryRecords.findIndex(function(r) {
+      return r && r.memberUid === newMemberObj.uid;
+    });
+
+    var rec = {
+      id: (existingIdx >= 0 && state.referralHistoryRecords[existingIdx].id) || ("REF-" + Math.floor(1000 + Math.random() * 9000)),
+      inviterUid: inviter.uid,
+      inviterCode: inviter.referralCode || inviter.uid,
+      memberName: newMemberObj.username || "Member",
+      memberUid: newMemberObj.uid,
+      joinDate: ist.istDisplayDate,
+      investedAmount: existingIdx >= 0 ? num(state.referralHistoryRecords[existingIdx].investedAmount) : 0,
+      status: existingIdx >= 0 && state.referralHistoryRecords[existingIdx].status === "Active" ? "Active" : "Pending"
+    };
+
+    if (existingIdx >= 0) {
+      state.referralHistoryRecords[existingIdx] = Object.assign({}, state.referralHistoryRecords[existingIdx], rec);
+    } else {
+      state.referralHistoryRecords.unshift(rec);
+    }
+
+    // Count all A-level registered referrals accurately without double counting
+    var inviterRefs = state.referralHistoryRecords.filter(function(r) {
+      return r.inviterUid === inviter.uid || normCode(r.inviterCode) === normCode(inviter.referralCode || inviter.uid);
+    });
+    inviter.aMembersCount = Math.max(Number(inviter.aMembersCount || 0), inviterRefs.length);
+  }
+
+  window.registerReferralMemberRecord = function(inviterCodeOrUid, newMemberObj) {
+    syncImmediateReferralRegisterRecord(inviterCodeOrUid, newMemberObj);
+  };
+
+  // Immediate Active Member + Bonus Wallet Credit when referred member invests
+  window.awardReferralJoiningBonusOnInvest = function(investorMember, investedAmount) {
+    if (typeof ensureReferralStore === "function") ensureReferralStore();
+    state.referralHistoryRecords = Array.isArray(state.referralHistoryRecords) ? state.referralHistoryRecords : [];
+    state.referralCommissionRecords = Array.isArray(state.referralCommissionRecords) ? state.referralCommissionRecords : [];
+
+    var amt = num(investedAmount);
+    if (!investorMember || amt <= 0) return 0;
+
+    var refCode = normCode(investorMember.referredBy);
+    if (!refCode) return 0;
+
+    var bonusAmt = typeof calculateJoiningBonusByInvestAmount === "function"
+      ? num(calculateJoiningBonusByInvestAmount(amt))
+      : (amt >= 400 && amt <= 700 ? 35 : (amt >= 300 && amt < 400 ? 25 : (amt >= 200 && amt < 300 ? 15 : (amt >= 100 && amt < 200 ? 10 : 0))));
+
+    var owner = (state.members || []).find(function(m) {
+      return normCode(m.referralCode) === refCode || normCode(m.uid) === refCode;
+    });
+
+    var ist = getIstDateKeyAndTime(new Date());
+    var histRec = state.referralHistoryRecords.find(function(r) {
+      return r && r.memberUid === investorMember.uid;
+    });
+
+    if (!histRec) {
+      histRec = {
+        id: "REF-" + Math.floor(1000 + Math.random() * 9000),
+        inviterUid: owner ? owner.uid : "",
+        inviterCode: owner ? (owner.referralCode || owner.uid) : refCode,
+        memberName: investorMember.username || investorMember.uid,
+        memberUid: investorMember.uid,
+        joinDate: ist.istDisplayDate,
+        investedAmount: amt,
+        status: "Active"
+      };
+      state.referralHistoryRecords.unshift(histRec);
+    } else {
+      histRec.investedAmount = num(num(histRec.investedAmount) + amt);
+      histRec.status = "Active";
+      if (owner && !histRec.inviterUid) histRec.inviterUid = owner.uid;
+    }
+
+    if (owner) {
+      var ownerRefs = state.referralHistoryRecords.filter(function(r) {
+        return r.inviterUid === owner.uid || normCode(r.inviterCode) === normCode(owner.referralCode || owner.uid);
+      });
+      var ownerActiveRefs = ownerRefs.filter(function(r) { return r.status === "Active"; });
+
+      owner.aMembersCount = Math.max(Number(owner.aMembersCount || 0), ownerRefs.length);
+      owner.aMembersInvest = num(num(owner.aMembersInvest) + amt);
+      owner.teamInvest = num(num(owner.teamInvest) + amt);
+
+      if (bonusAmt > 0) {
+        owner.balance = num(num(owner.balance) + bonusAmt);
+        owner.referralBonus = num(num(owner.referralBonus) + bonusAmt);
+        if (owner.wallet && typeof owner.wallet === "object") {
+          owner.wallet.balance = owner.balance;
+          owner.wallet.available = owner.balance;
+        }
+
+        state.referralCommissionRecords.unshift({
+          id: "COM-" + Math.floor(1000 + Math.random() * 9000),
+          ownerUid: owner.uid,
+          fromMember: investorMember.username || investorMember.uid,
+          planInvest: amt,
+          source: "Referral Bonus",
+          amount: bonusAmt,
+          date: ist.istDisplayDate
+        });
+      }
+
+      if (state.extraData && (!state.currentUserUid || owner.uid === state.currentUserUid)) {
+        state.extraData.activeAMembersCount = Math.max(Number(state.extraData.activeAMembersCount || 0), ownerActiveRefs.length);
+        if (bonusAmt > 0) {
+          state.extraData.referralIncomeToday = num(num(state.extraData.referralIncomeToday) + bonusAmt);
+          state.extraData.totalIncomeToday = num(num(state.extraData.totalIncomeToday) + bonusAmt);
+          state.extraData.comprehensiveIncomeToday = num(num(state.extraData.comprehensiveIncomeToday) + bonusAmt);
+          state.extraData.availableBalance = owner.balance;
+          state.extraData.totalBalanceWallet = owner.balance;
+        }
+      }
+    }
+
+    return bonusAmt;
+  };
+
+  // Keep Team Active Members & Referral counts live in Team screen and Referral Program
+  var origRenderTeamScreenV54 = window.renderTeamScreen;
+  if (typeof origRenderTeamScreenV54 === "function") {
+    window.renderTeamScreen = function(user) {
+      if (user && typeof recalculatePlatformAutoMetrics === "function") {
+        recalculatePlatformAutoMetrics(user);
+      }
+      return origRenderTeamScreenV54(user);
+    };
+  }
+
+  // Check every 15 seconds so exact IST 12:00 AM (00:00 IST) triggers automatically
+  setInterval(function() {
+    processIstMidnightDailyProfitPayout(false);
+  }, 15000);
+
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", function() {
+      processIstMidnightDailyProfitPayout(false);
+    });
+  } else {
+    processIstMidnightDailyProfitPayout(false);
+  }
+})();
+</script>
+
 </body>
 </html>
