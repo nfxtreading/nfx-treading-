@@ -9187,203 +9187,194 @@ state.sentKycEmailCode = null;
   </script>
 
 <script>
-(function nfxSingleBulletproofFinalEngineV58() {
+(function nfxFinalUnifiedV59Engine() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
-  var DB_USERS_KEY = "nfx_v58_registered_users";
-  var DB_MEMBER_SESS_KEY = "nfx_v58_member_session";
-  var DB_ADMIN_SESS_KEY = "nfx_v58_admin_session";
-  var DB_LOGOUT_KEY = "nfx_v58_explicit_logout";
-  var DB_IST_LEDGER_KEY = "nfx_v58_ist_midnight_ledger";
+  var USERS_KEY = "nfx_v59_users_registry";
+  var MEM_SESS_KEY = "nfx_v59_member_session";
+  var ADM_SESS_KEY = "nfx_v59_admin_session";
+  var EXPLICIT_LOGOUT_KEY = "nfx_v59_explicit_logout";
+  var IST_LEDGER_KEY = "nfx_v59_ist_midnight_ledger";
 
-  function low(v) {
+  function norm(v) {
     return String(v || "").trim().toLowerCase();
   }
 
-  function up(v) {
+  function normUp(v) {
     return String(v || "").trim().toUpperCase();
   }
 
-  function dig(v) {
+  function digOnly(v) {
     return String(v || "").replace(/[^0-9]/g, "");
   }
 
-  function num2(v) {
+  function toNum2(v) {
     var n = parseFloat(v);
     return isNaN(n) ? 0 : Number(n.toFixed(2));
   }
 
-  function hasValidCreds(m) {
+  // Strictly reject empty/placeholder/duplicate garbage accounts
+  function isGenuineMember(m) {
     if (!m || typeof m !== "object") return false;
-    var hasId = Boolean(
-      (m.username && String(m.username).trim()) ||
-      (m.email && String(m.email).trim()) ||
-      (m.mobile && dig(m.mobile).length >= 6) ||
-      (m.uid && String(m.uid).trim() && String(m.uid).trim() !== "NFX-1001")
-    );
-    var hasPw = Boolean(typeof m.password === "string" && m.password.length > 0);
-    return hasId && hasPw;
+    var u = String(m.username || "").trim();
+    var em = String(m.email || "").trim();
+    var mo = digOnly(m.mobile || "");
+    var id = String(m.uid || "").trim();
+    var pw = typeof m.password === "string" ? m.password : "";
+
+    var hasRealIdentifier = Boolean(u.length >= 2 || em.includes("@") || mo.length >= 6 || (id && id !== "NFX-1001"));
+    var hasPw = pw.length > 0;
+    return hasRealIdentifier && hasPw;
   }
 
-  function normalizeUser(existing, patch) {
-    var u = Object.assign({}, existing || {}, patch || {});
-    u.uid = String((patch && patch.uid) || (existing && existing.uid) || "").trim();
-    u.username = String((patch && patch.username) || (existing && existing.username) || "").trim();
-    u.email = String((patch && patch.email) || (existing && existing.email) || "").trim();
-    u.mobile = String((patch && patch.mobile) || (existing && existing.mobile) || "").trim();
-    u.country = String((patch && patch.country) || (existing && existing.country) || "").trim();
+  function mergeMemberRecord(base, patch) {
+    var m = Object.assign({}, base || {}, patch || {});
+    m.uid = String((patch && patch.uid) || (base && base.uid) || "").trim();
+    m.username = String((patch && patch.username) || (base && base.username) || "").trim();
+    m.email = String((patch && patch.email) || (base && base.email) || "").trim();
+    m.mobile = String((patch && patch.mobile) || (base && base.mobile) || "").trim();
+    m.country = String((patch && patch.country) || (base && base.country) || "").trim();
 
     if (patch && typeof patch.password === "string" && patch.password.length > 0) {
-      u.password = patch.password;
-    } else if (existing && typeof existing.password === "string" && existing.password.length > 0) {
-      u.password = existing.password;
+      m.password = patch.password;
+    } else if (base && typeof base.password === "string" && base.password.length > 0) {
+      m.password = base.password;
     } else {
-      u.password = "";
+      m.password = "";
     }
 
-    u.balance = num2(patch && patch.balance !== undefined ? patch.balance : (existing && existing.balance));
-    u.yourInvest = num2(patch && patch.yourInvest !== undefined ? patch.yourInvest : (existing && existing.yourInvest));
-    u.teamInvest = num2(patch && patch.teamInvest !== undefined ? patch.teamInvest : (existing && existing.teamInvest));
-    u.totalProfit = num2(patch && patch.totalProfit !== undefined ? patch.totalProfit : (existing && existing.totalProfit));
-    u.referralBonus = num2(patch && patch.referralBonus !== undefined ? patch.referralBonus : (existing && existing.referralBonus));
-    u.aMembersCount = Math.max(0, parseInt((patch && patch.aMembersCount) ?? (existing && existing.aMembersCount) ?? 0, 10) || 0);
-    u.bMembersCount = Math.max(0, parseInt((patch && patch.bMembersCount) ?? (existing && existing.bMembersCount) ?? 0, 10) || 0);
-    u.cMembersCount = Math.max(0, parseInt((patch && patch.cMembersCount) ?? (existing && existing.cMembersCount) ?? 0, 10) || 0);
+    m.balance = toNum2(patch && patch.balance !== undefined ? patch.balance : (base && base.balance));
+    m.yourInvest = toNum2(patch && patch.yourInvest !== undefined ? patch.yourInvest : (base && base.yourInvest));
+    m.teamInvest = toNum2(patch && patch.teamInvest !== undefined ? patch.teamInvest : (base && base.teamInvest));
+    m.totalProfit = toNum2(patch && patch.totalProfit !== undefined ? patch.totalProfit : (base && base.totalProfit));
+    m.referralBonus = toNum2(patch && patch.referralBonus !== undefined ? patch.referralBonus : (base && base.referralBonus));
+    m.aMembersCount = Math.max(0, parseInt((patch && patch.aMembersCount) ?? (base && base.aMembersCount) ?? 0, 10) || 0);
+    m.bMembersCount = Math.max(0, parseInt((patch && patch.bMembersCount) ?? (base && base.bMembersCount) ?? 0, 10) || 0);
+    m.cMembersCount = Math.max(0, parseInt((patch && patch.cMembersCount) ?? (base && base.cMembersCount) ?? 0, 10) || 0);
 
-    if (!u.referralCode && u.uid) {
-      u.referralCode = u.uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if (!m.uid) {
+      m.uid = "NFX-" + Math.floor(2000 + Math.random() * 7999);
     }
-    if (!u.authenticatorSecret && typeof generateUniqueBase32Key === "function") {
-      u.authenticatorSecret = generateUniqueBase32Key(u.uid || u.username || "NFX");
+    if (!m.referralCode) {
+      m.referralCode = m.uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
     }
-    if (!u.avatar && typeof DEFAULT_USER_AVATAR !== "undefined") {
-      u.avatar = DEFAULT_USER_AVATAR;
+    if (!m.authenticatorSecret && typeof generateUniqueBase32Key === "function") {
+      m.authenticatorSecret = generateUniqueBase32Key(m.uid + "_" + (m.username || "USER"));
     }
-    if (!u.withdrawWallets || typeof u.withdrawWallets !== "object") {
-      u.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null };
+    if (!m.avatar && typeof DEFAULT_USER_AVATAR !== "undefined") {
+      m.avatar = DEFAULT_USER_AVATAR;
     }
-    return u;
+    if (!m.withdrawWallets || typeof m.withdrawWallets !== "object") {
+      m.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null };
+    }
+    return m;
   }
 
-  function loadUsersPool() {
-    var rawArr = [];
-    var storageKeys = [
-      DB_USERS_KEY,
+  // Deduplicate strictly by unique key (username OR email OR mobile OR uid) so duplicate accounts are never created
+  function deduplicateMembersList(rawList) {
+    var result = [];
+    (Array.isArray(rawList) ? rawList : []).forEach(function(item) {
+      if (!isGenuineMember(item)) return;
+      var matchIdx = result.findIndex(function(existing) {
+        var sameUser = item.username && existing.username && norm(item.username) === norm(existing.username);
+        var sameEmail = item.email && existing.email && norm(item.email) === norm(existing.email);
+        var sameMob = digOnly(item.mobile).length >= 6 && digOnly(existing.mobile).length >= 6 && digOnly(item.mobile) === digOnly(existing.mobile);
+        var sameUid = item.uid && existing.uid && norm(item.uid) === norm(existing.uid);
+        return Boolean(sameUser || sameEmail || sameMob || sameUid);
+      });
+      if (matchIdx >= 0) {
+        result[matchIdx] = mergeMemberRecord(result[matchIdx], item);
+      } else {
+        result.push(mergeMemberRecord(null, item));
+      }
+    });
+    return result;
+  }
+
+  function loadCleanMembers() {
+    var pool = [];
+    var keys = [
+      USERS_KEY,
+      "nfx_v58_registered_users",
       "nfx_authoritative_members_v57",
       "nfx_clean_members_registry_v56",
       "nfx_unified_registered_users_v55",
       "nfx_member_original_creds_v53"
     ];
-
-    storageKeys.forEach(function(key) {
+    keys.forEach(function(k) {
       try {
-        var txt = localStorage.getItem(key);
-        if (!txt) return;
-        var parsed = JSON.parse(txt);
-        if (Array.isArray(parsed)) {
-          rawArr = rawArr.concat(parsed);
-        } else if (parsed && typeof parsed === "object") {
-          Object.keys(parsed).forEach(function(k) { rawArr.push(parsed[k]); });
+        var raw = localStorage.getItem(k);
+        if (!raw) return;
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) pool = pool.concat(parsed);
+        else if (parsed && typeof parsed === "object") {
+          Object.keys(parsed).forEach(function(prop) { pool.push(parsed[prop]); });
         }
       } catch (e) {}
     });
-
     try {
       var s16 = localStorage.getItem("nfx_treading_session_v16");
       if (s16) {
         var p16 = JSON.parse(s16);
-        if (p16 && Array.isArray(p16.members)) rawArr = rawArr.concat(p16.members);
+        if (p16 && Array.isArray(p16.members)) pool = pool.concat(p16.members);
       }
     } catch (e) {}
-
     if (Array.isArray(state.members)) {
-      rawArr = rawArr.concat(state.members);
+      pool = pool.concat(state.members);
     }
-
-    var uniqueUsers = [];
-    rawArr.forEach(function(item) {
-      if (!hasValidCreds(item)) return;
-      var foundIdx = uniqueUsers.findIndex(function(x) {
-        return (item.uid && x.uid && low(item.uid) === low(x.uid)) ||
-               (item.username && x.username && low(item.username) === low(x.username)) ||
-               (item.email && x.email && low(item.email) === low(x.email));
-      });
-      if (foundIdx >= 0) {
-        uniqueUsers[foundIdx] = normalizeUser(uniqueUsers[foundIdx], item);
-      } else {
-        uniqueUsers.push(normalizeUser(null, item));
-      }
-    });
-    return uniqueUsers;
+    return deduplicateMembersList(pool);
   }
 
-  function saveUsersPool(list) {
-    var clean = (Array.isArray(list) ? list : []).filter(hasValidCreds).map(function(m) {
-      return normalizeUser(null, m);
-    });
+  function saveCleanMembers(list) {
+    var clean = deduplicateMembersList(list);
     try {
-      localStorage.setItem(DB_USERS_KEY, JSON.stringify(clean));
+      localStorage.setItem(USERS_KEY, JSON.stringify(clean));
     } catch (e) {}
-
-    state.members = Array.isArray(state.members) ? state.members : [];
-    clean.forEach(function(u) {
-      var idx = state.members.findIndex(function(m) {
-        return (u.uid && m.uid && low(u.uid) === low(m.uid)) ||
-               (u.username && m.username && low(u.username) === low(m.username)) ||
-               (u.email && m.email && low(u.email) === low(m.email));
-      });
-      if (idx >= 0) {
-        state.members[idx] = normalizeUser(state.members[idx], u);
-      } else {
-        state.members.push(u);
-      }
-    });
-
+    state.members = clean;
     if (typeof saveSessionState === "function") {
       try { saveSessionState(); } catch (e) {}
     }
   }
 
-  function lookupUserById(queryStr) {
-    var qLow = low(queryStr);
-    var qDig = dig(queryStr);
+  function findMemberByCredential(identifier) {
+    var qLow = norm(identifier);
+    var qDig = digOnly(identifier);
     if (!qLow && !qDig) return null;
 
-    var pool = loadUsersPool();
-    return pool.find(function(m) {
+    var list = loadCleanMembers();
+    return list.find(function(m) {
       if (!m) return false;
-      var byUser = m.username && low(m.username) === qLow;
-      var byUid = m.uid && low(m.uid) === qLow;
-      var byEmail = m.email && low(m.email) === qLow;
-      var byRef = m.referralCode && low(m.referralCode) === qLow;
-      var byMob = qDig.length >= 6 && m.mobile && dig(m.mobile) === qDig;
-      return Boolean(byUser || byUid || byEmail || byRef || byMob);
+      var uMatch = m.username && norm(m.username) === qLow;
+      var uidMatch = m.uid && norm(m.uid) === qLow;
+      var emMatch = m.email && norm(m.email) === qLow;
+      var refMatch = m.referralCode && norm(m.referralCode) === qLow;
+      var mobMatch = qDig.length >= 6 && m.mobile && digOnly(m.mobile) === qDig;
+      return Boolean(uMatch || uidMatch || emMatch || refMatch || mobMatch);
     }) || null;
   }
 
-  function persistMemberSessionNow(memObj, routeTarget) {
+  function saveMemberSession(mem, routeName) {
     try {
-      localStorage.removeItem(DB_LOGOUT_KEY);
-      sessionStorage.removeItem(DB_LOGOUT_KEY);
-      var uidNow = (memObj && memObj.uid) || state.currentUserUid || "";
-      var sess = {
+      localStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+      sessionStorage.removeItem(EXPLICIT_LOGOUT_KEY);
+      var payload = {
         isLoggedIn: true,
-        currentUserUid: uidNow,
-        currentRoute: routeTarget || "dashboard",
+        currentUserUid: (mem && mem.uid) || state.currentUserUid || "",
+        currentRoute: routeName || state.currentRoute || "dashboard",
         savedAt: Date.now()
       };
-      localStorage.setItem(DB_MEMBER_SESS_KEY, JSON.stringify(sess));
-      sessionStorage.setItem(DB_MEMBER_SESS_KEY, JSON.stringify(sess));
+      localStorage.setItem(MEM_SESS_KEY, JSON.stringify(payload));
+      sessionStorage.setItem(MEM_SESS_KEY, JSON.stringify(payload));
     } catch (e) {}
     if (typeof saveSessionState === "function") {
       try { saveSessionState(); } catch (e) {}
     }
   }
 
-  function persistAdminSessionNow() {
+  function saveAdminSession() {
     try {
       if (state.admin && state.admin.authenticated === true) {
-        var admSess = {
+        var payload = {
           authenticated: true,
           role: state.admin.role || "master_admin",
           username: state.admin.username || "",
@@ -9392,11 +9383,11 @@ state.sentKycEmailCode = null;
           adminMenuTab: state.adminMenuTab || "overview",
           savedAt: Date.now()
         };
-        localStorage.setItem(DB_ADMIN_SESS_KEY, JSON.stringify(admSess));
-        sessionStorage.setItem(DB_ADMIN_SESS_KEY, JSON.stringify(admSess));
+        localStorage.setItem(ADM_SESS_KEY, JSON.stringify(payload));
+        sessionStorage.setItem(ADM_SESS_KEY, JSON.stringify(payload));
       } else {
-        localStorage.removeItem(DB_ADMIN_SESS_KEY);
-        sessionStorage.removeItem(DB_ADMIN_SESS_KEY);
+        localStorage.removeItem(ADM_SESS_KEY);
+        sessionStorage.removeItem(ADM_SESS_KEY);
       }
     } catch (e) {}
     if (typeof saveSessionState === "function") {
@@ -9404,15 +9395,13 @@ state.sentKycEmailCode = null;
     }
   }
 
-  function restoreSessionNow() {
-    var pool = loadUsersPool();
-    if (pool.length > 0) {
-      saveUsersPool(pool);
-    }
+  function restoreSessions() {
+    var clean = loadCleanMembers();
+    saveCleanMembers(clean);
 
-    // 1. Check Master Admin session first
+    // 1. Master Admin session
     try {
-      var rawAdm = sessionStorage.getItem(DB_ADMIN_SESS_KEY) || localStorage.getItem(DB_ADMIN_SESS_KEY);
+      var rawAdm = sessionStorage.getItem(ADM_SESS_KEY) || localStorage.getItem(ADM_SESS_KEY);
       if (rawAdm) {
         var admObj = JSON.parse(rawAdm);
         if (admObj && admObj.authenticated === true) {
@@ -9431,23 +9420,23 @@ state.sentKycEmailCode = null;
       }
     } catch (e) {}
 
-    // 2. Check Member session unless user explicitly logged out
+    // 2. Member session unless explicitly logged out
     var loggedOut = false;
     try {
-      loggedOut = Boolean(localStorage.getItem(DB_LOGOUT_KEY) || sessionStorage.getItem(DB_LOGOUT_KEY));
+      loggedOut = Boolean(localStorage.getItem(EXPLICIT_LOGOUT_KEY) || sessionStorage.getItem(EXPLICIT_LOGOUT_KEY));
     } catch (e) {}
 
     if (!loggedOut) {
       try {
-        var rawMem = sessionStorage.getItem(DB_MEMBER_SESS_KEY) || localStorage.getItem(DB_MEMBER_SESS_KEY);
+        var rawMem = sessionStorage.getItem(MEM_SESS_KEY) || localStorage.getItem(MEM_SESS_KEY);
         if (rawMem) {
           var memObj = JSON.parse(rawMem);
           if (memObj && memObj.isLoggedIn === true && memObj.currentUserUid) {
-            var mFound = (state.members || []).find(function(m) {
-              return low(m.uid) === low(memObj.currentUserUid);
+            var foundMem = (state.members || []).find(function(m) {
+              return norm(m.uid) === norm(memObj.currentUserUid);
             });
-            if (mFound) {
-              state.currentUserUid = mFound.uid;
+            if (foundMem) {
+              state.currentUserUid = foundMem.uid;
               state.isLoggedIn = true;
               state.showForgetInLogin = false;
               state.currentRoute = (memObj.currentRoute && memObj.currentRoute !== "login" && memObj.currentRoute !== "register")
@@ -9460,16 +9449,16 @@ state.sentKycEmailCode = null;
       } catch (e) {}
     }
 
-    return "none";
+    return "guest";
   }
 
   window.restoreSessionState = function() {
-    restoreSessionNow();
+    restoreSessions();
     return Boolean(state.isLoggedIn || (state.admin && state.admin.authenticated));
   };
 
   // =========================================================================
-  // 1. REGISTER -> DIRECT DASHBOARD (Zero login prompt after register)
+  // 1. REGISTER -> NO DUPLICATE ACCOUNT, DIRECT DASHBOARD
   // =========================================================================
   window.handleRegisterSubmit = function(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -9496,15 +9485,16 @@ state.sentKycEmailCode = null;
       return false;
     }
 
-    var pool = loadUsersPool();
+    var pool = loadCleanMembers();
     var existing = pool.find(function(m) {
-      return (uname && m.username && low(m.username) === low(uname)) ||
-             (email && m.email && low(m.email) === low(email)) ||
-             (mobile && dig(m.mobile).length >= 6 && m.mobile && dig(m.mobile) === dig(mobile));
+      var uMatch = uname && m.username && norm(m.username) === norm(uname);
+      var eMatch = email && m.email && norm(m.email) === norm(email);
+      var mMatch = digOnly(mobile).length >= 6 && digOnly(m.mobile).length >= 6 && digOnly(m.mobile) === digOnly(mobile);
+      return Boolean(uMatch || eMatch || mMatch);
     });
 
     var uid = (existing && existing.uid) || ("NFX-" + Math.floor(2000 + Math.random() * 7999));
-    var createdUser = normalizeUser(existing, {
+    var userObj = mergeMemberRecord(existing, {
       uid: uid,
       username: uname,
       email: email || (existing && existing.email) || "",
@@ -9516,33 +9506,33 @@ state.sentKycEmailCode = null;
       status: (existing && existing.status) || "Active"
     });
 
-    var nextPool = pool.filter(function(x) { return low(x.uid) !== low(createdUser.uid); });
-    nextPool.push(createdUser);
-    saveUsersPool(nextPool);
+    var nextList = pool.filter(function(x) { return norm(x.uid) !== norm(userObj.uid); });
+    nextList.push(userObj);
+    saveCleanMembers(nextList);
 
     if (inv && typeof registerReferralMemberRecord === "function") {
-      try { registerReferralMemberRecord(inv, createdUser); } catch (eRef) {}
+      try { registerReferralMemberRecord(inv, userObj); } catch (eRef) {}
     }
 
     if (state.admin) {
       state.admin.authenticated = false;
-      persistAdminSessionNow();
+      saveAdminSession();
     }
-    state.currentUserUid = createdUser.uid;
+    state.currentUserUid = userObj.uid;
     state.isLoggedIn = true;
     state.showForgetInLogin = false;
     state.sentRegisterCode = null;
     if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
     state.currentRoute = "dashboard";
 
-    persistMemberSessionNow(createdUser, "dashboard");
+    saveMemberSession(userObj, "dashboard");
     if (typeof renderAll === "function") {
       try { renderAll(); } catch (eR) {}
     }
     var mv = document.getElementById("main-view");
     if (mv && typeof window.renderDashboardScreen === "function") {
-      var activeU = typeof activeMember === "function" ? activeMember() : createdUser;
-      mv.innerHTML = window.renderDashboardScreen(activeU);
+      var curU = typeof activeMember === "function" ? activeMember() : userObj;
+      mv.innerHTML = window.renderDashboardScreen(curU);
     }
     if (typeof showSuccessPopup2s === "function") {
       showSuccessPopup2s("Registered!", "Welcome to NFX Treading, " + uname + "!");
@@ -9551,7 +9541,7 @@ state.sentKycEmailCode = null;
   };
 
   // =========================================================================
-  // 2. LOGIN WITH REGISTERED USERNAME OR UID + PASSWORD
+  // 2. LOGIN WITH REGISTERED USERNAME OR UID + PASSWORD (ALL USERS)
   // =========================================================================
   window.handleLoginSubmit = function(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -9567,10 +9557,10 @@ state.sentKycEmailCode = null;
       return false;
     }
 
-    var pool = loadUsersPool();
-    saveUsersPool(pool);
+    var pool = loadCleanMembers();
+    saveCleanMembers(pool);
 
-    var matched = lookupUserById(idVal);
+    var matched = findMemberByCredential(idVal);
     if (!matched) {
       if (typeof showToast === "function") {
         showToast("Account Not Found", "No registered account found with this Username or UID.", "error");
@@ -9578,9 +9568,9 @@ state.sentKycEmailCode = null;
       return false;
     }
 
-    var savedPw = String(matched.password || "");
-    var pwOk = (pwVal === savedPw) || (pwVal.trim() === savedPw.trim());
-    if (!pwOk) {
+    var storedPw = String(matched.password || "");
+    var validPw = (pwVal === storedPw) || (pwVal.trim() === storedPw.trim());
+    if (!validPw) {
       if (typeof showToast === "function") {
         showToast("Incorrect Password", "Password does not match. Please try again.", "error");
       }
@@ -9589,7 +9579,7 @@ state.sentKycEmailCode = null;
 
     if (state.admin) {
       state.admin.authenticated = false;
-      persistAdminSessionNow();
+      saveAdminSession();
     }
     state.currentUserUid = matched.uid;
     state.isLoggedIn = true;
@@ -9597,14 +9587,14 @@ state.sentKycEmailCode = null;
     if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) routeHistory.length = 0;
     state.currentRoute = "dashboard";
 
-    persistMemberSessionNow(matched, "dashboard");
+    saveMemberSession(matched, "dashboard");
     if (typeof renderAll === "function") {
       try { renderAll(); } catch (eR) {}
     }
     var mv = document.getElementById("main-view");
     if (mv && typeof window.renderDashboardScreen === "function") {
-      var activeU = typeof activeMember === "function" ? activeMember() : matched;
-      mv.innerHTML = window.renderDashboardScreen(activeU);
+      var curU = typeof activeMember === "function" ? activeMember() : matched;
+      mv.innerHTML = window.renderDashboardScreen(curU);
     }
     if (typeof showSuccessPopup2s === "function") {
       showSuccessPopup2s("Logged In!", "Welcome back, " + (matched.username || matched.uid) + "!");
@@ -9641,7 +9631,7 @@ state.sentKycEmailCode = null;
     state.adminPage = state.adminPage || "dashboard";
     state.adminMenuTab = state.adminMenuTab || "overview";
 
-    persistAdminSessionNow();
+    saveAdminSession();
     if (typeof syncMasterAdminSidebarVisibility === "function") {
       try { syncMasterAdminSidebarVisibility(); } catch (eS) {}
     }
@@ -9659,12 +9649,12 @@ state.sentKycEmailCode = null;
   // =========================================================================
   window.logoutMemberAccount = function() {
     try {
-      localStorage.setItem(DB_LOGOUT_KEY, "1");
-      sessionStorage.setItem(DB_LOGOUT_KEY, "1");
-      localStorage.removeItem(DB_MEMBER_SESS_KEY);
-      sessionStorage.removeItem(DB_MEMBER_SESS_KEY);
-      localStorage.removeItem(DB_ADMIN_SESS_KEY);
-      sessionStorage.removeItem(DB_ADMIN_SESS_KEY);
+      localStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
+      sessionStorage.setItem(EXPLICIT_LOGOUT_KEY, "1");
+      localStorage.removeItem(MEM_SESS_KEY);
+      sessionStorage.removeItem(MEM_SESS_KEY);
+      localStorage.removeItem(ADM_SESS_KEY);
+      sessionStorage.removeItem(ADM_SESS_KEY);
     } catch (e) {}
 
     if (state.admin) {
@@ -9686,8 +9676,8 @@ state.sentKycEmailCode = null;
 
   window.logoutMasterAdmin = function() {
     try {
-      localStorage.removeItem(DB_ADMIN_SESS_KEY);
-      sessionStorage.removeItem(DB_ADMIN_SESS_KEY);
+      localStorage.removeItem(ADM_SESS_KEY);
+      sessionStorage.removeItem(ADM_SESS_KEY);
     } catch (e) {}
     if (state.admin) {
       state.admin.authenticated = false;
@@ -9705,9 +9695,64 @@ state.sentKycEmailCode = null;
   };
 
   // =========================================================================
-  // 5. IST 12:00 AM (00:00 IST) AUTO DAILY PROFIT & INSTANT REFERRAL ENGINE
+  // 5. GUARANTEED #master-admin LOGIN SCREEN ROUTING (EVEN WHEN UN-AUTHENTICATED)
   // =========================================================================
-  function getIstNowInfo(dObj) {
+  function getMasterAdminLoginCardHtml() {
+    return `
+      <div class="max-w-md mx-auto space-y-5 py-6 text-white">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center text-amber-300 text-lg font-extrabold">🛡️</div>
+          <div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Master Admin Login</h1>
+            <p class="text-xs text-slate-300">NFX Treading — Master Admin Panel</p>
+          </div>
+        </div>
+        <div class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-4 text-xs">
+          <div class="text-center pb-2 border-b border-sky-500/20">
+            <div class="text-lg font-extrabold text-amber-300">NFX Treading</div>
+            <div class="text-xs text-slate-300 mt-0.5">Master Admin Login</div>
+          </div>
+          <form onsubmit="return window.submitAdminLogin(event)" class="space-y-3.5">
+            <div>
+              <label class="text-slate-300 block mb-1">Admin Email or Username</label>
+              <input id="adm-login-email" required placeholder="Enter Admin Email or Username" class="input-box w-full rounded-lg px-3 py-2.5" />
+            </div>
+            <div>
+              <label class="text-slate-300 block mb-1">Password</label>
+              <div class="relative flex items-center">
+                <input type="password" id="adm-login-pw" required placeholder="Enter Password" class="input-box w-full rounded-lg px-3 py-2.5 pr-10" />
+                <button type="button" onclick="togglePasswordEye('adm-login-pw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm">👁</button>
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold tracking-wide shadow">
+              SECURE ADMIN LOGIN
+            </button>
+          </form>
+        </div>
+      </div>
+    `;
+  }
+
+  var baseRenderRouteV59 = window.renderRouteContent;
+  window.renderRouteContent = function(user) {
+    if (norm(window.location.hash || "").indexOf("master-admin") !== -1 || state.currentRoute === "master-admin") {
+      if (state.admin && state.admin.authenticated === true) {
+        if (typeof window.renderMasterAdminPanelScreen === "function") {
+          return window.renderMasterAdminPanelScreen();
+        }
+      }
+      return getMasterAdminLoginCardHtml();
+    }
+    if (typeof baseRenderRouteV59 === "function") {
+      return baseRenderRouteV59(user);
+    }
+    return "";
+  };
+
+  // =========================================================================
+  // 6. IST 12:00 AM (00:00 IST) AUTO DAILY PROFIT & INSTANT REFERRAL ENGINE
+  // =========================================================================
+  function getIstClockV59(dObj) {
     var d = dObj instanceof Date ? dObj : new Date();
     var utcMs = d.getTime() + (d.getTimezoneOffset() * 60000);
     var ist = new Date(utcMs + (5.5 * 3600000));
@@ -9726,24 +9771,22 @@ state.sentKycEmailCode = null;
     };
   }
 
-  function processIstMidnightProfit(forceRun) {
-    var ist = getIstNowInfo(new Date());
+  function runIstMidnightProfitV59(forceRun) {
+    var ist = getIstClockV59(new Date());
     if (!forceRun && !ist.isMidnight) return 0;
 
     var ledger = {};
     try {
-      var raw = localStorage.getItem(DB_IST_LEDGER_KEY);
+      var raw = localStorage.getItem(IST_LEDGER_KEY);
       if (raw) ledger = JSON.parse(raw) || {};
     } catch (e) {}
 
-    var creditedSum = 0;
-    var members = Array.isArray(state.members) ? state.members : [];
-
-    members.forEach(function(m) {
+    var credited = 0;
+    (state.members || []).forEach(function(m) {
       if (!m || !m.uid) return;
       var plans = Array.isArray(m.activePlansList) ? m.activePlansList : [];
-      if (plans.length === 0 && num2(m.yourInvest) > 0) {
-        var inv0 = num2(m.yourInvest);
+      if (plans.length === 0 && toNum2(m.yourInvest) > 0) {
+        var inv0 = toNum2(m.yourInvest);
         var pName0 = (m.planName && m.planName !== "None") ? m.planName : "Basic Plan";
         var rate0 = pName0.toLowerCase().indexOf("vip") !== -1 ? 5.0 : (pName0.toLowerCase().indexOf("premium") !== -1 ? 3.0 : 1.8);
         plans.push({
@@ -9751,8 +9794,8 @@ state.sentKycEmailCode = null;
           planName: pName0,
           investedAmount: inv0,
           dailyProfitPct: rate0,
-          dailyProfitAmt: num2(inv0 * (rate0 / 100)),
-          totalProfitEarned: num2(m.totalProfit || 0),
+          dailyProfitAmt: toNum2(inv0 * (rate0 / 100)),
+          totalProfitEarned: toNum2(m.totalProfit || 0),
           status: "Active",
           elapsedDays: 1,
           durationDays: 30,
@@ -9765,20 +9808,20 @@ state.sentKycEmailCode = null;
       plans.forEach(function(pl, i) {
         var st = String(pl && pl.status || "Active").toLowerCase();
         if (st !== "active" && st !== "running") return;
-        var invAmt = num2(pl.investedAmount);
+        var invAmt = toNum2(pl.investedAmount);
         var pct = parseFloat(pl.dailyProfitPct) || (String(pl.planName || "").toLowerCase().indexOf("vip") !== -1 ? 5.0 : (String(pl.planName || "").toLowerCase().indexOf("premium") !== -1 ? 3.0 : 1.8));
         if (invAmt <= 0 || pct <= 0) return;
 
         var k = (pl.investmentId || (m.uid + "_" + i)) + "::" + ist.dateKey;
         if (ledger[k] || pl.lastIstPayoutDateKey === ist.dateKey) return;
 
-        var dailyAmt = num2(invAmt * (pct / 100));
+        var dailyAmt = toNum2(invAmt * (pct / 100));
         if (dailyAmt <= 0) return;
 
         ledger[k] = true;
         pl.lastIstPayoutDateKey = ist.dateKey;
         pl.dailyProfitAmt = dailyAmt;
-        pl.totalProfitEarned = num2(num2(pl.totalProfitEarned) + dailyAmt);
+        pl.totalProfitEarned = toNum2(toNum2(pl.totalProfitEarned) + dailyAmt);
         pl.elapsedDays = (parseInt(pl.elapsedDays, 10) || 0) + 1;
         if (!Array.isArray(pl.incomeHistory)) pl.incomeHistory = [];
         pl.incomeHistory.unshift({
@@ -9786,39 +9829,39 @@ state.sentKycEmailCode = null;
           amount: dailyAmt,
           status: "Completed"
         });
-        mGain = num2(mGain + dailyAmt);
+        mGain = toNum2(mGain + dailyAmt);
       });
 
       if (mGain > 0) {
-        m.balance = num2(num2(m.balance) + mGain);
-        m.totalProfit = num2(num2(m.totalProfit) + mGain);
-        creditedSum = num2(creditedSum + mGain);
+        m.balance = toNum2(toNum2(m.balance) + mGain);
+        m.totalProfit = toNum2(toNum2(m.totalProfit) + mGain);
+        credited = toNum2(credited + mGain);
       }
     });
 
-    if (creditedSum > 0) {
-      try { localStorage.setItem(DB_IST_LEDGER_KEY, JSON.stringify(ledger)); } catch (e) {}
-      saveUsersPool(state.members);
+    if (credited > 0) {
+      try { localStorage.setItem(IST_LEDGER_KEY, JSON.stringify(ledger)); } catch (e) {}
+      saveCleanMembers(state.members);
       if (typeof renderAll === "function") renderAll();
     }
-    return creditedSum;
+    return credited;
   }
 
-  window.runIstMidnightDailyProfitCheck = processIstMidnightProfit;
+  window.runIstMidnightDailyProfitCheck = runIstMidnightProfitV59;
 
   window.registerReferralMemberRecord = function(inviterCodeOrUid, newMemberObj) {
     if (typeof ensureReferralStore === "function") ensureReferralStore();
     state.referralHistoryRecords = Array.isArray(state.referralHistoryRecords) ? state.referralHistoryRecords : [];
-    var codeClean = up(inviterCodeOrUid);
+    var codeClean = normUp(inviterCodeOrUid);
     if (!codeClean || !newMemberObj) return;
 
     var inviter = (state.members || []).find(function(m) {
-      return up(m.referralCode) === codeClean || up(m.uid) === codeClean;
+      return normUp(m.referralCode) === codeClean || normUp(m.uid) === codeClean;
     });
     if (!inviter) return;
 
     newMemberObj.referredBy = inviter.referralCode || inviter.uid;
-    var ist = getIstNowInfo(new Date());
+    var ist = getIstClockV59(new Date());
     var idx = state.referralHistoryRecords.findIndex(function(r) {
       return r && r.memberUid === newMemberObj.uid;
     });
@@ -9829,17 +9872,17 @@ state.sentKycEmailCode = null;
       memberName: newMemberObj.username || "Member",
       memberUid: newMemberObj.uid,
       joinDate: ist.dateLabel,
-      investedAmount: idx >= 0 ? num2(state.referralHistoryRecords[idx].investedAmount) : 0,
+      investedAmount: idx >= 0 ? toNum2(state.referralHistoryRecords[idx].investedAmount) : 0,
       status: idx >= 0 && state.referralHistoryRecords[idx].status === "Active" ? "Active" : "Pending"
     };
     if (idx >= 0) state.referralHistoryRecords[idx] = Object.assign({}, state.referralHistoryRecords[idx], rec);
     else state.referralHistoryRecords.unshift(rec);
 
     var refs = state.referralHistoryRecords.filter(function(r) {
-      return r.inviterUid === inviter.uid || up(r.inviterCode) === up(inviter.referralCode || inviter.uid);
+      return r.inviterUid === inviter.uid || normUp(r.inviterCode) === normUp(inviter.referralCode || inviter.uid);
     });
     inviter.aMembersCount = Math.max(Number(inviter.aMembersCount || 0), refs.length);
-    saveUsersPool(state.members);
+    saveCleanMembers(state.members);
   };
 
   window.awardReferralJoiningBonusOnInvest = function(investorMember, investedAmount) {
@@ -9847,21 +9890,21 @@ state.sentKycEmailCode = null;
     state.referralHistoryRecords = Array.isArray(state.referralHistoryRecords) ? state.referralHistoryRecords : [];
     state.referralCommissionRecords = Array.isArray(state.referralCommissionRecords) ? state.referralCommissionRecords : [];
 
-    var amt = num2(investedAmount);
+    var amt = toNum2(investedAmount);
     if (!investorMember || amt <= 0) return 0;
 
-    var refCode = up(investorMember.referredBy);
+    var refCode = normUp(investorMember.referredBy);
     if (!refCode) return 0;
 
     var bonusAmt = typeof calculateJoiningBonusByInvestAmount === "function"
-      ? num2(calculateJoiningBonusByInvestAmount(amt))
+      ? toNum2(calculateJoiningBonusByInvestAmount(amt))
       : (amt >= 400 && amt <= 700 ? 35 : (amt >= 300 && amt < 400 ? 25 : (amt >= 200 && amt < 300 ? 15 : (amt >= 100 && amt < 200 ? 10 : 0))));
 
     var owner = (state.members || []).find(function(m) {
-      return up(m.referralCode) === refCode || up(m.uid) === refCode;
+      return normUp(m.referralCode) === refCode || normUp(m.uid) === refCode;
     });
 
-    var ist = getIstNowInfo(new Date());
+    var ist = getIstClockV59(new Date());
     var histRec = state.referralHistoryRecords.find(function(r) {
       return r && r.memberUid === investorMember.uid;
     });
@@ -9879,24 +9922,24 @@ state.sentKycEmailCode = null;
       };
       state.referralHistoryRecords.unshift(histRec);
     } else {
-      histRec.investedAmount = num2(num2(histRec.investedAmount) + amt);
+      histRec.investedAmount = toNum2(toNum2(histRec.investedAmount) + amt);
       histRec.status = "Active";
       if (owner && !histRec.inviterUid) histRec.inviterUid = owner.uid;
     }
 
     if (owner) {
       var ownerRefs = state.referralHistoryRecords.filter(function(r) {
-        return r.inviterUid === owner.uid || up(r.inviterCode) === up(owner.referralCode || owner.uid);
+        return r.inviterUid === owner.uid || normUp(r.inviterCode) === normUp(owner.referralCode || owner.uid);
       });
       var ownerActive = ownerRefs.filter(function(r) { return r.status === "Active"; });
 
       owner.aMembersCount = Math.max(Number(owner.aMembersCount || 0), ownerRefs.length);
-      owner.aMembersInvest = num2(num2(owner.aMembersInvest) + amt);
-      owner.teamInvest = num2(num2(owner.teamInvest) + amt);
+      owner.aMembersInvest = toNum2(toNum2(owner.aMembersInvest) + amt);
+      owner.teamInvest = toNum2(toNum2(owner.teamInvest) + amt);
 
       if (bonusAmt > 0) {
-        owner.balance = num2(num2(owner.balance) + bonusAmt);
-        owner.referralBonus = num2(num2(owner.referralBonus) + bonusAmt);
+        owner.balance = toNum2(toNum2(owner.balance) + bonusAmt);
+        owner.referralBonus = toNum2(toNum2(owner.referralBonus) + bonusAmt);
         state.referralCommissionRecords.unshift({
           id: "COM-" + Math.floor(1000 + Math.random() * 9000),
           ownerUid: owner.uid,
@@ -9911,54 +9954,54 @@ state.sentKycEmailCode = null;
       if (state.extraData && (!state.currentUserUid || owner.uid === state.currentUserUid)) {
         state.extraData.activeAMembersCount = Math.max(Number(state.extraData.activeAMembersCount || 0), ownerActive.length);
         if (bonusAmt > 0) {
-          state.extraData.referralIncomeToday = num2(num2(state.extraData.referralIncomeToday) + bonusAmt);
-          state.extraData.totalIncomeToday = num2(num2(state.extraData.totalIncomeToday) + bonusAmt);
+          state.extraData.referralIncomeToday = toNum2(toNum2(state.extraData.referralIncomeToday) + bonusAmt);
+          state.extraData.totalIncomeToday = toNum2(toNum2(state.extraData.totalIncomeToday) + bonusAmt);
         }
       }
-      saveUsersPool(state.members);
+      saveCleanMembers(state.members);
     }
 
     return bonusAmt;
   };
 
   // =========================================================================
-  // 6. SMOOTH MASTER ADMIN SEARCH & INSTANT EDIT
+  // 7. SMOOTH MASTER ADMIN SEARCH & INSTANT EDIT
   // =========================================================================
-  function isMemberMatched(m, qText) {
+  function matchMemberSearch(m, qStr) {
     if (!m) return false;
-    var q = low(qText);
+    var q = norm(qStr);
     if (!q) return true;
-    var qDig = dig(qText);
+    var qDig = digOnly(qStr);
     return Boolean(
-      (m.username && low(m.username).indexOf(q) !== -1) ||
-      (m.uid && low(m.uid).indexOf(q) !== -1) ||
-      (m.email && low(m.email).indexOf(q) !== -1) ||
-      (m.referralCode && low(m.referralCode).indexOf(q) !== -1) ||
-      (qDig.length >= 2 && m.mobile && dig(m.mobile).indexOf(qDig) !== -1)
+      (m.username && norm(m.username).indexOf(q) !== -1) ||
+      (m.uid && norm(m.uid).indexOf(q) !== -1) ||
+      (m.email && norm(m.email).indexOf(q) !== -1) ||
+      (m.referralCode && norm(m.referralCode).indexOf(q) !== -1) ||
+      (qDig.length >= 2 && m.mobile && digOnly(m.mobile).indexOf(qDig) !== -1)
     );
   }
 
-  function renderSmoothSearchMatches(qText) {
-    var rows = (state.members || []).filter(function(m) {
-      return isMemberMatched(m, qText);
+  function renderSearchResultRows(qStr) {
+    var matches = (state.members || []).filter(function(m) {
+      return matchMemberSearch(m, qStr);
     });
-    if (rows.length === 0) {
-      return '<div class="p-3.5 rounded-xl bg-[#040d21] border border-sky-500/20 text-center text-xs text-slate-400">No member found matching "' + String(qText || "").replace(/</g, "&lt;") + '".</div>';
+    if (matches.length === 0) {
+      return '<div class="p-3.5 rounded-xl bg-[#040d21] border border-sky-500/20 text-center text-xs text-slate-400">No member found matching "' + String(qStr || "").replace(/</g, "&lt;") + '".</div>';
     }
-    return rows.map(function(m) {
-      var uidClean = String(m.uid || "").replace(/'/g, "");
-      var nameClean = String(m.username || "Member").replace(/</g, "&lt;");
-      var emailClean = String(m.email || "-").replace(/</g, "&lt;");
-      var mobClean = String(m.mobile || "-").replace(/</g, "&lt;");
+    return matches.map(function(m) {
+      var uidSafe = String(m.uid || "").replace(/'/g, "");
+      var nameSafe = String(m.username || "Member").replace(/</g, "&lt;");
+      var emailSafe = String(m.email || "-").replace(/</g, "&lt;");
+      var mobSafe = String(m.mobile || "-").replace(/</g, "&lt;");
       return `
         <div class="p-3.5 rounded-xl bg-[#040d21] border border-sky-500/25 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div class="space-y-0.5 min-w-0">
-            <div class="font-extrabold text-white text-sm">${nameClean} <span class="font-mono text-sky-300 text-xs">(${uidClean})</span></div>
-            <div class="text-[11px] font-mono text-slate-300">Email: <strong class="text-white">${emailClean}</strong> • Mobile: <strong class="text-white">${mobClean}</strong></div>
-            <div class="text-[11px] font-mono text-emerald-300">Balance: <strong>$${num2(m.balance).toFixed(2)}</strong> • Invest: <strong>$${num2(m.yourInvest).toFixed(2)}</strong> • Profit: <strong>$${num2(m.totalProfit).toFixed(2)}</strong> • KYC: <strong class="text-amber-300">${m.kycStatus || 'Pending'}</strong></div>
+            <div class="font-extrabold text-white text-sm">${nameSafe} <span class="font-mono text-sky-300 text-xs">(${uidSafe})</span></div>
+            <div class="text-[11px] font-mono text-slate-300">Email: <strong class="text-white">${emailSafe}</strong> • Mobile: <strong class="text-white">${mobSafe}</strong></div>
+            <div class="text-[11px] font-mono text-emerald-300">Balance: <strong>$${toNum2(m.balance).toFixed(2)}</strong> • Invest: <strong>$${toNum2(m.yourInvest).toFixed(2)}</strong> • Profit: <strong>$${toNum2(m.totalProfit).toFixed(2)}</strong> • KYC: <strong class="text-amber-300">${m.kycStatus || 'Pending'}</strong></div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <button type="button" onclick="window.nfxV58EditMember('${uidClean}')" class="px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow">
+            <button type="button" onclick="window.nfxV59OpenEdit('${uidSafe}')" class="px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow">
               Edit Member
             </button>
           </div>
@@ -9967,17 +10010,17 @@ state.sentKycEmailCode = null;
     }).join("");
   }
 
-  window.nfxV58Search = function(val, boxId) {
+  window.nfxV59Search = function(val, targetId) {
     state.adminSearchQuery = val;
     state.adminUmSearchInput = val;
     state.adminUmActiveFilter = val;
-    var el = document.getElementById(boxId || "nfx-v58-search-box");
-    if (el) {
-      el.innerHTML = renderSmoothSearchMatches(val);
+    var box = document.getElementById(targetId || "nfx-v59-search-results");
+    if (box) {
+      box.innerHTML = renderSearchResultRows(val);
     }
   };
 
-  window.nfxV58EditMember = function(uid) {
+  window.nfxV59OpenEdit = function(uid) {
     var m = (state.members || []).find(function(x) { return x.uid === uid; });
     if (!m) return;
     if (typeof window.openAdminEditModal === "function") {
@@ -9998,17 +10041,17 @@ state.sentKycEmailCode = null;
     m.uid = (document.getElementById("adm-edit-uid")?.value || m.uid || origUid).trim();
     m.email = (document.getElementById("adm-edit-email")?.value || m.email || "").trim();
     m.mobile = (document.getElementById("adm-edit-mobile")?.value || m.mobile || "").trim();
-    m.balance = num2(document.getElementById("adm-edit-balance")?.value);
-    m.yourInvest = num2(document.getElementById("adm-edit-invest")?.value);
-    m.teamInvest = num2(document.getElementById("adm-edit-teaminvest")?.value);
-    m.totalProfit = num2(document.getElementById("adm-edit-profit")?.value);
+    m.balance = toNum2(document.getElementById("adm-edit-balance")?.value);
+    m.yourInvest = toNum2(document.getElementById("adm-edit-invest")?.value);
+    m.teamInvest = toNum2(document.getElementById("adm-edit-teaminvest")?.value);
+    m.totalProfit = toNum2(document.getElementById("adm-edit-profit")?.value);
 
     if (state.currentUserUid === origUid) state.currentUserUid = m.uid;
-    saveUsersPool(state.members);
-    if (state.admin && state.admin.authenticated) persistAdminSessionNow();
+    saveCleanMembers(state.members);
+    if (state.admin && state.admin.authenticated) saveAdminSession();
     if (state.isLoggedIn) {
       var curU = (state.members || []).find(function(x) { return x.uid === state.currentUserUid; }) || m;
-      persistMemberSessionNow(curU, state.currentRoute);
+      saveMemberSession(curU, state.currentRoute);
     }
 
     var mod = document.getElementById("admin-edit-modal");
@@ -10021,42 +10064,52 @@ state.sentKycEmailCode = null;
   };
 
   // =========================================================================
-  // 7. SINGLE BOOT HANDLER (Fresh link -> Register; Refresh -> Keeps session)
+  // 8. BOOT & HASHCHANGE HANDLER (#master-admin -> Master Admin Login)
   // =========================================================================
-  function bootAppV58() {
-    var mode = restoreSessionNow();
-    var h = low(window.location.hash || "");
-
+  function syncHashRouteAndRender() {
+    var h = norm(window.location.hash || "");
     if (h.indexOf("master-admin") !== -1) {
       state.currentRoute = "master-admin";
       if (state.admin && state.admin.authenticated) {
         state.isLoggedIn = true;
-        persistAdminSessionNow();
+        saveAdminSession();
       }
-    } else if (mode === "admin") {
-      state.currentRoute = "master-admin";
-      state.isLoggedIn = true;
-    } else if (mode === "member") {
-      if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login") {
-        state.currentRoute = "dashboard";
+      if (typeof renderAll === "function") {
+        try { renderAll(); } catch (e) {}
       }
-      state.isLoggedIn = true;
-    } else {
-      state.isLoggedIn = false;
-      state.currentRoute = "register";
+      return true;
+    }
+    return false;
+  }
+
+  function bootAppV59() {
+    var mode = restoreSessions();
+    if (!syncHashRouteAndRender()) {
+      if (mode === "admin") {
+        state.currentRoute = "master-admin";
+        state.isLoggedIn = true;
+      } else if (mode === "member") {
+        if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login") {
+          state.currentRoute = "dashboard";
+        }
+        state.isLoggedIn = true;
+      } else {
+        state.isLoggedIn = false;
+        state.currentRoute = "register";
+      }
+      if (typeof renderAll === "function") {
+        try { renderAll(); } catch (e) {}
+      }
     }
 
-    processIstMidnightProfit(false);
-    if (typeof renderAll === "function") {
-      try { renderAll(); } catch (e) {}
-    }
+    runIstMidnightProfitV59(false);
 
     setTimeout(function() {
       if (state.admin && state.admin.authenticated && state.currentRoute === "master-admin") {
         var mv = document.getElementById("main-view");
-        if (mv && !document.getElementById("nfx-v58-admin-search-panel")) {
+        if (mv && !document.getElementById("nfx-v59-admin-search-panel")) {
           var panel = document.createElement("div");
-          panel.id = "nfx-v58-admin-search-panel";
+          panel.id = "nfx-v59-admin-search-panel";
           panel.className = "max-w-6xl mx-auto mb-4 p-4 rounded-2xl account-solid-panel border border-amber-400/50 space-y-3 text-xs";
           panel.innerHTML = `
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -10064,17 +10117,17 @@ state.sentKycEmailCode = null;
               <span class="text-[11px] font-mono text-emerald-300">Search by UID / Username / Mobile / Email</span>
             </div>
             <div class="flex gap-2">
-              <input id="nfx-v58-search-input" value="${String(state.adminSearchQuery || '').replace(/"/g, '&quot;')}"
-                     oninput="window.nfxV58Search(this.value, 'nfx-v58-search-box')"
+              <input id="nfx-v59-search-input" value="${String(state.adminSearchQuery || '').replace(/"/g, '&quot;')}"
+                     oninput="window.nfxV59Search(this.value, 'nfx-v59-search-results')"
                      placeholder="Type Member UID or Username to search & edit..."
                      class="input-box flex-1 rounded-lg px-3 py-2 font-mono text-xs" />
-              <button type="button" onclick="window.nfxV58Search(document.getElementById('nfx-v58-search-input')?.value || '', 'nfx-v58-search-box')"
+              <button type="button" onclick="window.nfxV59Search(document.getElementById('nfx-v59-search-input')?.value || '', 'nfx-v59-search-results')"
                       class="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shrink-0">
                 Search
               </button>
             </div>
-            <div id="nfx-v58-search-box" class="space-y-2 max-h-64 overflow-y-auto custom-scroll">
-              ${renderSmoothSearchMatches(state.adminSearchQuery || "")}
+            <div id="nfx-v59-search-results" class="space-y-2 max-h-64 overflow-y-auto custom-scroll">
+              ${renderSearchResultRows(state.adminSearchQuery || "")}
             </div>
           `;
           mv.insertBefore(panel, mv.firstChild);
@@ -10083,14 +10136,16 @@ state.sentKycEmailCode = null;
     }, 120);
   }
 
+  window.addEventListener("hashchange", syncHashRouteAndRender);
+
   setInterval(function() {
-    processIstMidnightProfit(false);
+    runIstMidnightProfitV59(false);
   }, 15000);
 
   if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", bootAppV58);
+    window.addEventListener("DOMContentLoaded", bootAppV59);
   } else {
-    bootAppV58();
+    bootAppV59();
   }
 })();
 </script>
