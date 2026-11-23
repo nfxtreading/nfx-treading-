@@ -9187,6 +9187,146 @@ state.sentKycEmailCode = null;
   </script>
 
 <script>
+(function nfxReferralLinkOpenFixV68() {
+  if (typeof window === "undefined") return;
+
+  function extractReferralCodeFromCurrentUrl() {
+    try {
+      var h = String(window.location.hash || "").trim();
+      if (h) {
+        if (h.indexOf("#ref=") === 0) {
+          return decodeURIComponent(h.slice(5).split("&")[0] || "").trim();
+        }
+        if (h.indexOf("#invite=") === 0) {
+          return decodeURIComponent(h.slice(8).split("&")[0] || "").trim();
+        }
+        var qPos = h.indexOf("?");
+        if (qPos !== -1) {
+          var hParams = new URLSearchParams(h.slice(qPos + 1));
+          var hRef = (hParams.get("ref") || hParams.get("invite") || "").trim();
+          if (hRef) return decodeURIComponent(hRef).trim();
+        }
+      }
+      if (window.location.search) {
+        var sParams = new URLSearchParams(window.location.search);
+        var sRef = (sParams.get("ref") || sParams.get("invite") || "").trim();
+        if (sRef) return decodeURIComponent(sRef).trim();
+      }
+    } catch (e) {}
+    return "";
+  }
+
+  function isReferralOrRegisterEntry() {
+    var refCode = extractReferralCodeFromCurrentUrl();
+    var hLower = String(window.location.hash || "").toLowerCase();
+    var pLower = String(window.location.pathname || "").toLowerCase();
+    return Boolean(refCode) || hLower.indexOf("register") !== -1 || pLower.endsWith("/register") || pLower.indexOf("/register?") !== -1;
+  }
+
+  function applyReferralEntryRoute() {
+    if (typeof state === "undefined") return false;
+    var refCode = extractReferralCodeFromCurrentUrl();
+    var hLower = String(window.location.hash || "").toLowerCase();
+    if (hLower.indexOf("master-admin") !== -1 || hLower.indexOf("master_admin") !== -1) {
+      state.currentRoute = "master-admin";
+      return true;
+    }
+    if (isReferralOrRegisterEntry()) {
+      state.currentRoute = "register";
+      if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.add === "function") {
+        AUTH_PAGES.add("register");
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function populateInviteCodeField() {
+    var refCode = extractReferralCodeFromCurrentUrl();
+    if (!refCode) return;
+    var invEl = document.getElementById("rg-inv");
+    if (invEl && !invEl.value) {
+      invEl.value = refCode;
+      invEl.dispatchEvent(new Event("input", { bubbles: true }));
+      invEl.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+
+  // Wrap renderRouteContent so referral/register links never throw or fail to render the website
+  var prevRenderRouteV68 = window.renderRouteContent;
+  window.renderRouteContent = function(user) {
+    try {
+      if (typeof state !== "undefined" && (!state.currentRoute || isReferralOrRegisterEntry() && state.currentRoute !== "register" && !(state.admin && state.admin.authenticated))) {
+        if (isReferralOrRegisterEntry()) {
+          state.currentRoute = "register";
+        }
+      }
+      var html = typeof prevRenderRouteV68 === "function" ? prevRenderRouteV68(user) : "";
+      if (!html || !String(html).trim()) {
+        if (typeof state !== "undefined") state.currentRoute = "register";
+        return typeof prevRenderRouteV68 === "function" ? prevRenderRouteV68(user) : "";
+      }
+      return html;
+    } catch (err) {
+      console.warn("Referral route fallback to register:", err);
+      if (typeof state !== "undefined") state.currentRoute = "register";
+      try {
+        return typeof prevRenderRouteV68 === "function" ? prevRenderRouteV68(user) : "";
+      } catch (err2) {
+        return "";
+      }
+    }
+  };
+
+  // Wrap renderAll so chrome, route, and invite code always render cleanly on referral links
+  var prevRenderAllV68 = window.renderAll;
+  window.renderAll = function() {
+    try {
+      applyReferralEntryRoute();
+      if (typeof prevRenderAllV68 === "function") {
+        prevRenderAllV68.apply(this, arguments);
+      }
+    } catch (err) {
+      console.warn("renderAll fallback:", err);
+      try {
+        if (typeof applyAuthChromeVisibility === "function") applyAuthChromeVisibility();
+        var mainEl = document.getElementById("main-view");
+        if (mainEl && typeof renderRouteContent === "function" && typeof activeMember === "function") {
+          mainEl.innerHTML = renderRouteContent(activeMember());
+        }
+      } catch (e2) {}
+    }
+    populateInviteCodeField();
+  };
+
+  function bootReferralEntryV68() {
+    if (typeof window.restoreSessionState === "function") {
+      try { window.restoreSessionState(); } catch (eR) {}
+    }
+    applyReferralEntryRoute();
+    if (typeof window.renderAll === "function") {
+      try { window.renderAll(); } catch (eAll) {}
+    }
+    populateInviteCodeField();
+  }
+
+  window.addEventListener("hashchange", function() {
+    applyReferralEntryRoute();
+    if (typeof window.renderAll === "function") {
+      try { window.renderAll(); } catch (eH) {}
+    }
+    populateInviteCodeField();
+  });
+
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", bootReferralEntryV68);
+  } else {
+    setTimeout(bootReferralEntryV68, 0);
+  }
+})();
+</script>
+
+<script>
 (function nfxMasterAdminHashAndAuthV64() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
