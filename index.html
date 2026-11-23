@@ -12588,5 +12588,493 @@ state.sentKycEmailCode = null;
 })();
 </script>
 
+
+<script>
+(function() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // =========================================================================
+  // 1. REGISTER FORM: Any 6-digit email code allowed (even if wrong), email not mandatory
+  //    Login remains untouched.
+  // =========================================================================
+  function isSixDigitCode(val) {
+    return /^[0-9]{6}$/.test(String(val || "").trim());
+  }
+
+  function makeAlnumUid8(existingSet) {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (var attempt = 0; attempt < 50; attempt++) {
+      var u = "";
+      for (var i = 0; i < 8; i++) {
+        u += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      if (!existingSet.has(u.toUpperCase())) return u;
+    }
+    return "NFX" + String(Date.now()).slice(-5);
+  }
+
+  // Override sendEmailCode for register so clicking Send OTP/Code sets a state smoothly
+  var prevSendEmailCode = window.sendEmailCode;
+  window.sendEmailCode = async function(mode, explicitEmail, btnEl) {
+    if (mode === "register") {
+      var em = String(document.getElementById("rg-email")?.value || explicitEmail || "").trim();
+      var uName = String(document.getElementById("rg-user")?.value || "Member").trim();
+      var codeInputVal = String(document.getElementById("rg-code")?.value || "").trim();
+      state.sentRegisterCode = isSixDigitCode(codeInputVal) ? codeInputVal : "000000";
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof showToast === "function") {
+        showToast("OTP Sent", "যেকোনো ৬ সংখ্যার কোড দিয়ে Register করতে পারবেন।", "info");
+      }
+      if (em && em.includes("@") && typeof window.sendRealEmailOtp === "function") {
+        window.sendRealEmailOtp(em, "Account Registration", uName).catch(function() {});
+      }
+      return;
+    }
+    if (typeof prevSendEmailCode === "function") {
+      return prevSendEmailCode.apply(this, arguments);
+    }
+  };
+
+  // Final authoritative handleRegisterSubmit: requires 6-digit code in #rg-code (any 6 digits accepted even if different/wrong)
+  window.handleRegisterSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var uname = String(document.getElementById("rg-user")?.value || "").trim();
+    var country = String(document.getElementById("rg-country")?.value || "");
+    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
+    var email = String(document.getElementById("rg-email")?.value || "").trim();
+    var code = String(document.getElementById("rg-code")?.value || "").trim();
+    var pw = String(document.getElementById("rg-pw")?.value || "");
+    var cpw = String(document.getElementById("rg-cpw")?.value || "");
+    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
+
+    if (!uname) {
+      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
+      return false;
+    }
+    if (!pw || pw.length < 6) {
+      if (typeof showToast === "function") showToast("Password Required", "দয়া করে অন্তত ৬ অক্ষরের Password দিন।", "error");
+      return false;
+    }
+    if (pw !== cpw) {
+      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
+      return false;
+    }
+    // Must enter a 6-digit Email Code, but even if it doesn't match sent code (wrong code), it is accepted
+    if (!isSixDigitCode(code)) {
+      if (typeof showToast === "function") {
+        showToast("৬ সংখ্যার কোড দিন", "Email Code বক্সে যেকোনো ৬ সংখ্যার কোড দিন।", "error");
+      }
+      return false;
+    }
+
+    var existingUids = new Set();
+    if (Array.isArray(state.members)) {
+      state.members.forEach(function(m) {
+        if (m && m.uid) existingUids.add(String(m.uid).toUpperCase());
+      });
+    }
+
+    var uid = makeAlnumUid8(existingUids);
+    var authSecret = (typeof generateUniqueBase32Key === "function")
+      ? generateUniqueBase32Key(uid + "_" + uname)
+      : ("JBSWY3DPEHPK3PXP" + uid);
+
+    var newMember = {
+      uid: uid,
+      username: uname,
+      email: email || "",
+      mobile: mobile || "",
+      country: country || "",
+      password: pw,
+      avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
+      authenticatorBound: false,
+      authenticatorSecret: authSecret,
+      referralCode: uid,
+      referredBy: inv || null,
+      referralBonus: 0,
+      balance: 0,
+      yourInvest: 0,
+      teamInvest: 0,
+      aMembersCount: 0,
+      aMembersInvest: 0,
+      bMembersCount: 0,
+      bMembersInvest: 0,
+      cMembersCount: 0,
+      cMembersInvest: 0,
+      totalProfit: 0,
+      investmentId: "#INV2026" + uid.slice(-4),
+      planName: "None",
+      startDate: "-",
+      endDate: "-",
+      status: "Active",
+      kycStatus: "Unverified",
+      withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null },
+      teamExt: {
+        mainBalance: 0,
+        availableMainBalance: 0,
+        lockedMainBalance: 0,
+        withdrawalBalance: 0,
+        walletBalance: 0,
+        totalTeamInvestment: 0,
+        teamAInvestment: 0,
+        teamBInvestment: 0,
+        teamCInvestment: 0,
+        totalMembers: 0,
+        totalAMembers: 0,
+        totalBMembers: 0,
+        totalCMembers: 0,
+        totalActiveMembers: 0,
+        totalActiveAMembers: 0,
+        totalActiveBMembers: 0,
+        activeCMembers: 0,
+        registeredAMembers: 0,
+        registeredBMembers: 0,
+        registeredCMember: 0,
+        totalIncomeIncome: 0,
+        totalBonusIncome: 0,
+        totalReferralIncome: 0,
+        totalTeamIncome: 0,
+        totalALevelCommission: 0,
+        totalBLevelCommission: 0,
+        totalCLevelCommission: 0,
+        totalTeamCommission: 0,
+        totalDirectReferralIncome: 0,
+        totalTeamReferralIncome: 0,
+        summaryTotalBonusIncome: 0,
+        totalEarnedIncome: 0,
+        totalDepositAmount: 0,
+        totalWithdrawalRequested: 0,
+        totalPeithdrawal: 0,
+        kycVerificationStatus: "Unverified",
+        teamAInvestmentHistory: "0.00"
+      }
+    };
+
+    if (!Array.isArray(state.members)) state.members = [];
+    var existingIdx = state.members.findIndex(function(m) {
+      return String(m.username || "").toLowerCase() === uname.toLowerCase();
+    });
+    if (existingIdx >= 0) {
+      state.members[existingIdx] = Object.assign(state.members[existingIdx], newMember);
+    } else {
+      state.members.push(newMember);
+    }
+
+    if (inv && typeof registerReferralMemberRecord === "function") {
+      registerReferralMemberRecord(inv, newMember);
+    }
+
+    state.currentUserUid = uid;
+    state.isLoggedIn = true;
+    state.sentRegisterCode = null;
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+      routeHistory.length = 0;
+    }
+    state.currentRoute = "dashboard";
+
+    try {
+      localStorage.removeItem("nfx_register_form_draft_v1");
+    } catch (err) {}
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof window.pushMemberToLiveSync === "function") {
+      window.pushMemberToLiveSync(newMember);
+    }
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Registered!", "Username & Password set. UID: " + uid);
+    }
+    setTimeout(function() {
+      if (typeof showReferralBonusPopup === "function") showReferralBonusPopup();
+    }, 250);
+    return true;
+  };
+
+  // =========================================================================
+  // 2. INSTANT LIVE REAL-TIME SYNC (Master Admin Edit -> Member ID / Phone)
+  //    Never reverts back after ~2 minutes; persists in localStorage +
+  //    BroadcastChannel + storage events + Firestore immediately.
+  // =========================================================================
+  var LIVE_SYNC_CHANNEL_NAME = "nfx_treading_realtime_member_sync_v1";
+  var LIVE_SYNC_STORAGE_KEY = "nfx_treading_realtime_members_v1";
+  var liveChannel = null;
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      liveChannel = new BroadcastChannel(LIVE_SYNC_CHANNEL_NAME);
+    }
+  } catch (e) {}
+
+  window.__nfxAdminUpdatedAtByUid = window.__nfxAdminUpdatedAtByUid || {};
+
+  function getStoredLiveMembersMap() {
+    try {
+      var raw = localStorage.getItem(LIVE_SYNC_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeStoredLiveMembersMap(mapObj) {
+    try {
+      localStorage.setItem(LIVE_SYNC_STORAGE_KEY, JSON.stringify(mapObj || {}));
+    } catch (e) {}
+  }
+
+  function applyIncomingMemberState(incomingMember, fromAdminEdit) {
+    if (!incomingMember || !incomingMember.uid) return;
+    if (!Array.isArray(state.members)) state.members = [];
+    var targetUid = String(incomingMember.uid);
+    var incTs = Number(incomingMember._liveUpdatedAt || Date.now());
+    var prevTs = Number(window.__nfxAdminUpdatedAtByUid[targetUid] || 0);
+
+    // If an admin edit happened, always honor the newer admin timestamp and never let stale background data overwrite it
+    if (fromAdminEdit) {
+      window.__nfxAdminUpdatedAtByUid[targetUid] = Math.max(incTs, Date.now());
+    } else if (prevTs > incTs) {
+      return;
+    }
+
+    var idx = state.members.findIndex(function(m) { return String(m.uid) === targetUid; });
+    if (idx >= 0) {
+      var cur = state.members[idx];
+      var mergedTeamExt = Object.assign({}, cur.teamExt || {}, incomingMember.teamExt || {});
+      var mergedWallets = Object.assign({}, cur.withdrawWallets || {}, incomingMember.withdrawWallets || {});
+      state.members[idx] = Object.assign({}, cur, incomingMember, {
+        teamExt: mergedTeamExt,
+        withdrawWallets: mergedWallets,
+        _liveUpdatedAt: Math.max(incTs, prevTs)
+      });
+    } else {
+      state.members.push(Object.assign({}, incomingMember, { _liveUpdatedAt: incTs }));
+    }
+
+    // If this member is currently active on this device/tab, sync extraData & recalculate live metrics
+    var activeM = typeof activeMember === "function" ? activeMember() : null;
+    if (activeM && String(activeM.uid) === targetUid) {
+      var tx = activeM.teamExt || {};
+      if (state.extraData) {
+        if (tx.availableMainBalance !== undefined) state.extraData.availableBalance = Number(tx.availableMainBalance) || 0;
+        if (tx.lockedMainBalance !== undefined) state.extraData.lockedBalance = Number(tx.lockedMainBalance) || 0;
+        if (tx.totalDepositAmount !== undefined) state.extraData.totalDeposit = Number(tx.totalDepositAmount) || 0;
+        if (tx.totalWithdrawalRequested !== undefined) state.extraData.totalWithdraw = Number(tx.totalWithdrawalRequested) || 0;
+        if (tx.totalTeamIncome !== undefined) state.extraData.teamIncomeToday = Number(tx.totalTeamIncome) || 0;
+        if (tx.totalReferralIncome !== undefined) state.extraData.referralIncomeToday = Number(tx.totalReferralIncome) || 0;
+        if (tx.totalActiveAMembers !== undefined) state.extraData.activeAMembersCount = Number(tx.totalActiveAMembers) || 0;
+        if (tx.totalActiveBMembers !== undefined) state.extraData.activeBMembersCount = Number(tx.totalActiveBMembers) || 0;
+        if (tx.activeCMembers !== undefined) state.extraData.activeCMembersCount = Number(tx.activeCMembers) || 0;
+      }
+      if (typeof recalculatePlatformAutoMetrics === "function") {
+        recalculatePlatformAutoMetrics(activeM);
+      }
+    }
+
+    if (typeof saveSessionState === "function") {
+      saveSessionState();
+    }
+    if (typeof renderAll === "function") {
+      renderAll();
+    }
+  }
+
+  window.pushMemberToLiveSync = function(memberObj) {
+    if (!memberObj || !memberObj.uid) return;
+    var ts = Date.now();
+    var targetUid = String(memberObj.uid);
+    window.__nfxAdminUpdatedAtByUid[targetUid] = ts;
+
+    var clone = Object.assign({}, memberObj, { _liveUpdatedAt: ts });
+    var mapObj = getStoredLiveMembersMap();
+    mapObj[targetUid] = clone;
+    writeStoredLiveMembersMap(mapObj);
+
+    if (typeof saveSessionState === "function") saveSessionState();
+
+    // Instant same-browser & cross-tab push
+    try {
+      if (liveChannel) {
+        liveChannel.postMessage({ type: "MEMBER_LIVE_UPDATE", uid: targetUid, member: clone, ts: ts });
+      }
+    } catch (e) {}
+
+    // Instant Firestore write if available
+    if (window.NFXFirebase && window.NFXFirebase.db && window.NFXFirebase.setDoc && window.NFXFirebase.doc) {
+      try {
+        var fbPayload = {
+          uid: clone.uid,
+          username: clone.username || "",
+          email: clone.email || "",
+          mobile: clone.mobile || "",
+          balance: Number(clone.balance || 0),
+          yourInvest: Number(clone.yourInvest || 0),
+          teamInvest: Number(clone.teamInvest || 0),
+          totalProfit: Number(clone.totalProfit || 0),
+          referralBonus: Number(clone.referralBonus || 0),
+          aMembersCount: Number(clone.aMembersCount || 0),
+          bMembersCount: Number(clone.bMembersCount || 0),
+          cMembersCount: Number(clone.cMembersCount || 0),
+          aMembersInvest: Number(clone.aMembersInvest || 0),
+          bMembersInvest: Number(clone.bMembersInvest || 0),
+          cMembersInvest: Number(clone.cMembersInvest || 0),
+          kycStatus: clone.kycStatus || "Unverified",
+          status: clone.status || "Active",
+          teamExt: clone.teamExt || {},
+          withdrawWallets: clone.withdrawWallets || {},
+          liveUpdatedAtMs: ts,
+          updatedAt: window.NFXFirebase.serverTimestamp ? window.NFXFirebase.serverTimestamp() : new Date().toISOString()
+        };
+        window.NFXFirebase.setDoc(
+          window.NFXFirebase.doc(window.NFXFirebase.db, "users", targetUid),
+          fbPayload,
+          { merge: true }
+        ).catch(function() {});
+      } catch (e) {}
+    }
+  };
+
+  // Listen to BroadcastChannel updates
+  if (liveChannel) {
+    liveChannel.onmessage = function(ev) {
+      if (ev && ev.data && ev.data.type === "MEMBER_LIVE_UPDATE" && ev.data.member) {
+        applyIncomingMemberState(ev.data.member, true);
+      }
+    };
+  }
+
+  // Listen to cross-tab localStorage updates
+  window.addEventListener("storage", function(ev) {
+    if (!ev) return;
+    if (ev.key === LIVE_SYNC_STORAGE_KEY && ev.newValue) {
+      try {
+        var parsedMap = JSON.parse(ev.newValue);
+        Object.keys(parsedMap || {}).forEach(function(k) {
+          applyIncomingMemberState(parsedMap[k], true);
+        });
+      } catch (e) {}
+    } else if (typeof NFX_SESSION_KEY !== "undefined" && ev.key === NFX_SESSION_KEY && ev.newValue) {
+      if (typeof restoreSessionState === "function") restoreSessionState();
+      if (typeof renderAll === "function") renderAll();
+    }
+  });
+
+  // Hydrate any stored live updates on load
+  (function hydrateLiveUpdatesOnLoad() {
+    var mapObj = getStoredLiveMembersMap();
+    Object.keys(mapObj || {}).forEach(function(k) {
+      var item = mapObj[k];
+      if (item && item.uid) {
+        window.__nfxAdminUpdatedAtByUid[String(item.uid)] = Number(item._liveUpdatedAt || Date.now());
+        applyIncomingMemberState(item, false);
+      }
+    });
+  })();
+
+  // Protect applyFirestoreUserDocToLocal from reverting newer local/admin edits
+  var prevApplyFirestore = window.applyFirestoreUserDocToLocal;
+  if (typeof prevApplyFirestore === "function") {
+    window.applyFirestoreUserDocToLocal = function(docId, d) {
+      if (!d) return;
+      var targetUid = String(d.uid || docId || "");
+      var localTs = Number(window.__nfxAdminUpdatedAtByUid[targetUid] || 0);
+      var remoteTs = Number(d.liveUpdatedAtMs || 0);
+      if (localTs > 0 && remoteTs > 0 && localTs > remoteTs) {
+        return;
+      }
+      var res = prevApplyFirestore.apply(this, arguments);
+      var m = Array.isArray(state.members) ? state.members.find(function(x) { return String(x.uid) === targetUid; }) : null;
+      if (m && d.teamExt && typeof d.teamExt === "object") {
+        m.teamExt = Object.assign({}, m.teamExt || {}, d.teamExt);
+      }
+      return res;
+    };
+  }
+
+  // Enhance tmSaveRowValue so saving any field in TEAM details immediately pushes live & updates balance/invest/profit/team
+  var prevTmSaveRowValue = window.tmSaveRowValue;
+  if (typeof prevTmSaveRowValue === "function") {
+    window.tmSaveRowValue = function(uid, key, labelText, fallbackVal) {
+      var res = prevTmSaveRowValue.apply(this, arguments);
+      var m = Array.isArray(state.members) ? state.members.find(function(x) { return String(x.uid) === String(uid); }) : null;
+      if (m) {
+        if (m.teamExt) {
+          if (key === "mainBalance" || key === "walletBalance" || key === "withdrawalBalance") {
+            m.balance = Number(m.teamExt.mainBalance ?? m.teamExt.walletBalance ?? m.balance ?? 0);
+            m.teamExt.mainBalance = m.balance;
+            m.teamExt.walletBalance = m.balance;
+            m.teamExt.withdrawalBalance = m.balance;
+          }
+          if (key === "availableMainBalance" && state.extraData) {
+            state.extraData.availableBalance = Number(m.teamExt.availableMainBalance || 0);
+          }
+          if (key === "lockedMainBalance" && state.extraData) {
+            state.extraData.lockedBalance = Number(m.teamExt.lockedMainBalance || 0);
+          }
+        }
+        window.pushMemberToLiveSync(m);
+      }
+      return res;
+    };
+  }
+
+  // =========================================================================
+  // 3. AUTOMATIC DEDUCTION / CALCULATION WHEN MEMBER USES BALANCE
+  //    (Withdraw, Buy Plan, etc. automatically deduct & recalculate live)
+  // =========================================================================
+  function syncMemberAfterSpend(m) {
+    if (!m) return;
+    var newBal = Number(m.balance || 0);
+    if (!m.teamExt) m.teamExt = {};
+    m.teamExt.mainBalance = newBal;
+    m.teamExt.walletBalance = newBal;
+    m.teamExt.withdrawalBalance = newBal;
+    m.teamExt.availableMainBalance = Math.max(0, Number((newBal - Number(m.teamExt.lockedMainBalance || 0)).toFixed(2)));
+    m.teamExt.totalDepositAmount = Number(m.yourInvest || 0);
+    m.teamExt.totalEarnedIncome = Number(m.totalProfit || 0);
+    if (state.extraData) {
+      state.extraData.availableBalance = m.teamExt.availableMainBalance;
+    }
+    if (typeof recalculatePlatformAutoMetrics === "function") {
+      recalculatePlatformAutoMetrics(m);
+    }
+    window.pushMemberToLiveSync(m);
+  }
+
+  var prevSubmitWithdrawWithOtp = window.submitUserWithdrawWithOtp;
+  if (typeof prevSubmitWithdrawWithOtp === "function") {
+    window.submitUserWithdrawWithOtp = async function(e) {
+      var res = await prevSubmitWithdrawWithOtp.apply(this, arguments);
+      var u = typeof activeMember === "function" ? activeMember() : null;
+      if (u) {
+        if (!u.teamExt) u.teamExt = {};
+        var totalWd = (state.withdrawRequests || [])
+          .filter(function(r) { return r.uid === u.uid && r.status !== "Rejected"; })
+          .reduce(function(sum, r) { return sum + (Number(r.amount) || 0); }, 0);
+        u.teamExt.totalWithdrawalRequested = Number(totalWd.toFixed(2));
+        u.teamExt.totalPeithdrawal = Number(totalWd.toFixed(2));
+        if (state.extraData) {
+          state.extraData.totalWithdraw = Number(totalWd.toFixed(2));
+        }
+        syncMemberAfterSpend(u);
+      }
+      return res;
+    };
+  }
+
+  var prevBuyPlan = window.buyPlan;
+  if (typeof prevBuyPlan === "function") {
+    window.buyPlan = function() {
+      var res = prevBuyPlan.apply(this, arguments);
+      var u = typeof activeMember === "function" ? activeMember() : null;
+      if (u) {
+        syncMemberAfterSpend(u);
+      }
+      return res;
+    };
+  }
+})();
+</script>
+
 </body>
 </html>
