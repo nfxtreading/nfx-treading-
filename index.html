@@ -1859,11 +1859,18 @@
 
     function getDepositChainAddress(chain) {
       const ch = (chain || "TRC20").toUpperCase();
-      const wallets = state.depositWallets || {
+      let sharedW = window.__NFXSharedDepositWallets || null;
+      if (!sharedW) {
+        try {
+          const rawG = localStorage.getItem("nfx_global_deposit_wallets_v1");
+          if (rawG) sharedW = JSON.parse(rawG);
+        } catch (e) {}
+      }
+      const wallets = Object.assign({
         TRC20: "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
         BEP20: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
         ERC20: "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7"
-      };
+      }, state.depositWallets || {}, sharedW || {});
       return wallets[ch] || wallets.TRC20 || "";
     }
 
@@ -4879,8 +4886,9 @@ state.sentKycEmailCode = null;
                     </div>
                     <button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">Register</button>
                   </form>
-                  <div class="text-center pt-1">
-                    <button onclick="navigateTo('login')" class="text-sky-300 hover:underline font-bold">Already have an account? Login</button>
+                  <div class="text-center pt-2 text-xs text-slate-300">
+                    <span>Already have an account?</span>
+                    <button type="button" onclick="navigateTo('login')" class="ml-1.5 text-sky-300 hover:text-amber-300 underline font-extrabold cursor-pointer">Login</button>
                   </div>
                 </div>
               </div>
@@ -5938,6 +5946,10 @@ state.sentKycEmailCode = null;
         }
         if (data.extraData) Object.assign(state.extraData, data.extraData);
         if (data.depositWallets) Object.assign(state.depositWallets, data.depositWallets);
+        try {
+          const rawG = localStorage.getItem("nfx_global_deposit_wallets_v1");
+          if (rawG) Object.assign(state.depositWallets, JSON.parse(rawG));
+        } catch (e) {}
         const isLegacyDummyTx = (item) => {
           if (!item) return true;
           const idStr = String(item.id || "").toUpperCase();
@@ -9626,8 +9638,36 @@ state.sentKycEmailCode = null;
   const fbCtx = window.NFXFirebase || {};
   const dbRef = fbCtx.db || getFirestore();
   const walletDocRef = doc(dbRef, "settings", "depositWallets");
+  let walletChannel = null;
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      walletChannel = new BroadcastChannel("nfx_deposit_wallets_channel");
+      walletChannel.onmessage = (ev) => {
+        if (ev && ev.data) applyRemoteDepositWallets(ev.data, true);
+      };
+    }
+  } catch (e) {}
 
-  function applyRemoteDepositWallets(data) {
+  function syncDepositAddressInputsDom() {
+    if (typeof state === "undefined") return;
+    const chainSel = document.getElementById("dep-chain-select");
+    const addrBox = document.getElementById("dep-chain-address");
+    const activeChain = String((chainSel && chainSel.value) || state.depositSelectedChain || "TRC20").toUpperCase();
+    const resolvedAddr = (typeof getDepositChainAddress === "function")
+      ? getDepositChainAddress(activeChain)
+      : ((state.depositWallets && (state.depositWallets[activeChain] || state.depositWallets.TRC20)) || "");
+    if (addrBox && resolvedAddr) {
+      addrBox.value = resolvedAddr;
+    }
+    const labels = document.querySelectorAll("label");
+    labels.forEach((lbl) => {
+      if (lbl.textContent && lbl.textContent.trim().startsWith("Deposit Address (")) {
+        lbl.textContent = `Deposit Address (${activeChain})`;
+      }
+    });
+  }
+
+  function applyRemoteDepositWallets(data, fromBroadcast = false) {
     if (!data || typeof state === "undefined") return;
     const nextW = {
       TRC20: String(data.TRC20 || "").trim(),
@@ -9635,43 +9675,69 @@ state.sentKycEmailCode = null;
       ERC20: String(data.ERC20 || "").trim()
     };
     if (!nextW.TRC20 && !nextW.BEP20 && !nextW.ERC20) return;
-    state.depositWallets = Object.assign({}, state.depositWallets || {}, {
-      TRC20: nextW.TRC20 || (state.depositWallets && state.depositWallets.TRC20) || "",
-      BEP20: nextW.BEP20 || (state.depositWallets && state.depositWallets.BEP20) || "",
-      ERC20: nextW.ERC20 || (state.depositWallets && state.depositWallets.ERC20) || ""
+
+    const prevW = state.depositWallets || {};
+    state.depositWallets = Object.assign({}, prevW, {
+      TRC20: nextW.TRC20 || prevW.TRC20 || "",
+      BEP20: nextW.BEP20 || prevW.BEP20 || "",
+      ERC20: nextW.ERC20 || prevW.ERC20 || ""
     });
+    window.__NFXSharedDepositWallets = Object.assign({}, state.depositWallets);
+
+    try {
+      localStorage.setItem("nfx_global_deposit_wallets_v1", JSON.stringify(state.depositWallets));
+    } catch (e) {}
+
     if (typeof saveSessionState === "function") saveSessionState();
-    const chainSel = document.getElementById("dep-chain-select");
-    const addrBox = document.getElementById("dep-chain-address");
-    const activeChain = (chainSel && chainSel.value) || state.depositSelectedChain || "TRC20";
-    if (addrBox && typeof getDepositChainAddress === "function") {
-      addrBox.value = getDepositChainAddress(activeChain);
+    syncDepositAddressInputsDom();
+
+    if (!fromBroadcast && walletChannel) {
+      try { walletChannel.postMessage(state.depositWallets); } catch (e) {}
     }
+
     if (state.currentRoute === "deposit" && typeof renderAll === "function") {
       renderAll();
+      setTimeout(syncDepositAddressInputsDom, 20);
     }
   }
 
+  window.applyRemoteDepositWallets = applyRemoteDepositWallets;
+
   window.syncDepositWalletsToFirestore = async function(walletsObj) {
+    const payload = {
+      TRC20: String((walletsObj && walletsObj.TRC20) || "").trim(),
+      BEP20: String((walletsObj && walletsObj.BEP20) || "").trim(),
+      ERC20: String((walletsObj && walletsObj.ERC20) || "").trim()
+    };
+    window.__NFXSharedDepositWallets = Object.assign({}, payload);
     try {
-      const payload = {
-        TRC20: String((walletsObj && walletsObj.TRC20) || "").trim(),
-        BEP20: String((walletsObj && walletsObj.BEP20) || "").trim(),
-        ERC20: String((walletsObj && walletsObj.ERC20) || "").trim(),
+      localStorage.setItem("nfx_global_deposit_wallets_v1", JSON.stringify(payload));
+    } catch (e) {}
+    if (walletChannel) {
+      try { walletChannel.postMessage(payload); } catch (e) {}
+    }
+    try {
+      await setDoc(walletDocRef, Object.assign({}, payload, {
         updatedAt: serverTimestamp()
-      };
-      await setDoc(walletDocRef, payload, { merge: true });
+      }), { merge: true });
     } catch (err) {
       console.warn("Deposit wallet Firestore sync notice:", err);
     }
   };
 
   try {
+    const cachedGlobal = localStorage.getItem("nfx_global_deposit_wallets_v1");
+    if (cachedGlobal) {
+      applyRemoteDepositWallets(JSON.parse(cachedGlobal), true);
+    }
+  } catch (e) {}
+
+  try {
     getDoc(walletDocRef).then((snap) => {
-      if (snap && snap.exists()) applyRemoteDepositWallets(snap.data());
+      if (snap && snap.exists()) applyRemoteDepositWallets(snap.data(), true);
     }).catch(() => {});
     onSnapshot(walletDocRef, (snap) => {
-      if (snap && snap.exists()) applyRemoteDepositWallets(snap.data());
+      if (snap && snap.exists()) applyRemoteDepositWallets(snap.data(), true);
     }, () => {});
   } catch (err) {
     console.warn("Deposit wallet listener setup notice:", err);
