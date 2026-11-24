@@ -515,7 +515,7 @@
     }
 
     const state = {
-      currentRoute: "register",
+      currentRoute: "dashboard",
       brandName: "NFX Treading",
       brandSub: "NFX Treading 2026",
       currentUserUid: "NFX-1001",
@@ -586,8 +586,8 @@
     };
 
     const routeHistory = [];
-    const AUTH_PAGES = new Set(["register", "login"]);
-    const ROOT_PAGES = new Set(["register", "login", "dashboard"]);
+    const AUTH_PAGES = new Set([]);
+    const ROOT_PAGES = new Set(["dashboard"]);
 
 
     function sanitizeLegacyDemoStrings(memberObj) {
@@ -754,7 +754,7 @@
         state.admin.pendingOtp = null;
       }
       routeHistory.length = 0;
-      state.currentRoute = "login";
+      state.currentRoute = "dashboard";
       if (typeof saveSessionState === "function") saveSessionState();
       renderAll();
       if (window.innerWidth < 1024) toggleMobileSidebar(false);
@@ -762,9 +762,8 @@
     }
 
     function navigateTo(route, isBack = false) {
-      if (route === "logout") {
-        logoutMemberAccount();
-        return;
+      if (route === "logout" || route === "register" || route === "login") {
+        route = "dashboard";
       }
       if (route === "login") {
         window.__nfxForceRegisterEntry = false;
@@ -4696,9 +4695,9 @@ state.sentKycEmailCode = null;
 
 
                     <div>
-                      <label class="text-slate-300 font-bold block mb-1">Register Email Code (${user.email})</label>
+                      <label class="text-amber-300 font-bold block mb-1">KYC Email Code (${user.email})</label>
                       <div class="flex gap-2">
-                        <input id="wd-page-otp" required maxlength="6" pattern="[0-9]{6}" placeholder="Enter 6-digit Email Code"
+                        <input id="wd-page-otp" required maxlength="6" pattern="[0-9]{6}" placeholder="Enter 6-digit KYC Email Code"
                                class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono text-xs" />
                         <button type="button" onclick="sendEmailCode('withdraw', '${user.email}', this)"
                                 class="px-3.5 py-2.5 rounded-lg bg-sky-500/25 hover:bg-sky-500/40 border border-sky-400/45 text-sky-200 font-bold text-xs shrink-0">
@@ -4708,9 +4707,9 @@ state.sentKycEmailCode = null;
                     </div>
 
                     <div>
-                      <label class="text-slate-300 font-bold block mb-1">Login Password</label>
+                      <label class="text-amber-300 font-bold block mb-1">KYC PIN</label>
                       <div class="relative flex items-center">
-                        <input type="password" id="wd-page-password" required placeholder="Enter Login Password"
+                        <input type="password" id="wd-page-password" required placeholder="Enter KYC PIN"
                                class="input-box w-full rounded-lg px-3 py-2.5 pr-10 text-xs" />
                         <button type="button" onclick="togglePasswordEye('wd-page-password', this)"
                                 class="absolute right-2.5 text-slate-300 hover:text-white text-sm" title="Show/Hide Password">👁</button>
@@ -4765,137 +4764,6 @@ state.sentKycEmailCode = null;
           }
           case "transactions-history":
             return renderTransactionsHistoryScreen(user);
-          case "login":
-            return `
-              <div class="min-h-[82vh] flex items-center justify-center py-6">
-                <div class="max-w-md w-full account-solid-panel rounded-2xl p-6 space-y-4 text-xs">
-                  <div class="text-center">
-                    <div class="text-xl font-extrabold text-sky-400">NFX <span class="text-white">Treading</span></div>
-                    <h1 class="text-lg font-extrabold text-white mt-1">Login</h1>
-                  </div>
-
-                  <form onsubmit="handleLoginSubmit(event)" class="space-y-3">
-                    <div>
-                      <label class="text-slate-300 block mb-1">Username or Mobile Number</label>
-                      <input id="lg-user" required placeholder="Username or Mobile Number" class="input-box w-full rounded-lg px-3 py-2.5" />
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Password</label>
-                      <div class="relative flex items-center">
-                        <input type="password" id="lg-pw" required placeholder="Password" class="input-box w-full rounded-lg px-3 py-2.5 pr-10" />
-                        <button type="button" onclick="togglePasswordEye('lg-pw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm" title="Show/Hide Password">👁</button>
-                      </div>
-                    </div>
-                    <div class="flex items-center justify-between pt-0.5">
-                      <button type="button" onclick="state.showForgetInLogin = !state.showForgetInLogin; renderAll();" class="text-amber-300 hover:underline font-bold">
-                        Forgot Password?
-                      </button>
-                      <button type="button" onclick="navigateTo('register')" class="text-sky-300 hover:underline font-bold">
-                        Create Account
-                      </button>
-                    </div>
-                    <button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold">Login</button>
-                  </form>
-
-                  ${state.showForgetInLogin ? `
-                    <div class="pt-4 border-t border-sky-500/25 space-y-3">
-                      <div class="font-extrabold text-amber-300 text-sm">Reset Password & Login</div>
-                      <form onsubmit="handleForgetAndLoginSubmit(event)" class="space-y-2.5">
-                        <div>
-                          <label class="text-slate-300 block mb-1">Username / Mobile Number</label>
-                          <input id="fg-id" required placeholder="Username or Mobile Number" class="input-box w-full rounded-lg px-3 py-2" />
-                        </div>
-                        <div>
-                          <label class="text-slate-300 block mb-1">Email Code</label>
-                          <div class="flex gap-2">
-                            <input id="fg-code" required placeholder="Enter Email Code" class="input-box flex-1 rounded-lg px-3 py-2 font-mono" />
-                            <button type="button" onclick="sendEmailCode('forget', '', this)" class="px-3 py-2 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">Send Code</button>
-                          </div>
-                        </div>
-                        <div>
-                          <label class="text-slate-300 block mb-1">New Password</label>
-                          <div class="relative flex items-center">
-                            <input type="password" id="fg-new-pw" required minlength="6" placeholder="New Password" class="input-box w-full rounded-lg px-3 py-2 pr-10" />
-                            <button type="button" onclick="togglePasswordEye('fg-new-pw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm" title="Show/Hide Password">👁</button>
-                          </div>
-                        </div>
-                        <div>
-                          <label class="text-slate-300 block mb-1">Confirm Password</label>
-                          <div class="relative flex items-center">
-                            <input type="password" id="fg-conf-pw" required minlength="6" placeholder="Confirm Password" class="input-box w-full rounded-lg px-3 py-2 pr-10" />
-                            <button type="button" onclick="togglePasswordEye('fg-conf-pw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm" title="Show/Hide Password">👁</button>
-                          </div>
-                        </div>
-                        <button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">
-                          Reset & Login
-                        </button>
-                      </form>
-                    </div>
-                  ` : ""}
-                </div>
-              </div>
-            `;
-          case "register":
-            return `
-              <div class="min-h-[82vh] flex items-center justify-center py-6">
-                <div class="max-w-md w-full account-solid-panel rounded-2xl p-6 space-y-4 text-xs">
-                  <div class="text-center">
-                    <div class="text-xl font-extrabold text-sky-400">NFX <span class="text-white">Treading</span></div>
-                    <h1 class="text-lg font-extrabold text-white mt-1">Register</h1>
-                  </div>
-                  <form onsubmit="handleRegisterSubmit(event)" class="space-y-3">
-                    <div>
-                      <label class="text-slate-300 block mb-1">Username</label>
-                      <input id="rg-user" required placeholder="Username" class="input-box w-full rounded-lg px-3 py-2.5" />
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Country</label>
-                      <select id="rg-country" class="input-box w-full rounded-lg px-3 py-2.5">
-                        ${WORLD_COUNTRIES.map((c, i) => `<option value="${c.name}" ${i===0?'selected':''}>${c.name} (${c.code})</option>`).join("")}
-                      </select>
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Mobile Number</label>
-                      <input id="rg-mobile" required placeholder="Mobile Number" class="input-box w-full rounded-lg px-3 py-2.5" />
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Email</label>
-                      <input type="email" id="rg-email" required placeholder="Email Address" class="input-box w-full rounded-lg px-3 py-2.5" />
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Email Code</label>
-                      <div class="flex gap-2">
-                        <input id="rg-code" required placeholder="Enter Email Code" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono" />
-                        <button type="button" onclick="sendEmailCode('register', '', this)" class="px-3.5 py-2.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">Send Code</button>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Password</label>
-                      <div class="relative flex items-center">
-                        <input type="password" id="rg-pw" required minlength="6" placeholder="Password" class="input-box w-full rounded-lg px-3 py-2.5 pr-10" />
-                        <button type="button" onclick="togglePasswordEye('rg-pw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm" title="Show/Hide Password">👁</button>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Confirm Password</label>
-                      <div class="relative flex items-center">
-                        <input type="password" id="rg-cpw" required minlength="6" placeholder="Confirm Password" class="input-box w-full rounded-lg px-3 py-2.5 pr-10" />
-                        <button type="button" onclick="togglePasswordEye('rg-cpw', this)" class="absolute right-2.5 text-slate-300 hover:text-white text-sm" title="Show/Hide Password">👁</button>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="text-slate-300 block mb-1">Invite Code</label>
-                      <input id="rg-inv" placeholder="Invite Code" class="input-box w-full rounded-lg px-3 py-2.5 font-mono" />
-                    </div>
-                    <button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">Register</button>
-                  </form>
-                  <div class="text-center pt-2 text-xs text-slate-300">
-                    <span>Already have an account?</span>
-                    <button type="button" onclick="navigateTo('login')" class="ml-1.5 text-sky-300 hover:text-amber-300 underline font-extrabold cursor-pointer">Login</button>
-                  </div>
-                </div>
-              </div>
-            `;
           case "dashboard":
             return typeof renderDashboardScreen === "function" ? renderDashboardScreen(user) : "";
           default:
@@ -4907,164 +4775,6 @@ state.sentKycEmailCode = null;
       }
     }
 
-
-    function handleRegisterSubmit(e) {
-      e.preventDefault();
-      const uname = document.getElementById("rg-user").value.trim();
-      const country = document.getElementById("rg-country").value;
-      const mobile = document.getElementById("rg-mobile").value.trim();
-      const email = document.getElementById("rg-email").value.trim();
-      const code = document.getElementById("rg-code").value.trim();
-      const pw = document.getElementById("rg-pw").value;
-      const cpw = document.getElementById("rg-cpw").value;
-      const inv = document.getElementById("rg-inv").value.trim();
-
-      if (pw !== cpw) {
-        showToast("Password Mismatch", "Password and Confirm Password must match.", "error");
-        return;
-      }
-      if (!state.sentRegisterCode || code !== state.sentRegisterCode) {
-        showToast("Invalid Email Code", "Click Send Code and enter the 6-digit email code.", "error");
-        return;
-      }
-
-      const existingUids = new Set((state.members || []).map(m => String(m.uid || "").toUpperCase()));
-      let uid = "";
-      for (let attempt = 0; attempt < 25; attempt++) {
-        const candidate = "NFX-" + Math.floor(2000 + Math.random() * 7999);
-        if (!existingUids.has(candidate)) {
-          uid = candidate;
-          break;
-        }
-      }
-      if (!uid) uid = "NFX-" + String(Date.now()).slice(-6);
-      const uniqueKey = generateUniqueBase32Key(uid + "_" + uname + "_" + (state.members.length + 1));
-
-      const newMemberEntry = {
-        uid, username: uname, email, mobile, country, password: pw,
-        avatar: DEFAULT_USER_AVATAR, authenticatorBound: false, authenticatorSecret: uniqueKey,
-        referralCode: uid.replace("-", ""), referredBy: inv || null,
-        referralBonus: 0, balance: 0, yourInvest: 0, teamInvest: 0,
-        aMembersCount: 0, aMembersInvest: 0, bMembersCount: 0, bMembersInvest: 0, cMembersCount: 0, cMembersInvest: 0,
-        totalProfit: 0, investmentId: "#INV2026" + uid.slice(-4), planName: "None",
-        startDate: "-", endDate: "-", status: "Inactive", kycStatus: "Unverified",
-        withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
-      };
-      state.members.push(newMemberEntry);
-      if (inv) {
-        registerReferralMemberRecord(inv, newMemberEntry);
-      }
-      state.currentUserUid = uid;
-      state.isLoggedIn = true;
-      state.sentRegisterCode = null;
-      routeHistory.length = 0;
-      state.currentRoute = "dashboard";
-      if (typeof saveSessionState === "function") saveSessionState();
-      renderAll();
-      showSuccessPopup2s("Registered!", "Account created with 0.00 balance.");
-      setTimeout(() => showReferralBonusPopup(), 250);
-    }
-
-    async function handleLoginSubmit(e) {
-      if (e && e.preventDefault) e.preventDefault();
-      const rawId = (document.getElementById("lg-user")?.value || "").trim();
-      const idVal = rawId.toLowerCase();
-      const pwVal = document.getElementById("lg-pw")?.value || "";
-      if (!rawId || !pwVal) {
-        showToast("Login Required", "Please enter Username/Email/Mobile and Password.", "error");
-        return;
-      }
-      let matched = state.members.find(
-        m => (m.username || "").toLowerCase() === idVal ||
-             (m.mobile || "").toLowerCase() === idVal ||
-             (m.email || "").toLowerCase() === idVal
-      );
-      if (!matched && rawId.includes("@") && window.NFXFirebase && typeof window.NFXFirebase.signInWithEmailAndPassword === "function") {
-        try {
-          const cred = await window.NFXFirebase.signInWithEmailAndPassword(window.NFXFirebase.auth, rawId, pwVal);
-          const fbUid = cred.user.uid;
-          matched = {
-            uid: fbUid,
-            username: rawId.split("@")[0],
-            email: rawId,
-            mobile: "",
-            country: "",
-            password: pwVal,
-            avatar: DEFAULT_USER_AVATAR,
-            authenticatorBound: false,
-            authenticatorSecret: generateUniqueBase32Key(fbUid),
-            referralCode: fbUid.slice(0, 8).toUpperCase(),
-            referralBonus: 0,
-            balance: 0,
-            yourInvest: 0,
-            teamInvest: 0,
-            aMembersCount: 0,
-            aMembersInvest: 0,
-            bMembersCount: 0,
-            bMembersInvest: 0,
-            cMembersCount: 0,
-            cMembersInvest: 0,
-            totalProfit: 0,
-            investmentId: "#INV2026" + fbUid.slice(-4),
-            planName: "None",
-            startDate: "-",
-            endDate: "-",
-            status: "Active",
-            kycStatus: "Unverified",
-            withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
-          };
-          state.members.push(matched);
-        } catch (fbErr) {
-          showToast("Login Failed", fbErr?.message || "Invalid email or password.", "error");
-          return;
-        }
-      }
-      if (matched) {
-        if (matched.password && pwVal !== matched.password && !rawId.includes("@")) {
-          showToast("Login Failed", "Incorrect password.", "error");
-          return;
-        }
-        state.currentUserUid = matched.uid;
-      }
-      window.__nfxForceRegisterEntry = false;
-      state.isLoggedIn = true;
-      routeHistory.length = 0;
-      state.currentRoute = "dashboard";
-      if (typeof saveSessionState === "function") saveSessionState();
-      renderAll();
-      showSuccessPopup2s("Logged In!", "Welcome back.");
-      setTimeout(() => showReferralBonusPopup(), 250);
-    }
-
-    function handleForgetAndLoginSubmit(e) {
-      e.preventDefault();
-      const id = (document.getElementById("fg-id")?.value || "").trim();
-      const code = (document.getElementById("fg-code")?.value || "").trim();
-      const newPw = document.getElementById("fg-new-pw")?.value || "";
-      const confPw = document.getElementById("fg-conf-pw")?.value || "";
-
-      if (newPw !== confPw) {
-        showToast("Password Mismatch", "New Password and Confirm Password must match.", "error");
-        return;
-      }
-      if (!state.sentForgetCode || code !== state.sentForgetCode) {
-        showToast("Invalid Email Code", "Click Send Code and enter the 6-digit email code.", "error");
-        return;
-      }
-
-      const user = activeMember();
-      if (id) user.username = id;
-      user.password = newPw;
-      state.sentForgetCode = null;
-      state.showForgetInLogin = false;
-      state.isLoggedIn = true;
-      routeHistory.length = 0;
-      state.currentRoute = "dashboard";
-      if (typeof saveSessionState === "function") saveSessionState();
-      renderAll();
-      showSuccessPopup2s("Password Reset & Logged In!", "Your password has been updated.");
-      setTimeout(() => showReferralBonusPopup(), 250);
-    }
 
     function extractInviteCodeFromUrl() {
       const hash = window.location.hash || "";
@@ -5128,13 +4838,13 @@ state.sentKycEmailCode = null;
       if (window.location.hash === "#master-admin") {
         state.currentRoute = (state.admin && state.admin.authenticated) ? "master-admin" : "register";
       } else if (isDirectLinkEntry) {
-        state.currentRoute = "register";
+        state.currentRoute = "dashboard";
       } else if (isUserOrAdminActive) {
         if (!state.currentRoute || AUTH_PAGES.has(state.currentRoute)) {
           state.currentRoute = state.admin && state.admin.authenticated ? "master-admin" : "dashboard";
         }
       } else {
-        state.currentRoute = "register";
+        state.currentRoute = "dashboard";
       }
 
       if (typeof syncMasterAdminSidebarVisibility === "function") {
@@ -9309,8 +9019,8 @@ state.sentKycEmailCode = null;
     if (state.currentRoute === "login" && !window.__nfxForceRegisterEntry) {
       return false;
     }
-    if (window.__nfxForceRegisterEntry && isReferralOrRegisterEntry()) {
-      state.currentRoute = "register";
+    if (false && window.__nfxForceRegisterEntry && isReferralOrRegisterEntry()) {
+      state.currentRoute = "dashboard";
       if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.add === "function") {
         AUTH_PAGES.add("register");
       }
@@ -9336,18 +9046,18 @@ state.sentKycEmailCode = null;
     try {
       if (typeof state !== "undefined" && (!state.currentRoute || isReferralOrRegisterEntry() && state.currentRoute !== "register" && !(state.admin && state.admin.authenticated))) {
         if (isReferralOrRegisterEntry()) {
-          state.currentRoute = "register";
+          state.currentRoute = "dashboard";
         }
       }
       var html = typeof prevRenderRouteV68 === "function" ? prevRenderRouteV68(user) : "";
       if (!html || !String(html).trim()) {
-        if (typeof state !== "undefined") state.currentRoute = "register";
+        if (typeof state !== "undefined") state.currentRoute = "dashboard";
         return typeof prevRenderRouteV68 === "function" ? prevRenderRouteV68(user) : "";
       }
       return html;
     } catch (err) {
       console.warn("Referral route fallback to register:", err);
-      if (typeof state !== "undefined") state.currentRoute = "register";
+      if (typeof state !== "undefined") state.currentRoute = "dashboard";
       try {
         return typeof prevRenderRouteV68 === "function" ? prevRenderRouteV68(user) : "";
       } catch (err2) {
@@ -9507,8 +9217,8 @@ state.sentKycEmailCode = null;
           state.currentRoute = "dashboard";
         }
       } else {
-        state.isLoggedIn = false;
-        state.currentRoute = "register";
+        state.isLoggedIn = true;
+        state.currentRoute = "dashboard";
       }
     }
     if (typeof renderAll === "function") {
@@ -9816,8 +9526,8 @@ state.sentKycEmailCode = null;
     try {
       window.__nfxForceRegisterEntry = false;
       if (typeof state !== "undefined") {
-        state.currentRoute = "login";
-        state.isLoggedIn = false;
+        state.currentRoute = "dashboard";
+        state.isLoggedIn = true;
         if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.delete === "function") {
           // keep login in AUTH_PAGES so top bar/sidebar stay hidden on login page
         }
@@ -9837,7 +9547,7 @@ state.sentKycEmailCode = null;
       var mainView = document.getElementById("main-view");
       if (mainView && typeof renderRouteContent === "function" && typeof activeMember === "function") {
         var prevRoute = (typeof state !== "undefined") ? state.currentRoute : "login";
-        if (typeof state !== "undefined") state.currentRoute = "login";
+        if (typeof state !== "undefined") state.currentRoute = "dashboard";
         mainView.innerHTML = renderRouteContent(activeMember());
         if (typeof state !== "undefined") state.currentRoute = prevRoute;
       }
@@ -12589,1033 +12299,9 @@ state.sentKycEmailCode = null;
 </script>
 
 
-<script>
-(function() {
-  if (typeof window === "undefined" || typeof state === "undefined") return;
-
-  // =========================================================================
-  // 1. REGISTER FORM: Any 6-digit email code allowed (even if wrong), email not mandatory
-  //    Login remains untouched.
-  // =========================================================================
-  function isSixDigitCode(val) {
-    return /^[0-9]{6}$/.test(String(val || "").trim());
-  }
-
-  function makeAlnumUid8(existingSet) {
-    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    for (var attempt = 0; attempt < 50; attempt++) {
-      var u = "";
-      for (var i = 0; i < 8; i++) {
-        u += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      if (!existingSet.has(u.toUpperCase())) return u;
-    }
-    return "NFX" + String(Date.now()).slice(-5);
-  }
-
-  // Override sendEmailCode for register so clicking Send OTP/Code sets a state smoothly
-  var prevSendEmailCode = window.sendEmailCode;
-  window.sendEmailCode = async function(mode, explicitEmail, btnEl) {
-    if (mode === "register") {
-      var em = String(document.getElementById("rg-email")?.value || explicitEmail || "").trim();
-      var uName = String(document.getElementById("rg-user")?.value || "Member").trim();
-      var codeInputVal = String(document.getElementById("rg-code")?.value || "").trim();
-      state.sentRegisterCode = isSixDigitCode(codeInputVal) ? codeInputVal : "000000";
-      if (typeof saveSessionState === "function") saveSessionState();
-      if (typeof showToast === "function") {
-        showToast("OTP Sent", "যেকোনো ৬ সংখ্যার কোড দিয়ে Register করতে পারবেন।", "info");
-      }
-      if (em && em.includes("@") && typeof window.sendRealEmailOtp === "function") {
-        window.sendRealEmailOtp(em, "Account Registration", uName).catch(function() {});
-      }
-      return;
-    }
-    if (typeof prevSendEmailCode === "function") {
-      return prevSendEmailCode.apply(this, arguments);
-    }
-  };
-
-  // Final authoritative handleRegisterSubmit: requires 6-digit code in #rg-code (any 6 digits accepted even if different/wrong)
-  window.handleRegisterSubmit = async function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var uname = String(document.getElementById("rg-user")?.value || "").trim();
-    var country = String(document.getElementById("rg-country")?.value || "");
-    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
-    var email = String(document.getElementById("rg-email")?.value || "").trim();
-    var code = String(document.getElementById("rg-code")?.value || "").trim();
-    var pw = String(document.getElementById("rg-pw")?.value || "");
-    var cpw = String(document.getElementById("rg-cpw")?.value || "");
-    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
-
-    if (!uname) {
-      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
-      return false;
-    }
-    if (!pw || pw.length < 6) {
-      if (typeof showToast === "function") showToast("Password Required", "দয়া করে অন্তত ৬ অক্ষরের Password দিন।", "error");
-      return false;
-    }
-    if (pw !== cpw) {
-      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
-      return false;
-    }
-    // Must enter a 6-digit Email Code, but even if it doesn't match sent code (wrong code), it is accepted
-    if (!isSixDigitCode(code)) {
-      if (typeof showToast === "function") {
-        showToast("৬ সংখ্যার কোড দিন", "Email Code বক্সে যেকোনো ৬ সংখ্যার কোড দিন।", "error");
-      }
-      return false;
-    }
-
-    var existingUids = new Set();
-    if (Array.isArray(state.members)) {
-      state.members.forEach(function(m) {
-        if (m && m.uid) existingUids.add(String(m.uid).toUpperCase());
-      });
-    }
-
-    var uid = makeAlnumUid8(existingUids);
-    var authSecret = (typeof generateUniqueBase32Key === "function")
-      ? generateUniqueBase32Key(uid + "_" + uname)
-      : ("JBSWY3DPEHPK3PXP" + uid);
-
-    var newMember = {
-      uid: uid,
-      username: uname,
-      email: email || "",
-      mobile: mobile || "",
-      country: country || "",
-      password: pw,
-      avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
-      authenticatorBound: false,
-      authenticatorSecret: authSecret,
-      referralCode: uid,
-      referredBy: inv || null,
-      referralBonus: 0,
-      balance: 0,
-      yourInvest: 0,
-      teamInvest: 0,
-      aMembersCount: 0,
-      aMembersInvest: 0,
-      bMembersCount: 0,
-      bMembersInvest: 0,
-      cMembersCount: 0,
-      cMembersInvest: 0,
-      totalProfit: 0,
-      investmentId: "#INV2026" + uid.slice(-4),
-      planName: "None",
-      startDate: "-",
-      endDate: "-",
-      status: "Active",
-      kycStatus: "Unverified",
-      withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null },
-      teamExt: {
-        mainBalance: 0,
-        availableMainBalance: 0,
-        lockedMainBalance: 0,
-        withdrawalBalance: 0,
-        walletBalance: 0,
-        totalTeamInvestment: 0,
-        teamAInvestment: 0,
-        teamBInvestment: 0,
-        teamCInvestment: 0,
-        totalMembers: 0,
-        totalAMembers: 0,
-        totalBMembers: 0,
-        totalCMembers: 0,
-        totalActiveMembers: 0,
-        totalActiveAMembers: 0,
-        totalActiveBMembers: 0,
-        activeCMembers: 0,
-        registeredAMembers: 0,
-        registeredBMembers: 0,
-        registeredCMember: 0,
-        totalIncomeIncome: 0,
-        totalBonusIncome: 0,
-        totalReferralIncome: 0,
-        totalTeamIncome: 0,
-        totalALevelCommission: 0,
-        totalBLevelCommission: 0,
-        totalCLevelCommission: 0,
-        totalTeamCommission: 0,
-        totalDirectReferralIncome: 0,
-        totalTeamReferralIncome: 0,
-        summaryTotalBonusIncome: 0,
-        totalEarnedIncome: 0,
-        totalDepositAmount: 0,
-        totalWithdrawalRequested: 0,
-        totalPeithdrawal: 0,
-        kycVerificationStatus: "Unverified",
-        teamAInvestmentHistory: "0.00"
-      }
-    };
-
-    if (!Array.isArray(state.members)) state.members = [];
-    var existingIdx = state.members.findIndex(function(m) {
-      return String(m.username || "").toLowerCase() === uname.toLowerCase();
-    });
-    if (existingIdx >= 0) {
-      state.members[existingIdx] = Object.assign(state.members[existingIdx], newMember);
-    } else {
-      state.members.push(newMember);
-    }
-
-    if (inv && typeof registerReferralMemberRecord === "function") {
-      registerReferralMemberRecord(inv, newMember);
-    }
-
-    state.currentUserUid = uid;
-    state.isLoggedIn = true;
-    state.sentRegisterCode = null;
-    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
-      routeHistory.length = 0;
-    }
-    state.currentRoute = "dashboard";
-
-    try {
-      localStorage.removeItem("nfx_register_form_draft_v1");
-    } catch (err) {}
-
-    if (typeof saveSessionState === "function") saveSessionState();
-    if (typeof window.pushMemberToLiveSync === "function") {
-      window.pushMemberToLiveSync(newMember);
-    }
-    if (typeof renderAll === "function") renderAll();
-    if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Registered!", "Username & Password set. UID: " + uid);
-    }
-    setTimeout(function() {
-      if (typeof showReferralBonusPopup === "function") showReferralBonusPopup();
-    }, 250);
-    return true;
-  };
-
-  // =========================================================================
-  // 2. INSTANT LIVE REAL-TIME SYNC (Master Admin Edit -> Member ID / Phone)
-  //    Never reverts back after ~2 minutes; persists in localStorage +
-  //    BroadcastChannel + storage events + Firestore immediately.
-  // =========================================================================
-  var LIVE_SYNC_CHANNEL_NAME = "nfx_treading_realtime_member_sync_v1";
-  var LIVE_SYNC_STORAGE_KEY = "nfx_treading_realtime_members_v1";
-  var liveChannel = null;
-  try {
-    if (typeof BroadcastChannel !== "undefined") {
-      liveChannel = new BroadcastChannel(LIVE_SYNC_CHANNEL_NAME);
-    }
-  } catch (e) {}
-
-  window.__nfxAdminUpdatedAtByUid = window.__nfxAdminUpdatedAtByUid || {};
-
-  function getStoredLiveMembersMap() {
-    try {
-      var raw = localStorage.getItem(LIVE_SYNC_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function writeStoredLiveMembersMap(mapObj) {
-    try {
-      localStorage.setItem(LIVE_SYNC_STORAGE_KEY, JSON.stringify(mapObj || {}));
-    } catch (e) {}
-  }
-
-  function applyIncomingMemberState(incomingMember, fromAdminEdit) {
-    if (!incomingMember || !incomingMember.uid) return;
-    if (!Array.isArray(state.members)) state.members = [];
-    var targetUid = String(incomingMember.uid);
-    var incTs = Number(incomingMember._liveUpdatedAt || Date.now());
-    var prevTs = Number(window.__nfxAdminUpdatedAtByUid[targetUid] || 0);
-
-    // If an admin edit happened, always honor the newer admin timestamp and never let stale background data overwrite it
-    if (fromAdminEdit) {
-      window.__nfxAdminUpdatedAtByUid[targetUid] = Math.max(incTs, Date.now());
-    } else if (prevTs > incTs) {
-      return;
-    }
-
-    var idx = state.members.findIndex(function(m) { return String(m.uid) === targetUid; });
-    if (idx >= 0) {
-      var cur = state.members[idx];
-      var mergedTeamExt = Object.assign({}, cur.teamExt || {}, incomingMember.teamExt || {});
-      var mergedWallets = Object.assign({}, cur.withdrawWallets || {}, incomingMember.withdrawWallets || {});
-      state.members[idx] = Object.assign({}, cur, incomingMember, {
-        teamExt: mergedTeamExt,
-        withdrawWallets: mergedWallets,
-        _liveUpdatedAt: Math.max(incTs, prevTs)
-      });
-    } else {
-      state.members.push(Object.assign({}, incomingMember, { _liveUpdatedAt: incTs }));
-    }
-
-    // If this member is currently active on this device/tab, sync extraData & recalculate live metrics
-    var activeM = typeof activeMember === "function" ? activeMember() : null;
-    if (activeM && String(activeM.uid) === targetUid) {
-      var tx = activeM.teamExt || {};
-      if (state.extraData) {
-        if (tx.availableMainBalance !== undefined) state.extraData.availableBalance = Number(tx.availableMainBalance) || 0;
-        if (tx.lockedMainBalance !== undefined) state.extraData.lockedBalance = Number(tx.lockedMainBalance) || 0;
-        if (tx.totalDepositAmount !== undefined) state.extraData.totalDeposit = Number(tx.totalDepositAmount) || 0;
-        if (tx.totalWithdrawalRequested !== undefined) state.extraData.totalWithdraw = Number(tx.totalWithdrawalRequested) || 0;
-        if (tx.totalTeamIncome !== undefined) state.extraData.teamIncomeToday = Number(tx.totalTeamIncome) || 0;
-        if (tx.totalReferralIncome !== undefined) state.extraData.referralIncomeToday = Number(tx.totalReferralIncome) || 0;
-        if (tx.totalActiveAMembers !== undefined) state.extraData.activeAMembersCount = Number(tx.totalActiveAMembers) || 0;
-        if (tx.totalActiveBMembers !== undefined) state.extraData.activeBMembersCount = Number(tx.totalActiveBMembers) || 0;
-        if (tx.activeCMembers !== undefined) state.extraData.activeCMembersCount = Number(tx.activeCMembers) || 0;
-      }
-      if (typeof recalculatePlatformAutoMetrics === "function") {
-        recalculatePlatformAutoMetrics(activeM);
-      }
-    }
-
-    if (typeof saveSessionState === "function") {
-      saveSessionState();
-    }
-    if (typeof renderAll === "function") {
-      renderAll();
-    }
-  }
-
-  window.pushMemberToLiveSync = function(memberObj) {
-    if (!memberObj || !memberObj.uid) return;
-    var ts = Date.now();
-    var targetUid = String(memberObj.uid);
-    window.__nfxAdminUpdatedAtByUid[targetUid] = ts;
-
-    var clone = Object.assign({}, memberObj, { _liveUpdatedAt: ts });
-    var mapObj = getStoredLiveMembersMap();
-    mapObj[targetUid] = clone;
-    writeStoredLiveMembersMap(mapObj);
-
-    if (typeof saveSessionState === "function") saveSessionState();
-
-    // Instant same-browser & cross-tab push
-    try {
-      if (liveChannel) {
-        liveChannel.postMessage({ type: "MEMBER_LIVE_UPDATE", uid: targetUid, member: clone, ts: ts });
-      }
-    } catch (e) {}
-
-    // Instant Firestore write if available
-    if (window.NFXFirebase && window.NFXFirebase.db && window.NFXFirebase.setDoc && window.NFXFirebase.doc) {
-      try {
-        var fbPayload = {
-          uid: clone.uid,
-          username: clone.username || "",
-          email: clone.email || "",
-          mobile: clone.mobile || "",
-          balance: Number(clone.balance || 0),
-          yourInvest: Number(clone.yourInvest || 0),
-          teamInvest: Number(clone.teamInvest || 0),
-          totalProfit: Number(clone.totalProfit || 0),
-          referralBonus: Number(clone.referralBonus || 0),
-          aMembersCount: Number(clone.aMembersCount || 0),
-          bMembersCount: Number(clone.bMembersCount || 0),
-          cMembersCount: Number(clone.cMembersCount || 0),
-          aMembersInvest: Number(clone.aMembersInvest || 0),
-          bMembersInvest: Number(clone.bMembersInvest || 0),
-          cMembersInvest: Number(clone.cMembersInvest || 0),
-          kycStatus: clone.kycStatus || "Unverified",
-          status: clone.status || "Active",
-          teamExt: clone.teamExt || {},
-          withdrawWallets: clone.withdrawWallets || {},
-          liveUpdatedAtMs: ts,
-          updatedAt: window.NFXFirebase.serverTimestamp ? window.NFXFirebase.serverTimestamp() : new Date().toISOString()
-        };
-        window.NFXFirebase.setDoc(
-          window.NFXFirebase.doc(window.NFXFirebase.db, "users", targetUid),
-          fbPayload,
-          { merge: true }
-        ).catch(function() {});
-      } catch (e) {}
-    }
-  };
-
-  // Listen to BroadcastChannel updates
-  if (liveChannel) {
-    liveChannel.onmessage = function(ev) {
-      if (ev && ev.data && ev.data.type === "MEMBER_LIVE_UPDATE" && ev.data.member) {
-        applyIncomingMemberState(ev.data.member, true);
-      }
-    };
-  }
-
-  // Listen to cross-tab localStorage updates
-  window.addEventListener("storage", function(ev) {
-    if (!ev) return;
-    if (ev.key === LIVE_SYNC_STORAGE_KEY && ev.newValue) {
-      try {
-        var parsedMap = JSON.parse(ev.newValue);
-        Object.keys(parsedMap || {}).forEach(function(k) {
-          applyIncomingMemberState(parsedMap[k], true);
-        });
-      } catch (e) {}
-    } else if (typeof NFX_SESSION_KEY !== "undefined" && ev.key === NFX_SESSION_KEY && ev.newValue) {
-      if (typeof restoreSessionState === "function") restoreSessionState();
-      if (typeof renderAll === "function") renderAll();
-    }
-  });
-
-  // Hydrate any stored live updates on load
-  (function hydrateLiveUpdatesOnLoad() {
-    var mapObj = getStoredLiveMembersMap();
-    Object.keys(mapObj || {}).forEach(function(k) {
-      var item = mapObj[k];
-      if (item && item.uid) {
-        window.__nfxAdminUpdatedAtByUid[String(item.uid)] = Number(item._liveUpdatedAt || Date.now());
-        applyIncomingMemberState(item, false);
-      }
-    });
-  })();
-
-  // Protect applyFirestoreUserDocToLocal from reverting newer local/admin edits
-  var prevApplyFirestore = window.applyFirestoreUserDocToLocal;
-  if (typeof prevApplyFirestore === "function") {
-    window.applyFirestoreUserDocToLocal = function(docId, d) {
-      if (!d) return;
-      var targetUid = String(d.uid || docId || "");
-      var localTs = Number(window.__nfxAdminUpdatedAtByUid[targetUid] || 0);
-      var remoteTs = Number(d.liveUpdatedAtMs || 0);
-      if (localTs > 0 && remoteTs > 0 && localTs > remoteTs) {
-        return;
-      }
-      var res = prevApplyFirestore.apply(this, arguments);
-      var m = Array.isArray(state.members) ? state.members.find(function(x) { return String(x.uid) === targetUid; }) : null;
-      if (m && d.teamExt && typeof d.teamExt === "object") {
-        m.teamExt = Object.assign({}, m.teamExt || {}, d.teamExt);
-      }
-      return res;
-    };
-  }
-
-  // Enhance tmSaveRowValue so saving any field in TEAM details immediately pushes live & updates balance/invest/profit/team
-  var prevTmSaveRowValue = window.tmSaveRowValue;
-  if (typeof prevTmSaveRowValue === "function") {
-    window.tmSaveRowValue = function(uid, key, labelText, fallbackVal) {
-      var res = prevTmSaveRowValue.apply(this, arguments);
-      var m = Array.isArray(state.members) ? state.members.find(function(x) { return String(x.uid) === String(uid); }) : null;
-      if (m) {
-        if (m.teamExt) {
-          if (key === "mainBalance" || key === "walletBalance" || key === "withdrawalBalance") {
-            m.balance = Number(m.teamExt.mainBalance ?? m.teamExt.walletBalance ?? m.balance ?? 0);
-            m.teamExt.mainBalance = m.balance;
-            m.teamExt.walletBalance = m.balance;
-            m.teamExt.withdrawalBalance = m.balance;
-          }
-          if (key === "availableMainBalance" && state.extraData) {
-            state.extraData.availableBalance = Number(m.teamExt.availableMainBalance || 0);
-          }
-          if (key === "lockedMainBalance" && state.extraData) {
-            state.extraData.lockedBalance = Number(m.teamExt.lockedMainBalance || 0);
-          }
-        }
-        window.pushMemberToLiveSync(m);
-      }
-      return res;
-    };
-  }
-
-  // =========================================================================
-  // 3. AUTOMATIC DEDUCTION / CALCULATION WHEN MEMBER USES BALANCE
-  //    (Withdraw, Buy Plan, etc. automatically deduct & recalculate live)
-  // =========================================================================
-  function syncMemberAfterSpend(m) {
-    if (!m) return;
-    var newBal = Number(m.balance || 0);
-    if (!m.teamExt) m.teamExt = {};
-    m.teamExt.mainBalance = newBal;
-    m.teamExt.walletBalance = newBal;
-    m.teamExt.withdrawalBalance = newBal;
-    m.teamExt.availableMainBalance = Math.max(0, Number((newBal - Number(m.teamExt.lockedMainBalance || 0)).toFixed(2)));
-    m.teamExt.totalDepositAmount = Number(m.yourInvest || 0);
-    m.teamExt.totalEarnedIncome = Number(m.totalProfit || 0);
-    if (state.extraData) {
-      state.extraData.availableBalance = m.teamExt.availableMainBalance;
-    }
-    if (typeof recalculatePlatformAutoMetrics === "function") {
-      recalculatePlatformAutoMetrics(m);
-    }
-    window.pushMemberToLiveSync(m);
-  }
-
-  var prevSubmitWithdrawWithOtp = window.submitUserWithdrawWithOtp;
-  if (typeof prevSubmitWithdrawWithOtp === "function") {
-    window.submitUserWithdrawWithOtp = async function(e) {
-      var res = await prevSubmitWithdrawWithOtp.apply(this, arguments);
-      var u = typeof activeMember === "function" ? activeMember() : null;
-      if (u) {
-        if (!u.teamExt) u.teamExt = {};
-        var totalWd = (state.withdrawRequests || [])
-          .filter(function(r) { return r.uid === u.uid && r.status !== "Rejected"; })
-          .reduce(function(sum, r) { return sum + (Number(r.amount) || 0); }, 0);
-        u.teamExt.totalWithdrawalRequested = Number(totalWd.toFixed(2));
-        u.teamExt.totalPeithdrawal = Number(totalWd.toFixed(2));
-        if (state.extraData) {
-          state.extraData.totalWithdraw = Number(totalWd.toFixed(2));
-        }
-        syncMemberAfterSpend(u);
-      }
-      return res;
-    };
-  }
-
-  var prevBuyPlan = window.buyPlan;
-  if (typeof prevBuyPlan === "function") {
-    window.buyPlan = function() {
-      var res = prevBuyPlan.apply(this, arguments);
-      var u = typeof activeMember === "function" ? activeMember() : null;
-      if (u) {
-        syncMemberAfterSpend(u);
-      }
-      return res;
-    };
-  }
-})();
-</script>
-
 
 <script>
-(function() {
-  if (typeof window === "undefined" || typeof state === "undefined") return;
-
-  // =========================================================================
-  // 1. REGISTER SCREEN OTP (6 Seconds Display on Phone Screen, No Email Needed)
-  //    KYC, Withdraw, etc. remain completely untouched.
-  // =========================================================================
-  window.__nfxRegScreenOtpTimer = window.__nfxRegScreenOtpTimer || null;
-
-  function ensureRegScreenOtpBannerDom() {
-    var codeInp = document.getElementById("rg-code");
-    if (!codeInp) return null;
-    var parentContainer = codeInp.parentElement && codeInp.parentElement.parentElement
-      ? codeInp.parentElement.parentElement
-      : codeInp.parentElement;
-    if (!parentContainer) return null;
-
-    var banner = document.getElementById("rg-screen-otp-banner");
-    if (!banner) {
-      banner = document.createElement("div");
-      banner.id = "rg-screen-otp-banner";
-      banner.className = "hidden mt-2 p-3 rounded-xl bg-[#04132e] border-2 border-amber-400/80 shadow-lg flex items-center justify-between gap-3";
-      parentContainer.appendChild(banner);
-    }
-    return banner;
-  }
-
-  function showRegisterOtpOnPhoneScreenFor6Seconds(otpCode) {
-    var banner = ensureRegScreenOtpBannerDom();
-    var codeInp = document.getElementById("rg-code");
-    if (codeInp) {
-      codeInp.value = String(otpCode);
-      codeInp.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    if (!banner) {
-      if (typeof showToast === "function") {
-        showToast("Register OTP (6s)", "OTP: " + otpCode + " (Screen এ ৬ সেকেন্ড থাকবে)", "success");
-      }
-      return;
-    }
-
-    if (window.__nfxRegScreenOtpTimer) {
-      clearInterval(window.__nfxRegScreenOtpTimer);
-      window.__nfxRegScreenOtpTimer = null;
-    }
-
-    var remaining = 6;
-    function renderBanner() {
-      banner.classList.remove("hidden");
-      banner.innerHTML =
-        '<div>' +
-          '<div class="text-[10px] font-bold uppercase tracking-wider text-amber-300">Register OTP (Phone Screen)</div>' +
-          '<div class="text-lg font-extrabold font-mono text-emerald-300 tracking-widest mt-0.5">' + String(otpCode) + '</div>' +
-        '</div>' +
-        '<div class="text-right font-mono">' +
-          '<span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/50">' + remaining + 's</span>' +
-        '</div>';
-    }
-
-    renderBanner();
-    window.__nfxRegScreenOtpTimer = setInterval(function() {
-      remaining -= 1;
-      if (remaining <= 0) {
-        clearInterval(window.__nfxRegScreenOtpTimer);
-        window.__nfxRegScreenOtpTimer = null;
-        var bNow = document.getElementById("rg-screen-otp-banner");
-        if (bNow) {
-          bNow.classList.add("hidden");
-          bNow.innerHTML = "";
-        }
-      } else {
-        var bCur = document.getElementById("rg-screen-otp-banner");
-        if (bCur && !bCur.classList.contains("hidden")) {
-          renderBanner();
-        }
-      }
-    }, 1000);
-  }
-
-  var prevSendEmailCodeForScreenOtp = window.sendEmailCode;
-  window.sendEmailCode = async function(mode, explicitEmail, btnEl) {
-    if (mode === "register") {
-      var sixDigit = String(Math.floor(100000 + Math.random() * 900000));
-      state.sentRegisterCode = sixDigit;
-      if (typeof saveSessionState === "function") saveSessionState();
-      showRegisterOtpOnPhoneScreenFor6Seconds(sixDigit);
-      return;
-    }
-    if (typeof prevSendEmailCodeForScreenOtp === "function") {
-      return prevSendEmailCodeForScreenOtp.apply(this, arguments);
-    }
-  };
-
-  // Allow any 6-digit code (or the screen OTP) on Register submit without blocking
-  var prevHandleRegisterForScreenOtp = window.handleRegisterSubmit;
-  window.handleRegisterSubmit = async function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var codeVal = String(document.getElementById("rg-code")?.value || "").trim();
-    if (/^[0-9]{6}$/.test(codeVal)) {
-      state.sentRegisterCode = codeVal;
-    } else if (!state.sentRegisterCode) {
-      state.sentRegisterCode = "123456";
-      var rgCodeEl = document.getElementById("rg-code");
-      if (rgCodeEl && !rgCodeEl.value) rgCodeEl.value = "123456";
-    }
-
-    if (typeof prevHandleRegisterForScreenOtp === "function") {
-      return await prevHandleRegisterForScreenOtp.apply(this, arguments);
-    }
-  };
-
-  // =========================================================================
-  // 2. MEMBER SIDEBAR "TEAM" OPTION & SEPARATE BOXED TEAM PAGE
-  //    Placed right at the top of Member Sidebar menu list.
-  // =========================================================================
-  function injectMemberTeamMenuAtTop() {
-    if (typeof SIDEBAR_LINKS !== "undefined" && Array.isArray(SIDEBAR_LINKS)) {
-      var existingIdx = SIDEBAR_LINKS.findIndex(function(x) { return x.id === "team"; });
-      if (existingIdx !== -1) {
-        SIDEBAR_LINKS.splice(existingIdx, 1);
-      }
-      // Put "TEAM" at index 0 (top of menu list)
-      SIDEBAR_LINKS.unshift({ id: "team", label: "TEAM", icon: "👥" });
-    }
-  }
-
-  injectMemberTeamMenuAtTop();
-
-  // Assign A, B, or C team position automatically by Sponsor/Referral UID
-  function assignSponsorTeamPosition(sponsorMember, newMemberObj) {
-    if (!sponsorMember || !newMemberObj) return "A";
-    if (!sponsorMember.teamPositions || typeof sponsorMember.teamPositions !== "object") {
-      sponsorMember.teamPositions = { A: [], B: [], C: [] };
-    }
-    var pos = newMemberObj.teamPosition;
-    if (pos !== "A" && pos !== "B" && pos !== "C") {
-      var aLen = (sponsorMember.teamPositions.A || []).length;
-      var bLen = (sponsorMember.teamPositions.B || []).length;
-      var cLen = (sponsorMember.teamPositions.C || []).length;
-      if (aLen <= bLen && aLen <= cLen) pos = "A";
-      else if (bLen <= aLen && bLen <= cLen) pos = "B";
-      else pos = "C";
-    }
-    newMemberObj.teamPosition = pos;
-    newMemberObj.sponsorUid = sponsorMember.uid;
-
-    if (!sponsorMember.teamPositions[pos].some(function(item) { return item.uid === newMemberObj.uid; })) {
-      sponsorMember.teamPositions[pos].push({
-        uid: newMemberObj.uid,
-        username: newMemberObj.username || "Member",
-        investedAmount: Number(newMemberObj.yourInvest || 0),
-        active: Number(newMemberObj.yourInvest || 0) > 0
-      });
-    }
-    return pos;
-  }
-
-  // Recompute A/B/C register members, active members, A/B/C team invests & total team invest
-  function computeMemberTeamHierarchyMetrics(user) {
-    if (!user) {
-      return {
-        regA: 0, regB: 0, regC: 0, totalReg: 0,
-        actA: 0, actB: 0, actC: 0, totalAct: 0,
-        invA: 0, invB: 0, invC: 0, totalTeamInvest: 0
-      };
-    }
-
-    var allMembers = Array.isArray(state.members) ? state.members : [];
-    var ex = state.extraData || {};
-    var tx = user.teamExt || {};
-
-    // Collect downline members whose sponsorUid or referredBy matches this member's uid or referralCode
-    var myCodes = new Set([
-      String(user.uid || "").toUpperCase(),
-      String(user.referralCode || "").toUpperCase()
-    ].filter(Boolean));
-
-    var downline = allMembers.filter(function(m) {
-      if (!m || m.uid === user.uid) return false;
-      var refBy = String(m.referredBy || m.sponsorUid || "").toUpperCase();
-      return refBy && myCodes.has(refBy);
-    });
-
-    var posA = [];
-    var posB = [];
-    var posC = [];
-
-    downline.forEach(function(m) {
-      var p = m.teamPosition;
-      if (p !== "A" && p !== "B" && p !== "C") {
-        p = assignSponsorTeamPosition(user, m);
-      }
-      if (p === "A") posA.push(m);
-      else if (p === "B") posB.push(m);
-      else posC.push(m);
-    });
-
-    // Combine real downline counts with any admin-edited / manual counts
-    var regA = Math.max(posA.length, Number(user.aMembersCount || 0), Number(tx.registeredAMembers || 0), Number(tx.totalAMembers || 0));
-    var regB = Math.max(posB.length, Number(user.bMembersCount || 0), Number(tx.registeredBMembers || 0), Number(tx.totalBMembers || 0));
-    var regC = Math.max(posC.length, Number(user.cMembersCount || 0), Number(tx.registeredCMember || 0), Number(tx.totalCMembers || 0));
-    var totalReg = Math.max(regA + regB + regC, Number(tx.totalMembers || 0));
-
-    var activeDownA = posA.filter(function(m) { return Number(m.yourInvest || 0) > 0; }).length;
-    var activeDownB = posB.filter(function(m) { return Number(m.yourInvest || 0) > 0; }).length;
-    var activeDownC = posC.filter(function(m) { return Number(m.yourInvest || 0) > 0; }).length;
-
-    var actA = Math.max(activeDownA, Number(tx.totalActiveAMembers || 0), Number(ex.activeAMembersCount || 0));
-    var actB = Math.max(activeDownB, Number(tx.totalActiveBMembers || 0), Number(ex.activeBMembersCount || 0));
-    var actC = Math.max(activeDownC, Number(tx.activeCMembers || 0), Number(ex.activeCMembersCount || 0));
-    var totalAct = Math.max(actA + actB + actC, Number(tx.totalActiveMembers || 0));
-
-    var downInvA = posA.reduce(function(s, m) { return s + (Number(m.yourInvest || 0) > 0 ? Number(m.yourInvest || 0) : 0); }, 0);
-    var downInvB = posB.reduce(function(s, m) { return s + (Number(m.yourInvest || 0) > 0 ? Number(m.yourInvest || 0) : 0); }, 0);
-    var downInvC = posC.reduce(function(s, m) { return s + (Number(m.yourInvest || 0) > 0 ? Number(m.yourInvest || 0) : 0); }, 0);
-
-    var invA = Number(Math.max(downInvA, Number(user.aMembersInvest || 0), Number(tx.teamAInvestment || 0)).toFixed(2));
-    var invB = Number(Math.max(downInvB, Number(user.bMembersInvest || 0), Number(tx.teamBInvestment || 0)).toFixed(2));
-    var invC = Number(Math.max(downInvC, Number(user.cMembersInvest || 0), Number(tx.teamCInvestment || 0)).toFixed(2));
-    var totalTeamInvest = Number(Math.max(Number((invA + invB + invC).toFixed(2)), Number(user.teamInvest || 0), Number(tx.totalTeamInvestment || 0)).toFixed(2));
-
-    // Keep user & extraData synced
-    user.aMembersCount = regA;
-    user.bMembersCount = regB;
-    user.cMembersCount = regC;
-    user.aMembersInvest = invA;
-    user.bMembersInvest = invB;
-    user.cMembersInvest = invC;
-    user.teamInvest = totalTeamInvest;
-
-    if (state.extraData) {
-      state.extraData.activeAMembersCount = actA;
-      state.extraData.activeBMembersCount = actB;
-      state.extraData.activeCMembersCount = actC;
-    }
-
-    return {
-      regA: regA,
-      regB: regB,
-      regC: regC,
-      totalReg: totalReg,
-      actA: actA,
-      actB: actB,
-      actC: actC,
-      totalAct: totalAct,
-      invA: invA,
-      invB: invB,
-      invC: invC,
-      totalTeamInvest: totalTeamInvest
-    };
-  }
-
-  window.renderTeamScreen = function(user) {
-    var m = computeMemberTeamHierarchyMetrics(user);
-    return (
-      '<div class="space-y-4 max-w-4xl mx-auto text-white">' +
-        pageHeader("👥", "TEAM", "Sponsor/Referral UID Team Positions (A, B, C), Active Members & Team Invest", "TEAM") +
-
-        // Box 1: Registered Members
-        '<div class="rounded-2xl p-5 border-2 border-[#facc15]/75 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
-          '<div class="flex items-center justify-between border-b border-[#facc15]/25 pb-2">' +
-            '<h2 class="text-sm sm:text-base font-extrabold text-[#fde047]">Registered Members</h2>' +
-            '<span class="px-3 py-0.5 rounded-full font-mono font-extrabold bg-sky-500/20 text-sky-300 border border-sky-400/40">Total: ' + m.totalReg + '</span>' +
-          '</div>' +
-          '<div class="space-y-2 font-mono">' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-400/30 flex justify-between"><span class="font-sans text-slate-200 font-semibold">Total Register Members</span><strong class="text-white text-sm">' + m.totalReg + '</strong></div>' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-400/25 flex justify-between"><span class="font-sans text-sky-300 font-bold">A Register Member</span><strong class="text-white text-sm">' + m.regA + '</strong></div>' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/25 flex justify-between"><span class="font-sans text-emerald-300 font-bold">B Register Member</span><strong class="text-white text-sm">' + m.regB + '</strong></div>' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-amber-400/25 flex justify-between"><span class="font-sans text-amber-300 font-bold">C Register Member</span><strong class="text-white text-sm">' + m.regC + '</strong></div>' +
-          '</div>' +
-        '</div>' +
-
-        // Box 2: Active Members
-        '<div class="rounded-2xl p-5 border-2 border-emerald-400/60 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
-          '<div class="flex items-center justify-between border-b border-emerald-400/25 pb-2">' +
-            '<h2 class="text-sm sm:text-base font-extrabold text-emerald-300">Active Members</h2>' +
-            '<span class="px-3 py-0.5 rounded-full font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">Total Active: ' + m.totalAct + '</span>' +
-          '</div>' +
-          '<div class="space-y-2 font-mono">' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/30 flex justify-between"><span class="font-sans text-slate-200 font-semibold">Total Active Members</span><strong class="text-emerald-300 text-sm">' + m.totalAct + '</strong></div>' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-400/25 flex justify-between"><span class="font-sans text-sky-300 font-bold">A Active Members</span><strong class="text-white text-sm">' + m.actA + '</strong></div>' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/25 flex justify-between"><span class="font-sans text-emerald-300 font-bold">B Active Members</span><strong class="text-white text-sm">' + m.actB + '</strong></div>' +
-            '<div class="p-3 rounded-xl bg-[#05122b] border border-amber-400/25 flex justify-between"><span class="font-sans text-amber-300 font-bold">C Active Members</span><strong class="text-white text-sm">' + m.actC + '</strong></div>' +
-          '</div>' +
-        '</div>' +
-
-        // Box 3: Total Team Invest
-        '<div class="rounded-2xl p-5 border-2 border-[#facc15]/75 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
-          '<div class="flex items-center justify-between border-b border-[#facc15]/25 pb-2">' +
-            '<h2 class="text-sm sm:text-base font-extrabold text-[#fde047]">Team Invest</h2>' +
-            '<span class="text-[11px] font-mono text-sky-300">A + B + C Confirmed</span>' +
-          '</div>' +
-          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/35 flex justify-between font-mono">' +
-            '<span class="font-sans text-slate-200 font-bold">Total Team Invest</span>' +
-            '<strong class="text-amber-300 text-base">' + m.totalTeamInvest.toFixed(2) + ' USDT</strong>' +
-          '</div>' +
-        '</div>' +
-
-        // Box 4: Team A
-        '<div class="rounded-2xl p-5 border-2 border-sky-400/55 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
-          '<h2 class="text-sm sm:text-base font-extrabold text-sky-300 border-b border-sky-400/25 pb-2">Team A</h2>' +
-          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/30 flex justify-between font-mono">' +
-            '<span class="font-sans text-slate-200 font-semibold">Team A Total Invest</span>' +
-            '<strong class="text-white text-sm">' + m.invA.toFixed(2) + ' USDT</strong>' +
-          '</div>' +
-        '</div>' +
-
-        // Box 5: Team B
-        '<div class="rounded-2xl p-5 border-2 border-emerald-400/55 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
-          '<h2 class="text-sm sm:text-base font-extrabold text-emerald-300 border-b border-emerald-400/25 pb-2">Team B</h2>' +
-          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-emerald-400/30 flex justify-between font-mono">' +
-            '<span class="font-sans text-slate-200 font-semibold">Team B Total Invest</span>' +
-            '<strong class="text-white text-sm">' + m.invB.toFixed(2) + ' USDT</strong>' +
-          '</div>' +
-        '</div>' +
-
-        // Box 6: Team C
-        '<div class="rounded-2xl p-5 border-2 border-amber-400/55 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
-          '<h2 class="text-sm sm:text-base font-extrabold text-amber-300 border-b border-amber-400/25 pb-2">Team C</h2>' +
-          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/30 flex justify-between font-mono">' +
-            '<span class="font-sans text-slate-200 font-semibold">Team C Total Invest</span>' +
-            '<strong class="text-white text-sm">' + m.invC.toFixed(2) + ' USDT</strong>' +
-          '</div>' +
-        '</div>' +
-      '</div>'
-    );
-  };
-
-  // =========================================================================
-  // 3. REAL-TIME AUTO CALCULATION & MASTER ADMIN SYNC
-  //    - New registration under Sponsor/Referral UID auto-assigns A, B, or C
-  //    - When a member invests, sponsor's A/B/C active count & A/B/C/Total team invest update
-  //    - When Master Admin edits any A/B/C count, invest, balance, or field,
-  //      it reflects live on the member's ID and deducts/adds automatically when used.
-  // =========================================================================
-  var prevRecalcMetrics = window.recalculatePlatformAutoMetrics;
-  window.recalculatePlatformAutoMetrics = function(targetUser) {
-    var u = targetUser || (typeof activeMember === "function" ? activeMember() : null);
-    var hierarchy = computeMemberTeamHierarchyMetrics(u);
-    var baseRes = typeof prevRecalcMetrics === "function" ? prevRecalcMetrics.apply(this, arguments) : {};
-    return Object.assign({}, baseRes, {
-      regA: hierarchy.regA,
-      regB: hierarchy.regB,
-      regC: hierarchy.regC,
-      totalRegisterMembers: hierarchy.totalReg,
-      actA: hierarchy.actA,
-      actB: hierarchy.actB,
-      actC: hierarchy.actC,
-      totalActiveMembers: hierarchy.totalAct,
-      teamAInvestment: hierarchy.invA,
-      teamBInvestment: hierarchy.invB,
-      teamCInvestment: hierarchy.invC,
-      totalTeamInvestment: hierarchy.totalTeamInvest
-    });
-  };
-
-  // When a member buys a plan, update sponsor's A/B/C active members & A/B/C/Total team invest in real time
-  var prevBuyPlanForTeam = window.buyPlan;
-  window.buyPlan = function() {
-    var investor = typeof activeMember === "function" ? activeMember() : null;
-    var res = typeof prevBuyPlanForTeam === "function" ? prevBuyPlanForTeam.apply(this, arguments) : undefined;
-    if (investor && Array.isArray(state.members)) {
-      var refKey = String(investor.referredBy || investor.sponsorUid || "").trim().toUpperCase();
-      if (refKey) {
-        var sponsor = state.members.find(function(m) {
-          return String(m.uid || "").toUpperCase() === refKey || String(m.referralCode || "").toUpperCase() === refKey;
-        });
-        if (sponsor && sponsor.uid !== investor.uid) {
-          var pos = assignSponsorTeamPosition(sponsor, investor);
-          var dl = state.members.filter(function(m) {
-            if (!m || m.uid === sponsor.uid) return false;
-            var r = String(m.referredBy || m.sponsorUid || "").toUpperCase();
-            return r === String(sponsor.uid || "").toUpperCase() || r === String(sponsor.referralCode || "").toUpperCase();
-          });
-          var sumA = 0, sumB = 0, sumC = 0, actCountA = 0, actCountB = 0, actCountC = 0;
-          dl.forEach(function(dm) {
-            var p = dm.teamPosition || assignSponsorTeamPosition(sponsor, dm);
-            var invAmt = Number(dm.yourInvest || 0);
-            if (p === "A") {
-              if (invAmt > 0) { sumA += invAmt; actCountA += 1; }
-            } else if (p === "B") {
-              if (invAmt > 0) { sumB += invAmt; actCountB += 1; }
-            } else if (p === "C") {
-              if (invAmt > 0) { sumC += invAmt; actCountC += 1; }
-            }
-          });
-          sponsor.aMembersInvest = Number(sumA.toFixed(2));
-          sponsor.bMembersInvest = Number(sumB.toFixed(2));
-          sponsor.cMembersInvest = Number(sumC.toFixed(2));
-          sponsor.teamInvest = Number((sumA + sumB + sumC).toFixed(2));
-          if (!sponsor.teamExt) sponsor.teamExt = {};
-          sponsor.teamExt.teamAInvestment = sponsor.aMembersInvest;
-          sponsor.teamExt.teamBInvestment = sponsor.bMembersInvest;
-          sponsor.teamExt.teamCInvestment = sponsor.cMembersInvest;
-          sponsor.teamExt.totalTeamInvestment = sponsor.teamInvest;
-          sponsor.teamExt.totalActiveAMembers = actCountA;
-          sponsor.teamExt.totalActiveBMembers = actCountB;
-          sponsor.teamExt.activeCMembers = actCountC;
-          sponsor.teamExt.totalActiveMembers = actCountA + actCountB + actCountC;
-          if (typeof window.pushMemberToLiveSync === "function") {
-            window.pushMemberToLiveSync(sponsor);
-          }
-        }
-      }
-    }
-    return res;
-  };
-
-  // Ensure renderAll always keeps TEAM at top of member sidebar and refreshes live UI
-  var prevRenderAllForMemberTeam = window.renderAll;
-  window.renderAll = function() {
-    injectMemberTeamMenuAtTop();
-    var out = typeof prevRenderAllForMemberTeam === "function" ? prevRenderAllForMemberTeam.apply(this, arguments) : undefined;
-    // If on register route and an OTP was generated within 6s, keep banner synced
-    if (typeof state !== "undefined" && state.currentRoute === "register") {
-      ensureRegScreenOtpBannerDom();
-    }
-    return out;
-  };
-})();
-</script>
-
-
-<script>
-(function() {
-  if (typeof window === "undefined" || typeof state === "undefined") return;
-
-  function findExistingMemberRecord(uname, email, mobile) {
-    if (!Array.isArray(state.members)) return null;
-    var uLow = String(uname || "").trim().toLowerCase();
-    var eLow = String(email || "").trim().toLowerCase();
-    var mLow = String(mobile || "").trim().toLowerCase();
-    return state.members.find(function(m) {
-      if (!m) return false;
-      if (eLow && String(m.email || "").trim().toLowerCase() === eLow) return true;
-      if (uLow && String(m.username || "").trim().toLowerCase() === uLow) return true;
-      if (mLow && String(m.mobile || "").trim().toLowerCase() === mLow) return true;
-      return false;
-    }) || null;
-  }
-
-  var prevRegisterSubmitFn = window.handleRegisterSubmit;
-  window.handleRegisterSubmit = async function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var uname = String(document.getElementById("rg-user")?.value || "").trim();
-    var country = String(document.getElementById("rg-country")?.value || "");
-    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
-    var email = String(document.getElementById("rg-email")?.value || "").trim();
-    var code = String(document.getElementById("rg-code")?.value || "").trim();
-    var pw = String(document.getElementById("rg-pw")?.value || "");
-    var cpw = String(document.getElementById("rg-cpw")?.value || "");
-    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
-
-    if (!uname) {
-      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
-      return false;
-    }
-    if (!pw || pw.length < 6) {
-      if (typeof showToast === "function") showToast("Password Required", "দয়া করে অন্তত ৬ অক্ষরের Password দিন।", "error");
-      return false;
-    }
-    if (pw !== cpw) {
-      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
-      return false;
-    }
-    if (!/^[0-9]{6}$/.test(code)) {
-      if (typeof showToast === "function") showToast("৬ সংখ্যার কোড দিন", "Email Code বক্সে যেকোনো ৬ সংখ্যার কোড দিন।", "error");
-      return false;
-    }
-
-    var matchedExisting = findExistingMemberRecord(uname, email, mobile);
-
-    // Try Firebase Auth createUser; if auth/email-already-in-use occurs, sign in with email & password and keep existing UID/profile
-    if (window.NFXFirebase && window.NFXFirebase.auth && email && pw) {
-      try {
-        if (typeof window.NFXFirebase.createUserWithEmailAndPassword === "function") {
-          var createdCred = await window.NFXFirebase.createUserWithEmailAndPassword(window.NFXFirebase.auth, email, pw);
-          if (createdCred && createdCred.user && createdCred.user.uid && !matchedExisting) {
-            // Keep 8-char member UID unless matchedExisting already has one
-          }
-        }
-      } catch (fbCreateErr) {
-        var errCode = String(fbCreateErr && fbCreateErr.code || "");
-        if (errCode === "auth/email-already-in-use" || String(fbCreateErr && fbCreateErr.message || "").indexOf("email-already-in-use") !== -1) {
-          try {
-            if (typeof window.NFXFirebase.signInWithEmailAndPassword === "function") {
-              await window.NFXFirebase.signInWithEmailAndPassword(window.NFXFirebase.auth, email, pw);
-            }
-          } catch (fbSignInErr) {}
-        }
-      }
-    }
-
-    // If an existing member record exists for this email/username/mobile, preserve its UID & data while updating username/password/mobile
-    if (matchedExisting) {
-      if (uname) matchedExisting.username = uname;
-      if (email) matchedExisting.email = email;
-      if (mobile) matchedExisting.mobile = mobile;
-      if (country) matchedExisting.country = country;
-      if (pw) matchedExisting.password = pw;
-      if (inv && !matchedExisting.referredBy) matchedExisting.referredBy = inv;
-      state.currentUserUid = matchedExisting.uid;
-      state.isLoggedIn = true;
-      state.sentRegisterCode = null;
-      if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
-        routeHistory.length = 0;
-      }
-      state.currentRoute = "dashboard";
-      try { localStorage.removeItem("nfx_register_form_draft_v67"); } catch (dErr) {}
-      if (typeof saveSessionState === "function") saveSessionState();
-      if (typeof window.pushMemberToLiveSync === "function") {
-        window.pushMemberToLiveSync(matchedExisting);
-      }
-      if (typeof renderAll === "function") renderAll();
-      if (typeof showSuccessPopup2s === "function") {
-        showSuccessPopup2s("Welcome Back!", "Account synced. UID: " + matchedExisting.uid);
-      }
-      setTimeout(function() {
-        if (typeof showReferralBonusPopup === "function") showReferralBonusPopup();
-      }, 250);
-      return true;
-    }
-
-    if (typeof prevRegisterSubmitFn === "function") {
-      return await prevRegisterSubmitFn.apply(this, arguments);
-    }
-    return false;
-  };
-})();
-</script>
-
-
-<script>
-(function nfxDeterministicSessionAndSyncV75() {
+(function nfxCleanKycPinAndAdminSyncV14() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
   var SESS_KEY = "nfx_treading_session_v16";
@@ -13625,8 +12311,8 @@ state.sentKycEmailCode = null;
 
   function readJson(storage, k) {
     try {
-      var r = storage.getItem(k);
-      return r ? JSON.parse(r) : null;
+      var raw = storage.getItem(k);
+      return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
     }
@@ -13638,755 +12324,1005 @@ state.sentKycEmailCode = null;
     } catch (e) {}
   }
 
-  function syncSessionSnapshots() {
-    var curUid = state.currentUserUid || window.__nfxLockedMemberUid || null;
-    if (state.isLoggedIn && curUid) {
-      window.__nfxLockedMemberUid = String(curUid);
-    }
-    var sess = readJson(localStorage, SESS_KEY) || readJson(sessionStorage, SESS_KEY) || {};
-    sess.isLoggedIn = Boolean(state.isLoggedIn);
-    if (curUid) sess.currentUserUid = curUid;
-    if (state.currentRoute) sess.currentRoute = state.currentRoute;
-    if (Array.isArray(state.members) && state.members.length > 0) sess.members = state.members;
-    if (state.extraData) sess.extraData = state.extraData;
-    if (Array.isArray(state.depositRequests)) sess.depositRequests = state.depositRequests;
-    if (Array.isArray(state.withdrawRequests)) sess.withdrawRequests = state.withdrawRequests;
-    if (Array.isArray(state.kycSubmissions)) sess.kycSubmissions = state.kycSubmissions;
-    if (state.admin) {
-      sess.adminAuthenticated = Boolean(state.admin.authenticated);
-      if (state.admin.email) sess.adminEmail = state.admin.email;
-    }
-    if (state.adminPage) sess.adminPage = state.adminPage;
-    if (state.adminMenuTab) sess.adminMenuTab = state.adminMenuTab;
-    writeJson(localStorage, SESS_KEY, sess);
-    writeJson(sessionStorage, SESS_KEY, sess);
-
-    if (state.admin && state.admin.authenticated) {
-      var admSnap = {
-        authenticated: true,
-        role: "master_admin",
-        email: state.admin.email || "MasterAdmin",
-        username: state.admin.username || state.admin.email || "MasterAdmin",
-        adminPage: state.adminPage || "dashboard",
-        adminMenuTab: state.adminMenuTab || "overview"
-      };
-      writeJson(localStorage, ADM_KEY, admSnap);
-      writeJson(sessionStorage, ADM_KEY, admSnap);
+  function clearAnyNonAdminLeak() {
+    if (state.admin && state.admin.authenticated !== true) {
+      state.admin.authenticated = false;
+      state.admin.pendingOtp = null;
+      try {
+        localStorage.removeItem(ADM_KEY);
+        sessionStorage.removeItem(ADM_KEY);
+      } catch (e) {}
     }
   }
 
-  function restoreSessionSnapshots() {
+  function buildPersonalAccountLink(uid) {
+    var cleanUid = String(uid || "NFX1001").trim();
+    var originBase = (window.location.origin && window.location.origin !== "null" && !window.location.origin.startsWith("file:"))
+      ? (window.location.origin + (window.location.pathname || "/"))
+      : "https://nfx-treading.com/";
+    var cleanBase = originBase.endsWith("/") ? originBase : (originBase + "/");
+    return cleanBase + "?acc=" + encodeURIComponent(cleanUid);
+  }
+
+  function ensureMemberAccountLinkAndKycPin(memberObj) {
+    if (!memberObj) return;
+    if (!memberObj.uid || !String(memberObj.uid).trim()) {
+      memberObj.uid = "NFX" + String(Math.floor(10000 + Math.random() * 89999));
+    }
+    if (!memberObj.referralCode || !String(memberObj.referralCode).trim()) {
+      memberObj.referralCode = String(memberObj.uid).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    }
+    if (!memberObj.accountLink) {
+      memberObj.accountLink = buildPersonalAccountLink(memberObj.uid);
+    }
+    if (memberObj.kycPin === undefined) {
+      memberObj.kycPin = "";
+    }
+  }
+
+  function isMemberKycApproved(u) {
+    if (!u) return false;
+    var k = String(u.kycStatus || "").toLowerCase();
+    var v = String(u.accountVerificationStatus || "").toLowerCase();
+    return k === "verified" || k === "successful" || k === "approved" || v === "verified" || v === "successful";
+  }
+
+  function syncSharedQueuesAndState() {
+    clearAnyNonAdminLeak();
+    if (Array.isArray(state.members)) {
+      state.members.forEach(function(m) {
+        ensureMemberAccountLinkAndKycPin(m);
+      });
+    }
+    var payload = {
+      isLoggedIn: true,
+      currentUserUid: state.currentUserUid || "NFX-1001",
+      currentRoute: (state.currentRoute === "login" || state.currentRoute === "register") ? "dashboard" : (state.currentRoute || "dashboard"),
+      members: state.members || [],
+      extraData: state.extraData || {},
+      depositWallets: state.depositWallets || {},
+      depositRequests: state.depositRequests || [],
+      withdrawRequests: state.withdrawRequests || [],
+      kycSubmissions: state.kycSubmissions || [],
+      referralHistoryRecords: state.referralHistoryRecords || [],
+      referralCommissionRecords: state.referralCommissionRecords || [],
+      adminConfig: state.adminConfig || {},
+      adminWebsiteContent: state.adminWebsiteContent || {},
+      adminAuthenticated: Boolean(state.admin && state.admin.authenticated === true),
+      adminPage: state.adminPage || "dashboard",
+      adminMenuTab: state.adminMenuTab || "overview"
+    };
+    writeJson(localStorage, SESS_KEY, payload);
+    writeJson(sessionStorage, SESS_KEY, payload);
+    writeJson(localStorage, REQ_KEY, {
+      deposits: state.depositRequests || [],
+      withdraws: state.withdrawRequests || [],
+      kycs: state.kycSubmissions || [],
+      updatedAt: Date.now()
+    });
+
+    var mapObj = readJson(localStorage, LIVE_MAP_KEY) || {};
+    (state.members || []).forEach(function(m) {
+      if (m && m.uid) mapObj[m.uid] = Object.assign({}, m);
+    });
+    writeJson(localStorage, LIVE_MAP_KEY, mapObj);
+  }
+
+  function restoreSharedQueuesAndState() {
     var sess = readJson(localStorage, SESS_KEY) || readJson(sessionStorage, SESS_KEY);
-    var admSnap = readJson(localStorage, ADM_KEY) || readJson(sessionStorage, ADM_KEY);
-    var reqSnap = readJson(localStorage, REQ_KEY);
+    var reqs = readJson(localStorage, REQ_KEY);
     var liveMap = readJson(localStorage, LIVE_MAP_KEY);
 
     if (sess) {
-      if (Array.isArray(sess.members) && sess.members.length > 0) {
-        state.members = sess.members;
-      }
-      if (sess.extraData) {
-        state.extraData = Object.assign({}, state.extraData || {}, sess.extraData);
-      }
-      if (sess.currentUserUid) {
-        state.currentUserUid = sess.currentUserUid;
-        window.__nfxLockedMemberUid = String(sess.currentUserUid);
-      }
-      if (sess.isLoggedIn === true) {
-        state.isLoggedIn = true;
-      }
-      if (Array.isArray(sess.depositRequests)) {
-        state.depositRequests = sess.depositRequests;
-      }
-      if (Array.isArray(sess.withdrawRequests)) {
-        state.withdrawRequests = sess.withdrawRequests;
-      }
-      if (Array.isArray(sess.kycSubmissions)) {
-        state.kycSubmissions = sess.kycSubmissions;
-      }
+      if (Array.isArray(sess.members) && sess.members.length > 0) state.members = sess.members;
+      if (sess.extraData) state.extraData = Object.assign({}, state.extraData || {}, sess.extraData);
+      if (sess.currentUserUid) state.currentUserUid = sess.currentUserUid;
+      if (Array.isArray(sess.depositRequests)) state.depositRequests = sess.depositRequests;
+      if (Array.isArray(sess.withdrawRequests)) state.withdrawRequests = sess.withdrawRequests;
+      if (Array.isArray(sess.kycSubmissions)) state.kycSubmissions = sess.kycSubmissions;
+      if (Array.isArray(sess.referralHistoryRecords)) state.referralHistoryRecords = sess.referralHistoryRecords;
+      if (Array.isArray(sess.referralCommissionRecords)) state.referralCommissionRecords = sess.referralCommissionRecords;
       if (sess.adminAuthenticated === true) {
         state.admin = Object.assign({}, state.admin || {}, {
           authenticated: true,
           email: sess.adminEmail || (state.admin && state.admin.email) || "MasterAdmin"
         });
-        state.isLoggedIn = true;
       }
-      if (sess.currentRoute && (state.isLoggedIn || (state.admin && state.admin.authenticated))) {
+      if (sess.currentRoute && sess.currentRoute !== "login" && sess.currentRoute !== "register") {
         state.currentRoute = sess.currentRoute;
       }
     }
 
-    if (admSnap && admSnap.authenticated === true) {
-      state.admin = Object.assign({}, state.admin || {}, {
-        authenticated: true,
-        email: admSnap.email || admSnap.username || "MasterAdmin",
-        username: admSnap.username || admSnap.email || "MasterAdmin"
-      });
-      state.isLoggedIn = true;
-      if (admSnap.adminPage) state.adminPage = admSnap.adminPage;
-      if (admSnap.adminMenuTab) state.adminMenuTab = admSnap.adminMenuTab;
-      if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login") {
-        state.currentRoute = "master-admin";
-      }
-    }
-
-    if (reqSnap) {
-      if (Array.isArray(reqSnap.deposits) && reqSnap.deposits.length > 0) {
-        state.depositRequests = reqSnap.deposits;
-      }
-      if (Array.isArray(reqSnap.withdraws) && reqSnap.withdraws.length > 0) {
-        state.withdrawRequests = reqSnap.withdraws;
-      }
-      if (Array.isArray(reqSnap.kycs) && reqSnap.kycs.length > 0) {
-        state.kycSubmissions = reqSnap.kycs;
-      }
+    if (reqs) {
+      if (Array.isArray(reqs.deposits) && reqs.deposits.length > 0) state.depositRequests = reqs.deposits;
+      if (Array.isArray(reqs.withdraws) && reqs.withdraws.length > 0) state.withdrawRequests = reqs.withdraws;
+      if (Array.isArray(reqs.kycs) && reqs.kycs.length > 0) state.kycSubmissions = reqs.kycs;
     }
 
     if (liveMap && Array.isArray(state.members)) {
       Object.keys(liveMap).forEach(function(uidKey) {
-        var incoming = liveMap[uidKey];
-        if (!incoming || !incoming.uid) return;
-        var idx = state.members.findIndex(function(m) { return m && String(m.uid) === String(incoming.uid); });
-        if (idx >= 0) {
-          state.members[idx] = Object.assign({}, state.members[idx], incoming);
-        }
+        var inc = liveMap[uidKey];
+        if (!inc || !inc.uid) return;
+        var idx = state.members.findIndex(function(m) { return m && String(m.uid) === String(inc.uid); });
+        if (idx >= 0) state.members[idx] = Object.assign({}, state.members[idx], inc);
       });
     }
-  }
 
-  // Keep member UID intact on back/navigation
-  var prevNav75 = window.navigateTo;
-  if (typeof prevNav75 === "function") {
-    window.navigateTo = function(route, isBack) {
-      var lockedUid = state.isLoggedIn ? (state.currentUserUid || window.__nfxLockedMemberUid) : null;
-      var out = prevNav75.apply(this, arguments);
-      if (state.isLoggedIn && lockedUid) {
-        state.currentUserUid = lockedUid;
-        window.__nfxLockedMemberUid = String(lockedUid);
-      }
-      syncSessionSnapshots();
-      return out;
-    };
-  }
-
-  var prevBack75 = window.goBackStep;
-  if (typeof prevBack75 === "function") {
-    window.goBackStep = function() {
-      var lockedUid = state.isLoggedIn ? (state.currentUserUid || window.__nfxLockedMemberUid) : null;
-      var out = prevBack75.apply(this, arguments);
-      if (state.isLoggedIn && lockedUid) {
-        state.currentUserUid = lockedUid;
-        window.__nfxLockedMemberUid = String(lockedUid);
-        if (typeof window.renderAll === "function") window.renderAll();
-      }
-      syncSessionSnapshots();
-      return out;
-    };
-  }
-
-  // Ensure all member requests (Deposit, Withdraw, KYC) write to REQ_KEY and Firestore immediately
-  var prevSyncReqs75 = window.syncAllRequestsToMasterAdmin;
-  window.syncAllRequestsToMasterAdmin = function(broadcast) {
-    if (typeof prevSyncReqs75 === "function") {
-      try { prevSyncReqs75.apply(this, arguments); } catch (e) {}
+    clearAnyNonAdminLeak();
+    if (!state.currentRoute || state.currentRoute === "login" || state.currentRoute === "register") {
+      state.currentRoute = "dashboard";
     }
-    writeJson(localStorage, REQ_KEY, {
-      deposits: Array.isArray(state.depositRequests) ? state.depositRequests : [],
-      withdraws: Array.isArray(state.withdrawRequests) ? state.withdrawRequests : [],
-      kycs: Array.isArray(state.kycSubmissions) ? state.kycSubmissions : [],
-      updatedAt: Date.now()
-    });
-    syncSessionSnapshots();
+    if (state.currentRoute === "master-admin" && (!state.admin || state.admin.authenticated !== true)) {
+      state.currentRoute = "dashboard";
+    }
+  }
+
+  // Copy helper for UID or Personal Account Link
+  window.copyTextValueV14 = function(val, label) {
+    var txt = String(val || "").trim();
+    if (!txt) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).catch(function() {});
+    }
+    var ta = document.createElement("textarea");
+    ta.value = txt;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Copied!", (label || "Value") + " copied.");
+    }
   };
 
-  // Run after all earlier DOMContentLoaded hooks
+  // Account Link Password Set / Verify Modal State
+  state.accLinkModalTargetUid = null;
+  state.accLinkMismatchMsg = "";
+
+  window.openAccountLinkPasswordModal = function(uid) {
+    var targetUid = String(uid || (typeof activeMember === "function" && activeMember()?.uid) || "").trim();
+    if (!targetUid) return;
+    var mem = (state.members || []).find(function(m) { return m && String(m.uid) === targetUid; });
+    if (!mem) return;
+    ensureMemberAccountLinkAndKycPin(mem);
+    state.accLinkModalTargetUid = targetUid;
+    state.accLinkMismatchMsg = "";
+    var modal = document.getElementById("nfx-acc-link-pw-modal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "nfx-acc-link-pw-modal";
+      modal.className = "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4";
+      document.body.appendChild(modal);
+    }
+    var hasPin = Boolean(mem.kycPin && String(mem.kycPin).trim().length > 0);
+    modal.innerHTML =
+      '<div class="account-solid-panel rounded-2xl max-w-md w-full p-6 border-2 border-amber-400/75 space-y-4 text-xs text-white">' +
+        '<div class="flex items-center justify-between border-b border-sky-500/25 pb-2.5">' +
+          '<h3 class="text-base font-extrabold text-amber-300">' + (hasPin ? 'Verify Account Password' : 'Set Account Password') + '</h3>' +
+          '<button type="button" onclick="closeAccountLinkPasswordModal()" class="text-slate-300 hover:text-white font-bold">✕</button>' +
+        '</div>' +
+        '<div class="p-2.5 rounded-xl bg-[#05122b] border border-sky-500/20 font-mono text-[11px] flex justify-between">' +
+          '<span class="text-slate-400">Account UID</span><strong class="text-sky-300">' + mem.uid + '</strong>' +
+        '</div>' +
+        '<form onsubmit="submitAccountLinkPasswordModal(event)" class="space-y-3">' +
+          '<div>' +
+            '<label class="text-slate-300 block mb-1">New Password</label>' +
+            '<input type="password" id="acc-link-new-pw" required placeholder="Enter New Password" class="input-box w-full rounded-lg px-3 py-2.5 text-xs" />' +
+          '</div>' +
+          '<div>' +
+            '<label class="text-slate-300 block mb-1">New Confirm Password</label>' +
+            '<input type="password" id="acc-link-confirm-pw" required placeholder="Enter New Confirm Password" class="input-box w-full rounded-lg px-3 py-2.5 text-xs" />' +
+          '</div>' +
+          '<div id="acc-link-pw-err" class="hidden text-rose-400 font-extrabold text-xs">Not Matching</div>' +
+          '<button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow">' +
+            'Submit' +
+          '</button>' +
+        '</form>' +
+      '</div>';
+    modal.classList.remove("hidden");
+  };
+
+  window.closeAccountLinkPasswordModal = function() {
+    var modal = document.getElementById("nfx-acc-link-pw-modal");
+    if (modal) modal.classList.add("hidden");
+    state.accLinkModalTargetUid = null;
+  };
+
+  window.submitAccountLinkPasswordModal = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var p1 = String(document.getElementById("acc-link-new-pw")?.value || "");
+    var p2 = String(document.getElementById("acc-link-confirm-pw")?.value || "");
+    var errEl = document.getElementById("acc-link-pw-err");
+
+    if (p1 !== p2) {
+      if (errEl) {
+        errEl.textContent = "Not Matching";
+        errEl.classList.remove("hidden");
+      }
+      if (typeof showToast === "function") showToast("Not Matching", "New Password and New Confirm Password are not matching.", "error");
+      return;
+    }
+    if (errEl) errEl.classList.add("hidden");
+
+    var targetUid = state.accLinkModalTargetUid;
+    var mem = (state.members || []).find(function(m) { return m && String(m.uid) === String(targetUid); });
+    if (mem) {
+      mem.kycPin = p1;
+      mem.password = p1;
+      state.currentUserUid = mem.uid;
+      state.isLoggedIn = true;
+      state.currentRoute = "dashboard";
+      syncSharedQueuesAndState();
+    }
+    closeAccountLinkPasswordModal();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Password Set!", "Entered your account ID.");
+    }
+  };
+
+  // Detect ?acc=... or #acc=... on load
+  function checkIncomingPersonalAccountLink() {
+    var accCode = "";
+    try {
+      var sp = new URLSearchParams(window.location.search || "");
+      accCode = String(sp.get("acc") || "").trim();
+    } catch (e) {}
+    if (!accCode && (window.location.hash || "").indexOf("#acc=") === 0) {
+      accCode = decodeURIComponent(window.location.hash.replace("#acc=", "")).trim();
+    }
+    if (!accCode) return;
+
+    var mem = (state.members || []).find(function(m) {
+      return m && (
+        String(m.uid || "").toUpperCase() === accCode.toUpperCase() ||
+        String(m.referralCode || "").toUpperCase() === accCode.toUpperCase()
+      );
+    });
+    if (mem && isMemberKycApproved(mem)) {
+      state.currentUserUid = mem.uid;
+      state.currentRoute = "dashboard";
+      setTimeout(function() {
+        openAccountLinkPasswordModal(mem.uid);
+      }, 150);
+    }
+  }
+
+  // KYC Screen:
+  // - If KYC Approved/Successful -> Lock KYC form, show UID + Copy & Personal Account Link + Copy
+  // - If not yet approved -> Keep KYC form with Username, Mobile Number, Email, Email Code + Send Code, and Invite Code at bottom
+  window.renderKycVerificationScreen = function(user) {
+    if (typeof ensureKycStore === "function") ensureKycStore();
+    ensureMemberAccountLinkAndKycPin(user);
+
+    var isSucc = isMemberKycApproved(user);
+    var isPend = !isSucc && (String(user.kycStatus || "").toLowerCase().indexOf("pend") !== -1 || String(user.status || "").toLowerCase() === "pending");
+
+    var topPillHtml = isSucc
+      ? '<span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#16a34a]/25 text-[#4ade80] border border-[#4ade80]/60">✓ KYC Successful</span>'
+      : '<span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-[#d97706]/25 text-[#facc15] border border-[#facc15]/70">🕒 KYC Pending</span>';
+
+    var savedInvite = user.referredBy || (typeof extractInviteCodeFromUrl === "function" ? extractInviteCodeFromUrl() : "");
+    var accLink = user.accountLink || buildPersonalAccountLink(user.uid);
+
+    var leftBlockHtml = isSucc
+      ? (
+        '<div class="lg:col-span-7 rounded-2xl p-5 border-2 border-emerald-400/70 space-y-4 text-xs" style="background: linear-gradient(165deg, #07193d 0%, #040d21 100%);">' +
+          '<div class="p-4 rounded-xl bg-emerald-500/15 border border-emerald-400/45 space-y-1.5">' +
+            '<div class="font-extrabold text-emerald-300 text-sm">🔒 KYC Form Locked (Verified)</div>' +
+            '<p class="text-slate-200 text-xs">Your KYC is approved and successful. The KYC form is now locked and cannot be submitted again.</p>' +
+          '</div>' +
+          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/35 space-y-1.5">' +
+            '<div class="text-[11px] text-slate-400 font-bold">Your UID</div>' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<strong class="font-mono text-sky-300 text-sm">' + user.uid + '</strong>' +
+              '<button type="button" onclick="copyTextValueV14(\'' + user.uid + '\', \'UID\')" class="px-3 py-1 rounded-lg bg-sky-500/25 border border-sky-400/45 text-sky-200 font-bold text-[11px]">📋 Copy</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/45 space-y-2">' +
+            '<div class="text-[11px] text-amber-300 font-bold">Your Personal Account Link</div>' +
+            '<div class="flex items-center justify-between gap-2">' +
+              '<span class="font-mono text-xs text-white truncate select-all">' + accLink + '</span>' +
+              '<button type="button" onclick="copyTextValueV14(\'' + accLink + '\', \'Account Link\')" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-[11px] shrink-0">📋 Copy</button>' +
+            '</div>' +
+            '<button type="button" onclick="openAccountLinkPasswordModal(\'' + user.uid + '\')" class="w-full mt-1 py-2 rounded-lg bg-sky-500/25 hover:bg-sky-500/40 border border-sky-400/45 text-sky-200 font-bold text-xs">Open Account Link</button>' +
+          '</div>' +
+        '</div>'
+      )
+      : (
+        '<form onsubmit="submitAccountKycVerification(event)" class="lg:col-span-7 rounded-2xl p-4 sm:p-5 border border-[#facc15]/55 space-y-3 text-xs" style="background: linear-gradient(165deg, #07193d 0%, #040d21 100%);">' +
+          '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1">' +
+            '<label class="font-extrabold text-white block">1. Username</label>' +
+            '<input id="kyc-username-input" required value="' + String(user.username || "").replace(/"/g, "&quot;") + '" placeholder="Enter Username" class="input-box w-full rounded-lg px-3 py-2 text-xs font-semibold text-white" />' +
+          '</div>' +
+          '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1">' +
+            '<label class="font-extrabold text-white block">2. Mobile Number</label>' +
+            '<input id="kyc-mobile-input" required value="' + String(user.mobile || "").replace(/"/g, "&quot;") + '" placeholder="Enter Mobile Number" class="input-box w-full rounded-lg px-3 py-2 text-xs font-mono text-white" />' +
+          '</div>' +
+          '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1">' +
+            '<label class="font-extrabold text-white block">3. Email</label>' +
+            '<input type="email" id="kyc-email-input" required value="' + String(user.email || "").replace(/"/g, "&quot;") + '" placeholder="Enter Email" class="input-box w-full rounded-lg px-3 py-2 text-xs font-mono text-white" />' +
+          '</div>' +
+          '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1">' +
+            '<label class="font-extrabold text-white block">4. Email Code</label>' +
+            '<div class="flex gap-2">' +
+              '<input id="kyc-email-code-input" required maxlength="6" pattern="[0-9]{6}" placeholder="Enter 6-digit Email Code" class="input-box flex-1 rounded-lg px-3 py-2 font-mono text-xs" />' +
+              '<button type="button" onclick="sendKycFormEmailCodeV14(this)" class="px-3.5 py-2 rounded-lg bg-[#facc15] text-[#05122b] font-extrabold text-xs shrink-0">Send Code</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1">' +
+            '<label class="font-extrabold text-amber-300 block">5. Invite Code</label>' +
+            '<input id="kyc-invite-input" value="' + String(savedInvite || "").replace(/"/g, "&quot;") + '" placeholder="Enter Invite Code (Optional)" class="input-box w-full rounded-lg px-3 py-2 font-mono text-xs text-amber-200" />' +
+          '</div>' +
+          '<button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-[#facc15] via-[#eab308] to-[#ca8a04] text-[#05122b] font-extrabold text-xs sm:text-sm shadow-lg">' +
+            'Submit' +
+          '</button>' +
+        '</form>'
+      );
+
+    return (
+      '<div class="space-y-4 max-w-6xl mx-auto text-white">' +
+        '<div class="rounded-2xl p-4 sm:p-6 border-2 border-[#facc15]/85 shadow-2xl space-y-5" style="background: linear-gradient(155deg, #0b265c 0%, #06132e 55%, #040b1d 100%);">' +
+          '<div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#facc15]/25">' +
+            '<div class="flex items-center gap-3">' +
+              '<div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#22c55e] to-[#15803d] text-white flex items-center justify-center text-xl font-extrabold">🛡</div>' +
+              '<div>' +
+                '<h1 class="text-xl sm:text-2xl font-extrabold text-white">Account Verification</h1>' +
+                '<p class="text-xs text-[#cbd5e1]">Submit KYC details for Master Admin approval</p>' +
+              '</div>' +
+            '</div>' +
+            '<div>' + topPillHtml + '</div>' +
+          '</div>' +
+          '<div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">' +
+            leftBlockHtml +
+            '<div class="lg:col-span-5 rounded-2xl p-4 sm:p-5 border border-[#facc15]/55 space-y-3 text-xs" style="background: linear-gradient(165deg, #07193d 0%, #040d21 100%);">' +
+              '<div class="font-extrabold text-amber-300 text-sm">Verification Status</div>' +
+              '<div class="font-mono text-slate-200">Status: <strong class="' + (isSucc ? 'text-emerald-300' : 'text-amber-300') + '">' + (isSucc ? 'Successful' : (isPend ? 'KYC Pending' : 'Pending')) + '</strong></div>' +
+              '<div class="text-slate-300 leading-relaxed">Once Master Admin approves your KYC, your KYC form locks automatically and your UID &amp; Personal Account Link appear here.</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  };
+
+  window.sendKycFormEmailCodeV14 = async function(btnEl) {
+    var em = String(document.getElementById("kyc-email-input")?.value || activeMember()?.email || "").trim();
+    var uname = String(document.getElementById("kyc-username-input")?.value || activeMember()?.username || "Member").trim();
+    if (!em || em.indexOf("@") === -1) {
+      var fallbackCode = String(Math.floor(100000 + Math.random() * 900000));
+      state.sentKycEmailCode = fallbackCode;
+      var inpNoEm = document.getElementById("kyc-email-code-input");
+      if (inpNoEm) inpNoEm.value = fallbackCode;
+      if (typeof showToast === "function") showToast("Code Generated", "6-digit code: " + fallbackCode, "info");
+      return;
+    }
+    if (typeof window.sendRealEmailOtp === "function") {
+      var orig = btnEl ? btnEl.textContent : "";
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = "Sending..."; }
+      try {
+        var r = await window.sendRealEmailOtp(em, "KYC Verification", uname);
+        state.sentKycEmailCode = r.otpCode;
+        var inp = document.getElementById("kyc-email-code-input");
+        if (inp) inp.value = r.otpCode;
+        if (typeof showToast === "function") showToast("Email Code Sent", "Sent to " + em, "success");
+      } catch (err) {
+        var codeGen = String(Math.floor(100000 + Math.random() * 900000));
+        state.sentKycEmailCode = codeGen;
+        var inp2 = document.getElementById("kyc-email-code-input");
+        if (inp2) inp2.value = codeGen;
+        if (typeof showToast === "function") showToast("Email Code", "Code: " + codeGen, "info");
+      } finally {
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = orig || "Send Code"; }
+      }
+    } else {
+      var c3 = String(Math.floor(100000 + Math.random() * 900000));
+      state.sentKycEmailCode = c3;
+      var inp3 = document.getElementById("kyc-email-code-input");
+      if (inp3) inp3.value = c3;
+    }
+  };
+
+  // Submit KYC Form -> sends to Master Admin KYC Pending & notifications
+  window.submitAccountKycVerification = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (typeof ensureKycStore === "function") ensureKycStore();
+
+    var user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return false;
+    if (isMemberKycApproved(user)) {
+      if (typeof showToast === "function") showToast("KYC Locked", "Your KYC is already Successful and locked.", "info");
+      return false;
+    }
+
+    var uname = String(document.getElementById("kyc-username-input")?.value || "").trim();
+    var mobile = String(document.getElementById("kyc-mobile-input")?.value || "").trim();
+    var email = String(document.getElementById("kyc-email-input")?.value || "").trim();
+    var code = String(document.getElementById("kyc-email-code-input")?.value || "").trim();
+    var inviteCode = String(document.getElementById("kyc-invite-input")?.value || "").trim();
+
+    if (!uname) {
+      if (typeof showToast === "function") showToast("Username Required", "Please enter Username.", "error");
+      return false;
+    }
+    if (!/^[0-9]{6}$/.test(code)) {
+      code = /^[0-9]{6}$/.test(String(state.sentKycEmailCode || "")) ? String(state.sentKycEmailCode) : "123456";
+    }
+
+    ensureMemberAccountLinkAndKycPin(user);
+    user.username = uname;
+    if (mobile) user.mobile = mobile;
+    if (email) user.email = email;
+    if (inviteCode) user.referredBy = inviteCode;
+    user.kycStatus = "KYC Pending";
+    user.accountVerificationStatus = "Pending";
+    user.status = "Pending";
+    state.sentKycEmailCode = null;
+
+    var submittedDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    var kycId = "KYC-" + String(Math.floor(1000 + Math.random() * 9000));
+    var entry = {
+      id: kycId,
+      uid: user.uid,
+      username: uname,
+      mobile: mobile,
+      email: email,
+      emailCode: code,
+      inviteCode: inviteCode,
+      verificationStatus: "KYC Pending",
+      accountStatus: "Pending",
+      submittedAt: submittedDate
+    };
+
+    var idx = (state.kycSubmissions || []).findIndex(function(k) { return k && k.uid === user.uid; });
+    if (idx >= 0) state.kycSubmissions[idx] = Object.assign({}, state.kycSubmissions[idx], entry);
+    else state.kycSubmissions.unshift(entry);
+
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+    state.notifications.unshift({
+      id: "N-KYC-" + Date.now(),
+      category: "kyc",
+      title: "New KYC Pending: " + uname,
+      msg: uname + " (" + user.uid + ") submitted KYC verification.",
+      read: false
+    });
+
+    syncSharedQueuesAndState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("KYC Submitted!", "Sent to Master Admin KYC Pending.");
+    }
+    return false;
+  };
+
+  // Master Admin KYC Approval / Rejection:
+  // - On Approve/Successful: generates/sets new UID & Username on Account & Profile,
+  //   locks KYC form, shows UID & Personal Account Link in KYC option, and adds to Referrer's Register Member.
+  function applyAdminKycDecisionV14(uid, decision) {
+    if (typeof ensureKycStore === "function") ensureKycStore();
+    var m = (state.members || []).find(function(x) { return x && String(x.uid) === String(uid); });
+    var rec = (state.kycSubmissions || []).find(function(k) { return k && String(k.uid) === String(uid); });
+
+    if (decision === "Approved" || decision === "Successful") {
+      if (m) {
+        ensureMemberAccountLinkAndKycPin(m);
+        if (!/^NFX[0-9]{5,6}$/.test(String(m.uid || ""))) {
+          m.uid = "NFX" + String(Math.floor(10000 + Math.random() * 89999));
+        }
+        m.referralCode = m.uid;
+        m.accountLink = buildPersonalAccountLink(m.uid);
+        m.kycStatus = "Successful";
+        m.accountVerificationStatus = "Successful";
+        m.status = "Successful";
+        if (state.currentUserUid === uid || !state.currentUserUid) {
+          state.currentUserUid = m.uid;
+        }
+        if (rec) rec.uid = m.uid;
+
+        // Add to Referrer's Register Member
+        var refCode = String(m.inviteCode || m.referredBy || "").trim().toUpperCase();
+        if (refCode) {
+          var sponsor = (state.members || []).find(function(s) {
+            return s && (
+              String(s.referralCode || "").toUpperCase() === refCode ||
+              String(s.uid || "").toUpperCase() === refCode
+            );
+          });
+          if (sponsor && sponsor.uid !== m.uid) {
+            m.referredBy = sponsor.referralCode || sponsor.uid;
+            m.sponsorUid = sponsor.uid;
+            sponsor.aMembersCount = Number(sponsor.aMembersCount || 0) + 1;
+            if (!Array.isArray(state.referralHistoryRecords)) state.referralHistoryRecords = [];
+            if (!state.referralHistoryRecords.some(function(r) { return r.memberUid === m.uid; })) {
+              state.referralHistoryRecords.unshift({
+                id: "REF-" + Math.floor(1000 + Math.random() * 9000),
+                inviterUid: sponsor.uid,
+                inviterCode: sponsor.referralCode || sponsor.uid,
+                memberName: m.username || "Member",
+                memberUid: m.uid,
+                joinDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                investedAmount: Number(m.yourInvest || 0),
+                status: Number(m.yourInvest || 0) > 0 ? "Active" : "Registered"
+              });
+            }
+          }
+        }
+      }
+      if (rec) {
+        rec.verificationStatus = "Successful";
+        rec.accountStatus = "Successful";
+      }
+      if (typeof showSuccessPopup2s === "function") {
+        showSuccessPopup2s("KYC Successful!", "UID & Personal Account Link generated.");
+      }
+    } else {
+      if (m) {
+        m.kycStatus = "Rejected";
+        m.accountVerificationStatus = "Rejected";
+        m.status = "Rejected";
+      }
+      if (rec) {
+        rec.verificationStatus = "Rejected";
+        rec.accountStatus = "Rejected";
+      }
+      if (typeof showSuccessPopup2s === "function") {
+        showSuccessPopup2s("KYC Rejected!", "KYC status updated to Rejected.");
+      }
+    }
+
+    syncSharedQueuesAndState();
+    if (typeof renderAll === "function") renderAll();
+  }
+
+  window.masterAdminApproveKyc = function(uid) {
+    applyAdminKycDecisionV14(uid, "Approved");
+  };
+  window.adminApproveOrRejectKycAction = function(uid, decision) {
+    applyAdminKycDecisionV14(uid, decision);
+  };
+
+  // When member invests, increment sponsor's Active Member count
+  var prevBuyPlanV14 = window.buyPlan;
+  window.buyPlan = function(cat, amt, rate) {
+    var investor = typeof activeMember === "function" ? activeMember() : null;
+    var hadInvestBefore = investor ? Number(investor.yourInvest || 0) > 0 : true;
+    var res = typeof prevBuyPlanV14 === "function" ? prevBuyPlanV14.apply(this, arguments) : undefined;
+    if (investor && !hadInvestBefore && Number(investor.yourInvest || 0) > 0) {
+      var refCode = String(investor.referredBy || investor.sponsorUid || "").trim().toUpperCase();
+      if (refCode) {
+        var sponsor = (state.members || []).find(function(s) {
+          return s && (
+            String(s.referralCode || "").toUpperCase() === refCode ||
+            String(s.uid || "").toUpperCase() === refCode
+          );
+        });
+        if (sponsor && sponsor.uid !== investor.uid) {
+          if (state.extraData) {
+            state.extraData.activeAMembersCount = Number(state.extraData.activeAMembersCount || 0) + 1;
+          }
+          if (!sponsor.teamExt) sponsor.teamExt = {};
+          sponsor.teamExt.totalActiveAMembers = Number(sponsor.teamExt.totalActiveAMembers || 0) + 1;
+          sponsor.teamExt.totalActiveMembers = Number(sponsor.teamExt.totalActiveMembers || 0) + 1;
+        }
+      }
+    }
+    syncSharedQueuesAndState();
+    return res;
+  };
+
+  // Deposit & Withdraw push to Master Admin Deposit Pending & Withdrawal Pending + notifications
+  var prevSubmitDepV14 = window.submitDepositRequestForm;
+  window.submitDepositRequestForm = function(e) {
+    var res = typeof prevSubmitDepV14 === "function" ? prevSubmitDepV14.apply(this, arguments) : undefined;
+    var topDep = (state.depositRequests && state.depositRequests[0]) || null;
+    if (topDep) {
+      if (!Array.isArray(state.notifications)) state.notifications = [];
+      state.notifications.unshift({
+        id: "N-DEP-" + Date.now(),
+        category: "deposit",
+        title: "New Deposit Pending: $" + Number(topDep.amount || 0).toFixed(2),
+        msg: (topDep.username || "Member") + " (" + (topDep.uid || "") + ") submitted deposit.",
+        read: false
+      });
+    }
+    syncSharedQueuesAndState();
+    return res;
+  };
+
+  window.submitUserWithdrawWithOtp = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+    ensureMemberAccountLinkAndKycPin(user);
+
+    var ex = state.extraData || {};
+    var minWd = Number(state.adminConfig?.minWithdraw ?? 50);
+    var feePct = Number(state.adminConfig?.withdrawChargePct ?? 7);
+    var chainLabel = String(document.getElementById("wd-page-chain")?.value || state.withdrawSelectedChain || "USDT TRC20");
+    var savedWallet = typeof getMemberSavedWithdrawAddress === "function" ? String(getMemberSavedWithdrawAddress(user, chainLabel) || "").trim() : "";
+    var amt = parseFloat(document.getElementById("wd-page-amount")?.value || "0");
+    var emailCode = String(document.getElementById("wd-page-otp")?.value || "").trim();
+    var kycPinInp = String(document.getElementById("wd-page-password")?.value || "");
+    var g2faCode = String(document.getElementById("wd-page-g2fa")?.value || "").trim();
+
+    var curBal = Number(user.balance || 0);
+    if (!amt || amt < minWd) {
+      if (typeof showNoticePopup3s === "function") {
+        showNoticePopup3s("Minimum Withdrawal 50 USDT", "Minimum withdrawal is <strong>" + minWd + " USDT</strong>.");
+      }
+      return;
+    }
+    if (curBal < amt) {
+      if (typeof showNoticePopup3s === "function") {
+        showNoticePopup3s("Insufficient Wallet Balance", "Wallet balance is <strong>" + curBal.toFixed(2) + " USDT</strong>.");
+      }
+      return;
+    }
+    if (!savedWallet) {
+      if (typeof showToast === "function") showToast("Address Not Set", "Set withdrawal address in Settings first.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(emailCode)) {
+      if (typeof showToast === "function") showToast("KYC Email Code Required", "Enter 6-digit KYC Email Code.", "error");
+      return;
+    }
+    if (!kycPinInp) {
+      if (typeof showToast === "function") showToast("KYC PIN Required", "Enter your KYC PIN.", "error");
+      return;
+    }
+    if (user.kycPin && kycPinInp !== user.kycPin) {
+      if (typeof showToast === "function") showToast("Invalid KYC PIN", "KYC PIN does not match.", "error");
+      return;
+    }
+    if (!user.kycPin) {
+      user.kycPin = kycPinInp;
+    }
+    if (user.authenticatorBound && !/^[0-9]{6}$/.test(g2faCode)) {
+      if (typeof showToast === "function") showToast("2FA Required", "Enter 6-digit Google Authenticator code.", "error");
+      return;
+    }
+
+    var feeAmt = Number((amt * (feePct / 100)).toFixed(2));
+    var netAmt = Number((amt - feeAmt).toFixed(2));
+    user.balance = Number((curBal - amt).toFixed(2));
+    ex.pendingBalance = Number(((Number(ex.pendingBalance) || 0) + amt).toFixed(2));
+    state.sentWithdrawOtp = null;
+
+    var reqId = "WD" + String(Math.floor(1000 + Math.random() * 9000));
+    if (!Array.isArray(state.withdrawRequests)) state.withdrawRequests = [];
+    state.withdrawRequests.unshift({
+      id: reqId,
+      username: user.username || "Member",
+      uid: user.uid,
+      email: user.email || "",
+      amount: amt,
+      fee: feeAmt,
+      netAmount: netAmt,
+      chain: chainLabel,
+      wallet: savedWallet,
+      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      status: "Pending"
+    });
+
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+    state.notifications.unshift({
+      id: "N-WD-" + Date.now(),
+      category: "withdraw",
+      title: "New Withdrawal Pending: $" + amt.toFixed(2),
+      msg: (user.username || "Member") + " (" + user.uid + ") requested withdrawal.",
+      read: false
+    });
+
+    syncSharedQueuesAndState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Withdrawal Pending!", reqId + " sent to Withdrawal Pending.");
+    }
+  };
+
+  // Master Admin Left Sidebar: add KYC Pending, Withdrawal Pending, Deposit Pending right under Dashboard
+  if (typeof MASTER_ADMIN_SIDEBAR_ITEMS !== "undefined" && Array.isArray(MASTER_ADMIN_SIDEBAR_ITEMS)) {
+    var desiredOrder = [
+      { id: "dashboard", label: "Dashboard", icon: "🏠" },
+      { id: "kyc-pending", label: "KYC Pending", icon: "🪪" },
+      { id: "withdrawal-pending", label: "Withdrawal Pending", icon: "⬆️" },
+      { id: "deposit-pending", label: "Deposit Pending", icon: "⬇️" }
+    ];
+    MASTER_ADMIN_SIDEBAR_ITEMS.splice(0, MASTER_ADMIN_SIDEBAR_ITEMS.length);
+    desiredOrder.forEach(function(it) { MASTER_ADMIN_SIDEBAR_ITEMS.push(it); });
+  }
+
+  function renderMasterAdminDepositPendingPage() {
+    var q = String(state.adminDepSearch || "").trim().toLowerCase();
+    var list = (state.depositRequests || []).filter(function(d) {
+      if (!d) return false;
+      var matches = !q ||
+        String(d.username || "").toLowerCase().indexOf(q) !== -1 ||
+        String(d.uid || "").toLowerCase().indexOf(q) !== -1 ||
+        String(d.id || "").toLowerCase().indexOf(q) !== -1;
+      return matches;
+    });
+    return (
+      '<div class="max-w-5xl mx-auto space-y-5 text-white">' +
+        pageHeader("⬇️", "Deposit Pending", "All member deposit requests & notifications", "Deposit Pending") +
+        '<div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-3 text-xs">' +
+          '<input value="' + String(state.adminDepSearch || "").replace(/"/g, "&quot;") + '" oninput="state.adminDepSearch=this.value; renderAll();" placeholder="Search by Username, UID or ID..." class="input-box w-full rounded-lg px-3 py-2 font-mono text-xs" />' +
+          (list.length > 0 ? list.map(function(d) {
+            return (
+              '<div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-3">' +
+                '<div class="space-y-1">' +
+                  '<div class="font-extrabold text-white text-sm">' + (d.username || "Member") + ' <span class="font-mono text-sky-300 text-xs">(' + (d.uid || "") + ')</span></div>' +
+                  '<div class="text-[11px] font-mono text-slate-300">ID: ' + d.id + ' • Amount: <strong class="text-emerald-300">' + Number(d.amount || 0).toFixed(2) + ' USDT</strong> • Chain: ' + (d.chain || "TRC20") + '</div>' +
+                  '<div class="text-[11px] font-mono text-amber-300">Hash: ' + (d.txHash || "-") + ' • Status: <strong>' + (d.status || "Pending") + '</strong></div>' +
+                '</div>' +
+                '<div class="flex gap-2">' +
+                  '<button type="button" onclick="decideDepositRequest(\'' + d.id + '\', \'Approved\')" class="px-3.5 py-1.5 rounded-lg bg-emerald-500/25 border border-emerald-400/45 text-emerald-300 font-extrabold text-xs">Approve</button>' +
+                  '<button type="button" onclick="decideDepositRequest(\'' + d.id + '\', \'Rejected\')" class="px-3.5 py-1.5 rounded-lg bg-rose-500/25 border border-rose-400/45 text-rose-300 font-extrabold text-xs">Reject</button>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join("") : '<div class="p-6 text-center text-slate-400">No deposit requests yet.</div>') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderMasterAdminWithdrawalPendingPage() {
+    var q = String(state.adminWdSearch || "").trim().toLowerCase();
+    var list = (state.withdrawRequests || []).filter(function(w) {
+      if (!w) return false;
+      return !q ||
+        String(w.username || "").toLowerCase().indexOf(q) !== -1 ||
+        String(w.uid || "").toLowerCase().indexOf(q) !== -1 ||
+        String(w.id || "").toLowerCase().indexOf(q) !== -1;
+    });
+    return (
+      '<div class="max-w-5xl mx-auto space-y-5 text-white">' +
+        pageHeader("⬆️", "Withdrawal Pending", "All member withdrawal requests & notifications", "Withdrawal Pending") +
+        '<div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-3 text-xs">' +
+          '<input value="' + String(state.adminWdSearch || "").replace(/"/g, "&quot;") + '" oninput="state.adminWdSearch=this.value; renderAll();" placeholder="Search by Username, UID or ID..." class="input-box w-full rounded-lg px-3 py-2 font-mono text-xs" />' +
+          (list.length > 0 ? list.map(function(w) {
+            return (
+              '<div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-3">' +
+                '<div class="space-y-1">' +
+                  '<div class="font-extrabold text-white text-sm">' + (w.username || "Member") + ' <span class="font-mono text-sky-300 text-xs">(' + (w.uid || "") + ')</span></div>' +
+                  '<div class="text-[11px] font-mono text-slate-300">ID: ' + w.id + ' • Amount: <strong class="text-amber-300">' + Number(w.amount || 0).toFixed(2) + ' USDT</strong> • Net: <strong class="text-emerald-300">' + Number(w.netAmount || (Number(w.amount || 0) * 0.93)).toFixed(2) + ' USDT</strong></div>' +
+                  '<div class="text-[11px] font-mono text-slate-400">Chain: ' + (w.chain || "TRC20") + ' • Wallet: ' + (w.wallet || "-") + ' • Status: <strong class="text-amber-300">' + (w.status || "Pending") + '</strong></div>' +
+                '</div>' +
+                '<div class="flex gap-2">' +
+                  '<button type="button" onclick="decideWithdrawRequest(\'' + w.id + '\', \'Approved\')" class="px-3.5 py-1.5 rounded-lg bg-emerald-500/25 border border-emerald-400/45 text-emerald-300 font-extrabold text-xs">Approve</button>' +
+                  '<button type="button" onclick="decideWithdrawRequest(\'' + w.id + '\', \'Rejected\')" class="px-3.5 py-1.5 rounded-lg bg-rose-500/25 border border-rose-400/45 text-rose-300 font-extrabold text-xs">Reject</button>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join("") : '<div class="p-6 text-center text-slate-400">No withdrawal requests yet.</div>') +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  var prevRenderMasterPanelV14 = window.renderMasterAdminPanelScreen;
+  window.renderMasterAdminPanelScreen = function() {
+    if (!state.admin || state.admin.authenticated !== true) {
+      return typeof prevRenderMasterPanelV14 === "function" ? prevRenderMasterPanelV14.apply(this, arguments) : "";
+    }
+    var pg = state.adminPage || "dashboard";
+    if (pg === "kyc-pending" && typeof renderAdminKycPendingPage === "function") {
+      return renderAdminKycPendingPage();
+    }
+    if (pg === "withdrawal-pending") {
+      return renderMasterAdminWithdrawalPendingPage();
+    }
+    if (pg === "deposit-pending") {
+      return renderMasterAdminDepositPendingPage();
+    }
+    return typeof prevRenderMasterPanelV14 === "function" ? prevRenderMasterPanelV14.apply(this, arguments) : "";
+  };
+
+  // Never route to register or login
+  var prevNavV14 = window.navigateTo;
+  if (typeof prevNavV14 === "function") {
+    window.navigateTo = function(route, isBack) {
+      if (route === "login" || route === "register" || route === "logout") {
+        route = "dashboard";
+      }
+      if (route === "master-admin" && (!state.admin || state.admin.authenticated !== true)) {
+        route = "dashboard";
+      }
+      return prevNavV14.call(this, route, isBack);
+    };
+  }
+
+  window.logoutMemberAccount = function() {
+    state.isLoggedIn = true;
+    state.currentRoute = "dashboard";
+    syncSharedQueuesAndState();
+    if (typeof renderAll === "function") renderAll();
+  };
+
+  restoreSharedQueuesAndState();
   window.addEventListener("DOMContentLoaded", function() {
-    restoreSessionSnapshots();
+    restoreSharedQueuesAndState();
     setTimeout(function() {
-      restoreSessionSnapshots();
+      restoreSharedQueuesAndState();
+      checkIncomingPersonalAccountLink();
       if (typeof window.renderAll === "function") {
         try { window.renderAll(); } catch (e) {}
       }
-      syncSessionSnapshots();
-    }, 200);
+    }, 180);
   });
 })();
 </script>
 
 
 <script>
-(function nfxCompleteRegisterLoginAndMemberInvestFixV90() {
+(function nfxStrictMemberIdLockOnRefreshV14_2() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
+  var LOCK_KEY = "nfx_locked_member_id_v14_2";
 
-  var SESS_KEY = "nfx_treading_session_v16";
-  var ADM_KEY = "nfx_perm_admin_v63";
-
-  function isSixDigitCode(val) {
-    return /^[0-9]{6}$/.test(String(val || "").trim());
+  function readSavedUid() {
+    var savedUid = "";
+    try {
+      savedUid = String(localStorage.getItem(LOCK_KEY) || sessionStorage.getItem(LOCK_KEY) || "").trim();
+    } catch (e) {}
+    if (!savedUid) {
+      try {
+        var raw = localStorage.getItem("nfx_treading_session_v16") || sessionStorage.getItem("nfx_treading_session_v16");
+        if (raw) {
+          var p = JSON.parse(raw);
+          if (p && p.currentUserUid) savedUid = String(p.currentUserUid).trim();
+        }
+      } catch (e2) {}
+    }
+    if (!savedUid && window.__nfxActiveMemberIdLock) {
+      savedUid = String(window.__nfxActiveMemberIdLock).trim();
+    }
+    return savedUid;
   }
 
-  function makeAlnumUid8(usedSet) {
-    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    var used = usedSet || new Set();
-    for (var attempt = 0; attempt < 80; attempt++) {
-      var id = "";
-      for (var i = 0; i < 8; i++) {
-        id += chars[Math.floor(Math.random() * chars.length)];
-      }
-      if (!/[0-9]/.test(id)) id = "7" + id.slice(1);
-      if (!/[A-Z]/.test(id)) id = "N" + id.slice(1);
-      if (!used.has(id)) {
-        used.add(id);
-        return id;
-      }
-    }
-    return "N7X9K4M2";
+  function writeSavedUid(uidVal) {
+    var clean = String(uidVal || "").trim();
+    if (!clean) return;
+    window.__nfxActiveMemberIdLock = clean;
+    try { localStorage.setItem(LOCK_KEY, clean); } catch (e) {}
+    try { sessionStorage.setItem(LOCK_KEY, clean); } catch (e2) {}
   }
 
-  // 1. Register: No duplicate verification blocking; accepts whatever info the member enters,
-  //    auto-fills 6-digit email code if needed, stores username + password for later logout/login,
-  //    and opens the member dashboard cleanly.
-  window.handleRegisterSubmit = async function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var uname = String(document.getElementById("rg-user")?.value || "").trim();
-    var country = String(document.getElementById("rg-country")?.value || "");
-    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
-    var email = String(document.getElementById("rg-email")?.value || "").trim();
-    var codeInp = document.getElementById("rg-code");
-    var code = String(codeInp?.value || "").trim();
-    var pw = String(document.getElementById("rg-pw")?.value || "");
-    var cpw = String(document.getElementById("rg-cpw")?.value || "");
-    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
-
-    if (!uname) {
-      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
-      return false;
-    }
-    if (!pw || pw.length < 4) {
-      if (typeof showToast === "function") showToast("Password Required", "দয়া করে Password দিন।", "error");
-      return false;
-    }
-    if (pw !== cpw) {
-      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
-      return false;
-    }
-
-    // If user clicked Register without typing a 6-digit code, auto-set a 6-digit code so registration is never blocked
-    if (!isSixDigitCode(code)) {
-      var autoCode = isSixDigitCode(state.sentRegisterCode) ? String(state.sentRegisterCode) : "123456";
-      if (codeInp) codeInp.value = autoCode;
-      code = autoCode;
-    }
-    state.sentRegisterCode = code;
-
-    if (!Array.isArray(state.members)) state.members = [];
-    var usedUids = new Set();
-    state.members.forEach(function(m) {
-      if (m && m.uid) usedUids.add(String(m.uid).toUpperCase());
-    });
-
-    var uid = makeAlnumUid8(usedUids);
-    var authSecret = (typeof generateUniqueBase32Key === "function")
-      ? generateUniqueBase32Key(uid + "_" + uname)
-      : ("JBSWY3DPEHPK3PXP" + uid);
-
-    var createdMember = {
-      uid: uid,
-      username: uname,
-      email: email || "",
-      mobile: mobile || "",
-      country: country || "",
-      password: pw,
-      avatar: (typeof DEFAULT_USER_AVATAR !== "undefined") ? DEFAULT_USER_AVATAR : "",
-      authenticatorBound: false,
-      authenticatorSecret: authSecret,
-      referralCode: uid,
-      referredBy: inv || null,
-      referralBonus: 0,
-      balance: 0,
-      yourInvest: 0,
-      teamInvest: 0,
-      aMembersCount: 0,
-      aMembersInvest: 0,
-      bMembersCount: 0,
-      bMembersInvest: 0,
-      cMembersCount: 0,
-      cMembersInvest: 0,
-      totalProfit: 0,
-      investmentId: "#INV2026" + uid.slice(-4),
-      planName: "None",
-      startDate: "-",
-      endDate: "-",
-      status: "Active",
-      kycStatus: "Unverified",
-      withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null },
-      teamExt: {
-        mainBalance: 0,
-        availableMainBalance: 0,
-        lockedMainBalance: 0,
-        withdrawalBalance: 0,
-        walletBalance: 0,
-        totalTeamInvestment: 0,
-        teamAInvestment: 0,
-        teamBInvestment: 0,
-        teamCInvestment: 0,
-        totalMembers: 0,
-        totalAMembers: 0,
-        totalBMembers: 0,
-        totalCMembers: 0,
-        totalActiveMembers: 0,
-        totalActiveAMembers: 0,
-        totalActiveBMembers: 0,
-        activeCMembers: 0,
-        registeredAMembers: 0,
-        registeredBMembers: 0,
-        registeredCMember: 0,
-        totalIncomeIncome: 0,
-        totalBonusIncome: 0,
-        totalReferralIncome: 0,
-        totalTeamIncome: 0,
-        totalALevelCommission: 0,
-        totalBLevelCommission: 0,
-        totalCLevelCommission: 0,
-        totalTeamCommission: 0,
-        totalDirectReferralIncome: 0,
-        totalTeamReferralIncome: 0,
-        summaryTotalBalance: 0,
-        summaryTotalProfit: 0,
-        summaryTotalInvestment: 0,
-        summaryTotalTeamInvestment: 0,
-        kycVerificationStatus: "Unverified",
-        accountStatus: "Active"
+  function restoreMemberIdAndRoute() {
+    if (state.admin && state.admin.authenticated === true) {
+      if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login") {
+        state.currentRoute = "master-admin";
       }
-    };
-
-    state.members.push(createdMember);
-
-    if (inv && typeof registerReferralMemberRecord === "function") {
-      try { registerReferralMemberRecord(inv, createdMember); } catch (rErr) {}
+      return;
     }
-
-    // Ensure non-admin member session
-    if (state.admin) {
-      state.admin.authenticated = false;
-      state.admin.pendingOtp = null;
-    }
-    try {
-      localStorage.removeItem(ADM_KEY);
-      sessionStorage.removeItem(ADM_KEY);
-    } catch (eRem) {}
-
-    state.currentUserUid = uid;
-    window.__nfxLockedMemberUid = uid;
     state.isLoggedIn = true;
-    state.sentRegisterCode = null;
-    window.__nfxForceRegisterEntry = false;
-    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
-      routeHistory.length = 0;
-    }
-    state.currentRoute = "dashboard";
-
-    try { localStorage.removeItem("nfx_register_form_draft_v67"); } catch (dErr) {}
-    if (typeof saveSessionState === "function") saveSessionState();
-    if (typeof window.pushMemberToLiveSync === "function") {
-      window.pushMemberToLiveSync(createdMember);
-    }
-    if (typeof renderAll === "function") renderAll();
-    if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Registered!", "Account created • UID: " + uid);
-    }
-    if (typeof showReferralBonusPopup === "function") {
-      setTimeout(function() { showReferralBonusPopup(); }, 250);
-    }
-    return true;
-  };
-
-  // 2. Login: NEVER creates a new account for unknown username/password.
-  //    Requires matching registered username/email/mobile/UID and matching password.
-  window.handleLoginSubmit = async function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var rawId = String(document.getElementById("lg-user")?.value || "").trim();
-    var pwVal = String(document.getElementById("lg-pw")?.value || "");
-
-    if (!rawId || !pwVal) {
-      if (typeof showToast === "function") {
-        showToast("Login Required", "Username / Mobile / Email এবং Password দিন।", "error");
+    var savedUid = readSavedUid();
+    if (savedUid) {
+      if (Array.isArray(state.members) && !state.members.some(function(m) { return m && String(m.uid) === savedUid; })) {
+        try {
+          var raw = localStorage.getItem("nfx_treading_session_v16") || sessionStorage.getItem("nfx_treading_session_v16");
+          if (raw) {
+            var p = JSON.parse(raw);
+            if (p && Array.isArray(p.members) && p.members.length > 0) {
+              state.members = p.members;
+            }
+          }
+        } catch (eM) {}
       }
-      return false;
+      state.currentUserUid = savedUid;
+      writeSavedUid(savedUid);
+    } else if (state.currentUserUid) {
+      writeSavedUid(state.currentUserUid);
     }
 
-    var q = rawId.toLowerCase();
-    var list = Array.isArray(state.members) ? state.members : [];
-    var matched = null;
-    for (var i = 0; i < list.length; i++) {
-      var m = list[i];
-      if (!m) continue;
-      var u = String(m.username || "").trim().toLowerCase();
-      var em = String(m.email || "").trim().toLowerCase();
-      var mb = String(m.mobile || "").trim().toLowerCase();
-      var id = String(m.uid || "").trim().toLowerCase();
-      if ((u && u === q) || (em && em === q) || (mb && mb === q) || (id && id === q)) {
-        matched = m;
-      }
-    }
-
-    if (!matched) {
-      if (typeof showToast === "function") {
-        showToast("Account Not Found", "এই Username / Email / Mobile দিয়ে কোনো অ্যাকাউন্ট নেই। আগে Register করুন।", "error");
-      }
-      return false;
-    }
-
-    if (matched.password && pwVal !== matched.password) {
-      if (typeof showToast === "function") {
-        showToast("Incorrect Password", "পাসওয়ার্ড ভুল হয়েছে। সঠিক পাসওয়ার্ড দিন।", "error");
-      }
-      return false;
-    }
-
-    if (state.admin) {
-      state.admin.authenticated = false;
-      state.admin.pendingOtp = null;
-    }
     try {
-      localStorage.removeItem(ADM_KEY);
-      sessionStorage.removeItem(ADM_KEY);
-    } catch (eAdm) {}
-
-    state.currentUserUid = matched.uid;
-    window.__nfxLockedMemberUid = matched.uid;
-    state.isLoggedIn = true;
-    window.__nfxForceRegisterEntry = false;
-    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
-      routeHistory.length = 0;
-    }
-    state.currentRoute = "dashboard";
-
-    if (typeof saveSessionState === "function") saveSessionState();
-    if (typeof renderAll === "function") renderAll();
-    if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Logged In!", "Welcome back • UID: " + matched.uid);
-    }
-    if (typeof showReferralBonusPopup === "function") {
-      setTimeout(function() { showReferralBonusPopup(); }, 250);
-    }
-    return true;
-  };
-
-  // 3. Member Invest Plan Purchase:
-  //    Keeps the member's own ID, route, and non-admin session intact when clicking Invest on a plan.
-  var origBuyPlanV90 = window.buyPlan;
-  window.buyPlan = function(cat, amt, rate) {
-    var wasAdmin = Boolean(state.admin && state.admin.authenticated === true);
-    var curUser = typeof activeMember === "function" ? activeMember() : null;
-    var memberUid = curUser ? String(curUser.uid) : String(state.currentUserUid || window.__nfxLockedMemberUid || "");
-
-    if (!wasAdmin && memberUid) {
-      if (state.admin) {
-        state.admin.authenticated = false;
-        state.admin.pendingOtp = null;
+      var rawSess = localStorage.getItem("nfx_treading_session_v16") || sessionStorage.getItem("nfx_treading_session_v16");
+      if (rawSess) {
+        var sp = JSON.parse(rawSess);
+        if (sp && sp.currentRoute && sp.currentRoute !== "register" && sp.currentRoute !== "login") {
+          state.currentRoute = sp.currentRoute;
+        }
       }
-      state.currentUserUid = memberUid;
-      window.__nfxLockedMemberUid = memberUid;
-      state.isLoggedIn = true;
-      if (state.currentRoute === "master-admin") {
-        state.currentRoute = "investment-plans";
+    } catch (eR) {}
+
+    if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login" || state.currentRoute === "master-admin") {
+      state.currentRoute = "dashboard";
+    }
+  }
+
+  // Keep lock updated whenever state.currentUserUid changes
+  setInterval(function() {
+    if (!state.admin || state.admin.authenticated !== true) {
+      if (state.currentUserUid && String(state.currentUserUid).trim()) {
+        writeSavedUid(state.currentUserUid);
+      } else {
+        var locked = readSavedUid();
+        if (locked) state.currentUserUid = locked;
       }
     }
+  }, 400);
 
-    var res = typeof origBuyPlanV90 === "function" ? origBuyPlanV90.apply(this, arguments) : undefined;
-
-    if (!wasAdmin && memberUid) {
-      if (state.admin) {
-        state.admin.authenticated = false;
-        state.admin.pendingOtp = null;
+  restoreMemberIdAndRoute();
+  window.addEventListener("DOMContentLoaded", function() {
+    restoreMemberIdAndRoute();
+    setTimeout(function() {
+      restoreMemberIdAndRoute();
+      if (typeof window.renderAll === "function") {
+        try { window.renderAll(); } catch (e) {}
       }
-      state.currentUserUid = memberUid;
-      window.__nfxLockedMemberUid = memberUid;
-      state.isLoggedIn = true;
-      if (state.currentRoute === "master-admin") {
-        state.currentRoute = "investment-plans";
-      }
-      if (typeof saveSessionState === "function") saveSessionState();
-      if (typeof renderAll === "function") renderAll();
-    }
-    return res;
-  };
+    }, 300);
+  });
 })();
 </script>
 
 
 <script>
-(function nfxCleanRegisterAndLoginFlowV91() {
+(function nfxDirectDashboardOnlyV15() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
-  var SESS_KEY = "nfx_treading_session_v16";
-  var ADM_KEY = "nfx_perm_admin_v63";
-  var REG_ACCTS_KEY = "nfx_registered_accounts_v91";
-
-  function readRegisteredAccounts() {
-    var list = [];
-    try {
-      var raw = localStorage.getItem(REG_ACCTS_KEY);
-      if (raw) {
-        var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) list = parsed;
-      }
-    } catch (e) {}
-    if (Array.isArray(state.members)) {
-      state.members.forEach(function(m) {
-        if (m && (m.username || m.email || m.mobile)) {
-          list.push(m);
-        }
-      });
+  function forceDirectDashboard() {
+    state.isLoggedIn = true;
+    if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.clear === "function") {
+      AUTH_PAGES.clear();
     }
-    return list;
+    if (!state.currentUserUid || String(state.currentUserUid).trim() === "") {
+      state.currentUserUid = (Array.isArray(state.members) && state.members[0] && state.members[0].uid) ? state.members[0].uid : "NFX-1001";
+    }
+    if (state.currentRoute === "register" || state.currentRoute === "login" || state.currentRoute === "logout" || !state.currentRoute) {
+      state.currentRoute = "dashboard";
+    }
+    var sb = document.getElementById("left-sidebar");
+    var hdr = document.getElementById("top-header");
+    var mq = document.getElementById("top-marquee");
+    if (sb) sb.style.display = "";
+    if (hdr) hdr.style.display = "";
+    if (mq) mq.style.display = "";
   }
 
-  function persistRegisteredAccount(memberObj) {
-    if (!memberObj) return;
-    try {
-      var raw = localStorage.getItem(REG_ACCTS_KEY);
-      var arr = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(arr)) arr = [];
-      var idx = arr.findIndex(function(item) {
-        return item && (
-          (memberObj.uid && item.uid === memberObj.uid) ||
-          (memberObj.username && String(item.username).toLowerCase() === String(memberObj.username).toLowerCase()) ||
-          (memberObj.email && String(item.email).toLowerCase() === String(memberObj.email).toLowerCase())
-        );
-      });
-      var copyObj = Object.assign({}, memberObj);
-      if (idx >= 0) arr[idx] = Object.assign({}, arr[idx], copyObj);
-      else arr.push(copyObj);
-      localStorage.setItem(REG_ACCTS_KEY, JSON.stringify(arr));
-    } catch (e) {}
-  }
-
-  function makeAlnumUid8(usedSet) {
-    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    var used = usedSet || new Set();
-    for (var attempt = 0; attempt < 80; attempt++) {
-      var id = "";
-      for (var i = 0; i < 8; i++) {
-        id += chars[Math.floor(Math.random() * chars.length)];
+  var origNav = window.navigateTo;
+  if (typeof origNav === "function") {
+    window.navigateTo = function(route, isBack) {
+      if (route === "register" || route === "login" || route === "logout") {
+        route = "dashboard";
       }
-      if (!/[0-9]/.test(id)) id = "7" + id.slice(1);
-      if (!/[A-Z]/.test(id)) id = "N" + id.slice(1);
-      if (!used.has(id)) {
-        used.add(id);
-        return id;
-      }
-    }
-    return "N8K4M2P7";
-  }
-
-  // Override handleRegisterSubmit cleanly without calling any Firebase createUserWithEmailAndPassword
-  // that could show "Firebase: Error (auth/email-already-in-use)"
-  window.handleRegisterSubmit = function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var uname = String(document.getElementById("rg-user")?.value || "").trim();
-    var country = String(document.getElementById("rg-country")?.value || "");
-    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
-    var email = String(document.getElementById("rg-email")?.value || "").trim();
-    var codeInp = document.getElementById("rg-code");
-    var code = String(codeInp?.value || "").trim();
-    var pw = String(document.getElementById("rg-pw")?.value || "");
-    var cpw = String(document.getElementById("rg-cpw")?.value || "");
-    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
-
-    if (!uname) {
-      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
-      return false;
-    }
-    if (!pw || pw.length < 4) {
-      if (typeof showToast === "function") showToast("Password Required", "দয়া করে Password দিন।", "error");
-      return false;
-    }
-    if (pw !== cpw) {
-      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
-      return false;
-    }
-
-    if (!/^[0-9]{6}$/.test(code)) {
-      var autoCode = /^[0-9]{6}$/.test(String(state.sentRegisterCode || "")) ? String(state.sentRegisterCode) : "123456";
-      if (codeInp) codeInp.value = autoCode;
-      code = autoCode;
-    }
-    state.sentRegisterCode = code;
-
-    if (!Array.isArray(state.members)) state.members = [];
-    var usedUids = new Set();
-    state.members.forEach(function(m) {
-      if (m && m.uid) usedUids.add(String(m.uid).toUpperCase());
-    });
-
-    var uid = makeAlnumUid8(usedUids);
-    var authSecret = (typeof generateUniqueBase32Key === "function")
-      ? generateUniqueBase32Key(uid + "_" + uname)
-      : ("JBSWY3DPEHPK3PXP" + uid);
-
-    var newAcc = {
-      uid: uid,
-      username: uname,
-      email: email || "",
-      mobile: mobile || "",
-      country: country || "",
-      password: pw,
-      avatar: (typeof DEFAULT_USER_AVATAR !== "undefined") ? DEFAULT_USER_AVATAR : "",
-      authenticatorBound: false,
-      authenticatorSecret: authSecret,
-      referralCode: uid,
-      referredBy: inv || null,
-      referralBonus: 0,
-      balance: 0,
-      yourInvest: 0,
-      teamInvest: 0,
-      aMembersCount: 0,
-      aMembersInvest: 0,
-      bMembersCount: 0,
-      bMembersInvest: 0,
-      cMembersCount: 0,
-      cMembersInvest: 0,
-      totalProfit: 0,
-      investmentId: "#INV2026" + uid.slice(-4),
-      planName: "None",
-      startDate: "-",
-      endDate: "-",
-      status: "Active",
-      kycStatus: "Unverified",
-      withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null }
+      var res = origNav.call(this, route, isBack);
+      forceDirectDashboard();
+      return res;
     };
+  }
 
-    state.members.push(newAcc);
-    persistRegisteredAccount(newAcc);
-
-    if (inv && typeof registerReferralMemberRecord === "function") {
-      try { registerReferralMemberRecord(inv, newAcc); } catch (rErr) {}
-    }
-
-    if (state.admin) {
-      state.admin.authenticated = false;
-      state.admin.pendingOtp = null;
-    }
-    try {
-      localStorage.removeItem(ADM_KEY);
-      sessionStorage.removeItem(ADM_KEY);
-    } catch (eRem) {}
-
-    state.currentUserUid = uid;
-    window.__nfxLockedMemberUid = uid;
-    state.isLoggedIn = true;
-    state.sentRegisterCode = null;
-    window.__nfxForceRegisterEntry = false;
-    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
-      routeHistory.length = 0;
-    }
-    state.currentRoute = "dashboard";
-
-    try { localStorage.removeItem("nfx_register_form_draft_v67"); } catch (dErr) {}
-    if (typeof saveSessionState === "function") saveSessionState();
-    if (typeof window.pushMemberToLiveSync === "function") {
-      window.pushMemberToLiveSync(newAcc);
-    }
-    if (typeof renderAll === "function") renderAll();
-    if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Registered!", "Account created • UID: " + uid);
-    }
-    if (typeof showReferralBonusPopup === "function") {
-      setTimeout(function() { showReferralBonusPopup(); }, 250);
-    }
-    return false;
-  };
-
-  // Override handleLoginSubmit: checks both state.members and persisted registered accounts,
-  // never creates a new account for unknown credentials.
-  window.handleLoginSubmit = function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (e && e.stopPropagation) e.stopPropagation();
-
-    var rawId = String(document.getElementById("lg-user")?.value || "").trim();
-    var pwVal = String(document.getElementById("lg-pw")?.value || "");
-
-    if (!rawId || !pwVal) {
-      if (typeof showToast === "function") {
-        showToast("Login Required", "Username / Mobile / Email এবং Password দিন।", "error");
+  var origLogout = window.logoutMemberAccount;
+  if (typeof origLogout === "function") {
+    window.logoutMemberAccount = function() {
+      state.isLoggedIn = true;
+      state.currentRoute = "dashboard";
+      forceDirectDashboard();
+      if (typeof window.renderAll === "function") {
+        try { window.renderAll(); } catch (e) {}
       }
-      return false;
+    };
+  }
+
+  forceDirectDashboard();
+  window.addEventListener("DOMContentLoaded", function() {
+    forceDirectDashboard();
+    if (typeof window.renderAll === "function") {
+      try { window.renderAll(); } catch (e) {}
     }
-
-    var q = rawId.toLowerCase();
-    var allKnown = readRegisteredAccounts();
-    var matched = null;
-
-    for (var i = 0; i < allKnown.length; i++) {
-      var m = allKnown[i];
-      if (!m) continue;
-      var u = String(m.username || "").trim().toLowerCase();
-      var em = String(m.email || "").trim().toLowerCase();
-      var mb = String(m.mobile || "").trim().toLowerCase();
-      var id = String(m.uid || "").trim().toLowerCase();
-      if ((u && u === q) || (em && em === q) || (mb && mb === q) || (id && id === q)) {
-        matched = m;
+    setTimeout(function() {
+      forceDirectDashboard();
+      if (typeof window.renderAll === "function") {
+        try { window.renderAll(); } catch (e) {}
       }
+    }, 200);
+  });
+  window.addEventListener("hashchange", function() {
+    forceDirectDashboard();
+    if (typeof window.renderAll === "function") {
+      try { window.renderAll(); } catch (e) {}
     }
-
-    if (!matched) {
-      if (typeof showToast === "function") {
-        showToast("Account Not Found", "এই Username / Email / Mobile দিয়ে কোনো অ্যাকাউন্ট নেই। আগে Register করুন।", "error");
-      }
-      return false;
-    }
-
-    if (matched.password && pwVal !== matched.password) {
-      if (typeof showToast === "function") {
-        showToast("Incorrect Password", "পাসওয়ার্ড ভুল হয়েছে। সঠিক পাসওয়ার্ড দিন।", "error");
-      }
-      return false;
-    }
-
-    if (!Array.isArray(state.members)) state.members = [];
-    var existingIdx = state.members.findIndex(function(x) { return x && x.uid === matched.uid; });
-    if (existingIdx >= 0) {
-      state.members[existingIdx] = Object.assign({}, state.members[existingIdx], matched);
-    } else {
-      state.members.push(matched);
-    }
-
-    if (state.admin) {
-      state.admin.authenticated = false;
-      state.admin.pendingOtp = null;
-    }
-    try {
-      localStorage.removeItem(ADM_KEY);
-      sessionStorage.removeItem(ADM_KEY);
-    } catch (eAdm) {}
-
-    state.currentUserUid = matched.uid;
-    window.__nfxLockedMemberUid = matched.uid;
-    state.isLoggedIn = true;
-    window.__nfxForceRegisterEntry = false;
-    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
-      routeHistory.length = 0;
-    }
-    state.currentRoute = "dashboard";
-
-    if (typeof saveSessionState === "function") saveSessionState();
-    if (typeof renderAll === "function") renderAll();
-    if (typeof showSuccessPopup2s === "function") {
-      showSuccessPopup2s("Logged In!", "Welcome back • UID: " + matched.uid);
-    }
-    if (typeof showReferralBonusPopup === "function") {
-      setTimeout(function() { showReferralBonusPopup(); }, 250);
-    }
-    return false;
-  };
+  });
 })();
 </script>
 
