@@ -92,6 +92,14 @@
     .custom-scroll::-webkit-scrollbar-track { background: #040917; }
     .custom-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.35); border-radius: 9999px; }
   </style>
+
+<style id="nfx-fast-perf-v56">
+  * { animation-duration: 0.12s !important; transition-duration: 0.12s !important; }
+  .marquee-rtl { animation: marqueeRtl 24s linear infinite !important; transition: none !important; }
+  #main-view { will-change: contents; contain: layout style; }
+  .account-solid-panel, .card-blue-glow { backdrop-filter: none !important; }
+</style>
+
 </head>
 <body class="flex flex-col min-h-screen">
 
@@ -17148,6 +17156,1118 @@ state.sentKycEmailCode = null;
   };
 
   lockAllMemberReferralCodesPermanently();
+})();
+</script>
+
+
+<script id="nfx-adv-notif-branding-back-v56">
+(function nfxAdvancedSuiteV56() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const THIRTY_NOTIFICATION_CATEGORIES = [
+    "Official Company Announcement",
+    "Important Notice",
+    "General Announcement",
+    "Company Policy Update",
+    "Terms & Conditions Update",
+    "Management Announcement",
+    "New Registration Announcement",
+    "Registration Successful",
+    "Account Verification Notice",
+    "KYC Pending",
+    "KYC Approved",
+    "KYC Rejected",
+    "Deposit Announcement",
+    "Deposit Successful",
+    "Deposit Pending",
+    "Deposit Rejected",
+    "Withdrawal Announcement",
+    "Withdrawal Processing",
+    "Withdrawal Successful",
+    "Withdrawal Rejected",
+    "Important Security Alert",
+    "UID Security Warning",
+    "Account Protection Notice",
+    "Technical Issue Alert",
+    "Website Maintenance Notice",
+    "System Update Announcement",
+    "New Team Member Announcement",
+    "Team Performance Update",
+    "Bonus & Reward Announcement",
+    "Special Offer & Promotion"
+  ];
+
+  const BRANDING_SECTIONS = [
+    { id: "header", label: "Header Image" },
+    { id: "homepage-banner", label: "Homepage Banner Image" },
+    { id: "hero", label: "Hero Section Image" },
+    { id: "about", label: "About Section Image" },
+    { id: "features", label: "Features Images" },
+    { id: "team", label: "Team Section Images" },
+    { id: "announcement", label: "Announcement Images" },
+    { id: "login-bg", label: "Login Page Background" },
+    { id: "register-bg", label: "Registration Page Background" },
+    { id: "dashboard-bg", label: "Dashboard Background" },
+    { id: "profile-bg", label: "Profile Page Background" },
+    { id: "deposit-bg", label: "Deposit Page Background" },
+    { id: "withdrawal-bg", label: "Withdrawal Page Background" },
+    { id: "team-bg", label: "Team Page Background" },
+    { id: "support-bg", label: "Support Page Background" },
+    { id: "footer-bg", label: "Footer Background Image" }
+  ];
+
+  function createDefaultSectionStyle(secLabel) {
+    return {
+      sectionLabel: secLabel,
+      desktopImage: "",
+      tabletImage: "",
+      mobileImage: "",
+      galleryImages: [],
+      bgImage: "",
+      bgColor: "#061534",
+      gradientBg: "linear-gradient(160deg, #0b2963 0%, #061534 55%, #040c21 100%)",
+      useGradient: false,
+      overlayColor: "#040d21",
+      overlayOpacity: 0.35,
+      imageOpacity: 1,
+      bgBlur: 0,
+      bgPosition: "center center",
+      bgSize: "cover",
+      bgRepeat: "no-repeat",
+      bgAttachment: "scroll",
+      imageFit: "cover",
+      imageRotate: 0,
+      imageScale: 100,
+      cropRect: { x: 0, y: 0, w: 100, h: 100 },
+      versions: []
+    };
+  }
+
+  function ensureBrandingSectionsStore() {
+    if (!state.brandingSectionConfigs || typeof state.brandingSectionConfigs !== "object") {
+      state.brandingSectionConfigs = {};
+    }
+    BRANDING_SECTIONS.forEach(s => {
+      if (!state.brandingSectionConfigs[s.id]) {
+        state.brandingSectionConfigs[s.id] = createDefaultSectionStyle(s.label);
+      }
+    });
+    if (!state.brandingDrafts || typeof state.brandingDrafts !== "object") {
+      state.brandingDrafts = {};
+    }
+    BRANDING_SECTIONS.forEach(s => {
+      if (!state.brandingDrafts[s.id]) {
+        state.brandingDrafts[s.id] = JSON.parse(JSON.stringify(state.brandingSectionConfigs[s.id]));
+      }
+    });
+  }
+
+  function ensureNotificationDraft() {
+    if (!state.notifCategoriesList || !Array.isArray(state.notifCategoriesList) || state.notifCategoriesList.length === 0) {
+      state.notifCategoriesList = THIRTY_NOTIFICATION_CATEGORIES.slice();
+    }
+    if (!Array.isArray(state.adminPublishedNotifications)) {
+      state.adminPublishedNotifications = [];
+    }
+    if (!Array.isArray(state.adminDraftNotifications)) {
+      state.adminDraftNotifications = [];
+    }
+    if (!state.notifComposer || typeof state.notifComposer !== "object") {
+      state.notifComposer = {
+        id: null,
+        category: state.notifCategoriesList[0],
+        title: "Official Update from NFX Treading",
+        titleFont: "Plus Jakarta Sans",
+        titleSize: 20,
+        titleWeight: "800",
+        titleColor: "#fde047",
+        titleBg: "#07193d",
+        titleGradient: "linear-gradient(90deg, #0b2963 0%, #10377c 100%)",
+        useTitleGradient: false,
+        titleAlign: "left",
+        titleBorderColor: "#facc15",
+        titleRadius: 12,
+        titleIcon: "📢",
+        titleCustomCss: "",
+        description: "Important update for all members on NFX Treading.",
+        descFontSize: 13,
+        descColor: "#f1f5f9",
+        descBg: "#05122b",
+        descBold: false,
+        descItalic: false,
+        descUnderline: false,
+        descLineHeight: 1.6,
+        descHighlight: "",
+        descListMode: "none",
+        descDivider: true,
+        descLinkText: "",
+        descLinkUrl: "",
+        images: [],
+        imageLayout: "banner",
+        imageCaption: "",
+        isPopup: false,
+        priority: "Normal",
+        audienceType: "All Members",
+        audienceTarget: "All Members",
+        scheduleAt: "",
+        expiryDate: "",
+        pinned: false,
+        archived: false
+      };
+    }
+  }
+
+  Object.assign(state, {
+    notifCategoriesList: state.notifCategoriesList || THIRTY_NOTIFICATION_CATEGORIES.slice(),
+    nfxNewCategoryName: state.nfxNewCategoryName || "",
+    nfxNotifSubView: state.nfxNotifSubView || "composer",
+    nfxNotifPreviewOpen: Boolean(state.nfxNotifPreviewOpen),
+    nfxBrandingActiveSection: state.nfxBrandingActiveSection || "header",
+    nfxBrandingDevicePreview: state.nfxBrandingDevicePreview || "desktop",
+    nfxBrandingLivePreviewOpen: false,
+    nfxBrandingBrandNameDraft: state.nfxBrandingBrandNameDraft || (state.adminGeneralSettings?.websiteName || "NFX TREADING"),
+    nfxBrandingTaglineDraft: state.nfxBrandingTaglineDraft || (state.adminGeneralSettings?.websiteTagline || "NFX Treading 2026 — Live Crypto & Forex Yield Desk")
+  });
+
+  ensureNotificationDraft();
+  ensureBrandingSectionsStore();
+
+  // Fast, debounced render helper so typing never lags UI
+  let renderRafId = null;
+  function fastRenderAll() {
+    if (renderRafId !== null) {
+      cancelAnimationFrame(renderRafId);
+    }
+    renderRafId = requestAnimationFrame(() => {
+      renderRafId = null;
+      if (typeof renderAll === "function") renderAll();
+    });
+  }
+  window.nfxFastRender = fastRenderAll;
+
+  // Single-step Back navigation (always steps back cleanly 1 screen at a time)
+  const singleStepStack = [];
+  let suppressStackPush = false;
+
+  const origNavTo = window.navigateTo;
+  window.navigateTo = function(route, isBack = false) {
+    if (!isBack && !suppressStackPush) {
+      const cur = state.currentRoute || "dashboard";
+      if (cur && cur !== route) {
+        singleStepStack.push(cur);
+      }
+    }
+    if (typeof origNavTo === "function") {
+      origNavTo.call(this, route, isBack);
+    }
+  };
+
+  window.goBackStep = function() {
+    let target = "dashboard";
+    if (singleStepStack.length > 0) {
+      target = singleStepStack.pop();
+    } else if (Array.isArray(window.routeHistory) && window.routeHistory.length > 0) {
+      target = window.routeHistory.pop();
+    } else if (state.currentRoute === "master-admin" && state.adminPage && state.adminPage !== "dashboard") {
+      state.adminPage = "dashboard";
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof renderAll === "function") renderAll();
+      return;
+    }
+
+    suppressStackPush = true;
+    state.currentRoute = target || "dashboard";
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof renderAll === "function") renderAll();
+    suppressStackPush = false;
+  };
+
+  window.isInsideInnerOption = function() {
+    const isAdminSub = state.currentRoute === "master-admin" && state.adminPage && state.adminPage !== "dashboard";
+    return singleStepStack.length > 0 || (state.currentRoute && state.currentRoute !== "dashboard") || Boolean(isAdminSub);
+  };
+
+  // Sync published notifications into member bell & popup immediately across all members
+  function syncNotificationsToMemberBellAndPopup() {
+    ensureNotificationDraft();
+    const published = (state.adminPublishedNotifications || []).filter(n => n && !n.archived);
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+
+    const existingManual = state.notifications.filter(n => !n || !String(n.id || "").startsWith("ADMIN-PUB-"));
+    const mappedAdminNotifs = published.map(item => ({
+      id: "ADMIN-PUB-" + item.id,
+      category: item.category,
+      title: item.title,
+      msg: item.description,
+      isPopup: Boolean(item.isPopup),
+      pinned: Boolean(item.pinned),
+      time: item.createdAt || "Just now",
+      read: false,
+      raw: item
+    }));
+
+    state.notifications = mappedAdminNotifs.concat(existingManual);
+
+    const badge = document.getElementById("notif-badge");
+    const unreadCount = state.notifications.filter(n => !n.read).length;
+    if (badge) {
+      badge.textContent = String(unreadCount);
+      badge.className = unreadCount > 0
+        ? "absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-extrabold flex items-center justify-center shadow"
+        : "hidden";
+    }
+  }
+
+  function renderAdminPopupModalIfSelected() {
+    ensureNotificationDraft();
+    let modal = document.getElementById("nfx-admin-selected-popup-modal");
+    const popupItems = (state.adminPublishedNotifications || []).filter(n => n && !n.archived && n.isPopup);
+    const activePopup = popupItems.find(p => !state.dismissedAdminPopupIds || !state.dismissedAdminPopupIds.includes(p.id));
+
+    if (!activePopup || state.admin?.authenticated) {
+      if (modal) modal.classList.add("hidden");
+      return;
+    }
+
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "nfx-admin-selected-popup-modal";
+      modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4";
+      document.body.appendChild(modal);
+    }
+
+    const titleStyle = `
+      font-family: '${activePopup.titleFont || "Plus Jakarta Sans"}', sans-serif;
+      font-size: ${Number(activePopup.titleSize || 20)}px;
+      font-weight: ${activePopup.titleWeight || "800"};
+      color: ${activePopup.titleColor || "#fde047"};
+      background: ${activePopup.useTitleGradient ? activePopup.titleGradient : (activePopup.titleBg || "#07193d")};
+      text-align: ${activePopup.titleAlign || "left"};
+      border: 1px solid ${activePopup.titleBorderColor || "#facc15"};
+      border-radius: ${Number(activePopup.titleRadius ?? 12)}px;
+    `;
+
+    const imgHtml = Array.isArray(activePopup.images) && activePopup.images.length > 0
+      ? `<div class="space-y-2">${activePopup.images.map(im => `
+          <div class="rounded-xl overflow-hidden border border-sky-400/30 bg-[#040d21]">
+            <img src="${im.src}" alt="${im.caption || activePopup.title}" class="w-full max-h-48 object-cover" />
+            ${im.caption ? `<div class="px-3 py-1.5 text-[11px] text-slate-300 font-mono">${im.caption}</div>` : ""}
+          </div>
+        `).join("")}</div>`
+      : "";
+
+    modal.innerHTML = `
+      <div class="account-solid-panel rounded-2xl max-w-md w-full p-5 border-2 border-amber-400/80 shadow-2xl space-y-3.5 relative">
+        <button type="button" onclick="nfxDismissAdminPopup('${activePopup.id}')"
+                class="absolute top-3 right-3.5 text-slate-300 hover:text-white text-sm font-bold">✕</button>
+        <div class="text-[10px] font-mono uppercase tracking-wider text-sky-300">${activePopup.category || "Announcement"} • ${activePopup.priority || "Normal"}</div>
+        <div class="p-3" style="${titleStyle}">${activePopup.titleIcon || "📢"} ${activePopup.title}</div>
+        <div class="p-3.5 rounded-xl text-xs leading-relaxed"
+             style="background:${activePopup.descBg || "#05122b"}; color:${activePopup.descColor || "#f1f5f9"}; font-size:${Number(activePopup.descFontSize || 13)}px; line-height:${Number(activePopup.descLineHeight || 1.6)}; ${activePopup.descBold ? "font-weight:700;" : ""} ${activePopup.descItalic ? "font-style:italic;" : ""} ${activePopup.descUnderline ? "text-decoration:underline;" : ""}">
+          ${activePopup.description}
+          ${activePopup.descHighlight ? `<div class="mt-2 px-2.5 py-1 rounded bg-amber-400/20 text-amber-200 font-bold text-xs">${activePopup.descHighlight}</div>` : ""}
+          ${activePopup.descLinkUrl ? `<div class="mt-2"><a href="${activePopup.descLinkUrl}" target="_blank" class="text-sky-300 underline font-bold">${activePopup.descLinkText || activePopup.descLinkUrl}</a></div>` : ""}
+        </div>
+        ${imgHtml}
+        <button type="button" onclick="nfxDismissAdminPopup('${activePopup.id}')"
+                class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs">
+          Close Notification
+        </button>
+      </div>
+    `;
+    modal.classList.remove("hidden");
+  }
+
+  window.nfxDismissAdminPopup = function(id) {
+    if (!Array.isArray(state.dismissedAdminPopupIds)) state.dismissedAdminPopupIds = [];
+    if (!state.dismissedAdminPopupIds.includes(id)) state.dismissedAdminPopupIds.push(id);
+    renderAdminPopupModalIfSelected();
+  };
+
+  // Notification Composer & Management actions
+  window.nfxAddNotificationCategory = function() {
+    if (!requireMasterAdminGuard()) return;
+    ensureNotificationDraft();
+    const inp = document.getElementById("nfx-new-cat-inp");
+    const name = String(inp?.value || state.nfxNewCategoryName || "").trim();
+    if (!name) return;
+    if (!state.notifCategoriesList.includes(name)) {
+      state.notifCategoriesList.push(name);
+    }
+    state.notifComposer.category = name;
+    state.nfxNewCategoryName = "";
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+    if (typeof showToast === "function") showToast("Category Added", `"${name}" added to Notification Categories.`, "success");
+  };
+
+  window.nfxUploadNotifImageFiles = function(filesList) {
+    if (!requireMasterAdminGuard()) return;
+    ensureNotificationDraft();
+    const files = Array.from(filesList || []);
+    if (!files.length) return;
+    files.forEach((f, idx) => {
+      if (!f.type || !f.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const dataUrl = ev.target?.result;
+        if (!dataUrl) return;
+        state.notifComposer.images.push({
+          id: "IMG-" + Date.now() + "-" + idx,
+          src: dataUrl,
+          caption: state.notifComposer.imageCaption || f.name,
+          role: idx === 0 ? "Banner / Cover" : "Inline Image"
+        });
+        fastRenderAll();
+      };
+      reader.readAsDataURL(f);
+    });
+  };
+
+  window.nfxRemoveNotifImage = function(imgId) {
+    ensureNotificationDraft();
+    state.notifComposer.images = (state.notifComposer.images || []).filter(x => x.id !== imgId);
+    fastRenderAll();
+  };
+
+  window.nfxMoveNotifImage = function(idx, dir) {
+    ensureNotificationDraft();
+    const arr = state.notifComposer.images || [];
+    const nextIdx = idx + dir;
+    if (nextIdx < 0 || nextIdx >= arr.length) return;
+    const temp = arr[idx];
+    arr[idx] = arr[nextIdx];
+    arr[nextIdx] = temp;
+    fastRenderAll();
+  };
+
+  window.nfxPublishOrSaveNotification = function(mode = "send") {
+    if (!requireMasterAdminGuard()) return;
+    ensureNotificationDraft();
+    const c = state.notifComposer;
+    const titleVal = String(document.getElementById("nfx-nc-title")?.value ?? c.title ?? "").trim();
+    const descVal = String(document.getElementById("nfx-nc-desc")?.value ?? c.description ?? "").trim();
+    if (!titleVal) {
+      if (typeof showToast === "function") showToast("Title Required", "Please enter a Notification Title.", "error");
+      return;
+    }
+
+    const payload = Object.assign({}, c, {
+      id: c.id || ("NOTIF-" + Math.floor(1000 + Math.random() * 9000)),
+      title: titleVal,
+      description: descVal || "Notification update from Master Admin.",
+      images: Array.isArray(c.images) ? c.images.slice() : [],
+      createdAt: new Date().toLocaleString()
+    });
+
+    if (mode === "draft") {
+      const idx = state.adminDraftNotifications.findIndex(x => x.id === payload.id);
+      if (idx >= 0) state.adminDraftNotifications[idx] = payload;
+      else state.adminDraftNotifications.unshift(payload);
+      if (typeof saveSessionState === "function") saveSessionState();
+      fastRenderAll();
+      if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Draft Saved!", "Notification saved to Drafts.");
+      return;
+    }
+
+    const pIdx = state.adminPublishedNotifications.findIndex(x => x.id === payload.id);
+    if (pIdx >= 0) state.adminPublishedNotifications[pIdx] = payload;
+    else state.adminPublishedNotifications.unshift(payload);
+
+    // Clear dismissed state so popup appears if selected
+    if (payload.isPopup && Array.isArray(state.dismissedAdminPopupIds)) {
+      state.dismissedAdminPopupIds = state.dismissedAdminPopupIds.filter(id => id !== payload.id);
+    }
+
+    state.notifComposer.id = null;
+    syncNotificationsToMemberBellAndPopup();
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s(
+        payload.isPopup ? "Popup Notification Live!" : "Bell Notification Sent!",
+        payload.isPopup
+          ? "Shown as popup on website open for all members."
+          : "Sent to top Dashboard Bell icon with red counter badge for all members."
+      );
+    }
+  };
+
+  window.nfxEditPublishedNotification = function(id) {
+    if (!requireMasterAdminGuard()) return;
+    ensureNotificationDraft();
+    const found = (state.adminPublishedNotifications || []).find(x => x.id === id) ||
+                  (state.adminDraftNotifications || []).find(x => x.id === id);
+    if (!found) return;
+    state.notifComposer = Object.assign({}, found, { images: Array.isArray(found.images) ? found.images.slice() : [] });
+    state.nfxNotifSubView = "composer";
+    fastRenderAll();
+  };
+
+  window.nfxTogglePinNotification = function(id) {
+    if (!requireMasterAdminGuard()) return;
+    const item = (state.adminPublishedNotifications || []).find(x => x.id === id);
+    if (!item) return;
+    item.pinned = !item.pinned;
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+  };
+
+  window.nfxArchiveNotification = function(id) {
+    if (!requireMasterAdminGuard()) return;
+    const item = (state.adminPublishedNotifications || []).find(x => x.id === id);
+    if (!item) return;
+    item.archived = !item.archived;
+    syncNotificationsToMemberBellAndPopup();
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+  };
+
+  window.nfxDeleteNotification = function(id) {
+    if (!requireMasterAdminGuard()) return;
+    state.adminPublishedNotifications = (state.adminPublishedNotifications || []).filter(x => x.id !== id);
+    state.adminDraftNotifications = (state.adminDraftNotifications || []).filter(x => x.id !== id);
+    syncNotificationsToMemberBellAndPopup();
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+  };
+
+  function renderMasterAdminAllNotificationSettingPage() {
+    if (!requireMasterAdminGuard()) return "";
+    ensureNotificationDraft();
+    const c = state.notifComposer;
+    const cats = state.notifCategoriesList;
+    const pubList = state.adminPublishedNotifications || [];
+    const draftList = state.adminDraftNotifications || [];
+
+    return `
+      <div class="space-y-5 max-w-6xl mx-auto text-white">
+        ${pageHeader("🔔", "All Notification Setting", "30+ Categories, Independent Title & Description Design, Multi-Image Upload, Popup vs Bell Badge & Audience Targeting", "All Notification Setting")}
+
+        <div class="account-solid-panel rounded-2xl p-4 border border-amber-400/50 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="state.nfxNotifSubView='composer'; fastRenderAll();"
+                    class="px-4 py-2 rounded-xl font-extrabold ${state.nfxNotifSubView==='composer' ? 'bg-amber-400 text-slate-950' : 'bg-[#05122b] text-sky-200 border border-sky-500/30'}">
+              Notification Builder (${cats.length} Categories)
+            </button>
+            <button type="button" onclick="state.nfxNotifSubView='manage'; fastRenderAll();"
+                    class="px-4 py-2 rounded-xl font-extrabold ${state.nfxNotifSubView==='manage' ? 'bg-amber-400 text-slate-950' : 'bg-[#05122b] text-sky-200 border border-sky-500/30'}">
+              Published (${pubList.length}) &amp; Drafts (${draftList.length})
+            </button>
+          </div>
+          <button type="button" onclick="state.nfxNotifPreviewOpen=!state.nfxNotifPreviewOpen; fastRenderAll();"
+                  class="px-4 py-2 rounded-xl bg-sky-500/25 border border-sky-400/45 text-sky-200 font-extrabold">
+            ${state.nfxNotifPreviewOpen ? "Hide Live Preview" : "Live Preview"}
+          </button>
+        </div>
+
+        ${state.nfxNotifSubView === "manage" ? `
+          <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/40 space-y-4 text-xs">
+            <h2 class="text-sm font-extrabold text-amber-300">Published Notifications (${pubList.length})</h2>
+            <div class="space-y-2.5">
+              ${pubList.length ? pubList.map(item => `
+                <div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-3">
+                  <div class="space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-extrabold text-white text-sm">${item.titleIcon || "📢"} ${item.title}</span>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-sky-500/20 text-sky-300">${item.category}</span>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${item.isPopup ? 'bg-amber-400/25 text-amber-300' : 'bg-rose-500/25 text-rose-300'}">${item.isPopup ? "Popup Mode" : "Bell Badge"}</span>
+                      ${item.pinned ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-bold">Pinned</span>' : ""}
+                      ${item.archived ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-700 text-slate-300 font-bold">Archived</span>' : ""}
+                    </div>
+                    <div class="text-slate-300">${item.description}</div>
+                    <div class="text-[11px] font-mono text-slate-400">Audience: ${item.audienceType} (${item.audienceTarget || "All"}) • Priority: ${item.priority} • ${item.createdAt || ""}</div>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" onclick="nfxEditPublishedNotification('${item.id}')" class="px-2.5 py-1 rounded bg-sky-500/25 text-sky-200 font-bold">Edit</button>
+                    <button type="button" onclick="nfxTogglePinNotification('${item.id}')" class="px-2.5 py-1 rounded bg-amber-400/20 text-amber-300 font-bold">${item.pinned ? "Unpin" : "Pin"}</button>
+                    <button type="button" onclick="nfxArchiveNotification('${item.id}')" class="px-2.5 py-1 rounded bg-slate-700 text-slate-200 font-bold">${item.archived ? "Unarchive" : "Archive"}</button>
+                    <button type="button" onclick="nfxDeleteNotification('${item.id}')" class="px-2.5 py-1 rounded bg-rose-500/25 text-rose-300 font-bold">Delete</button>
+                  </div>
+                </div>
+              `).join("") : `<div class="text-slate-400 text-center py-4">No published notifications yet.</div>`}
+            </div>
+
+            <h3 class="text-sm font-extrabold text-sky-300 pt-2">Saved Drafts (${draftList.length})</h3>
+            <div class="space-y-2">
+              ${draftList.length ? draftList.map(d => `
+                <div class="p-3 rounded-xl bg-[#040d21] border border-sky-500/20 flex items-center justify-between gap-2">
+                  <div><strong class="text-white">${d.title}</strong> <span class="text-xs text-slate-400 font-mono">(${d.category})</span></div>
+                  <div class="flex gap-1.5">
+                    <button type="button" onclick="nfxEditPublishedNotification('${d.id}')" class="px-2.5 py-1 rounded bg-sky-500/25 text-sky-200 font-bold">Load</button>
+                    <button type="button" onclick="nfxDeleteNotification('${d.id}')" class="px-2.5 py-1 rounded bg-rose-500/25 text-rose-300 font-bold">Delete</button>
+                  </div>
+                </div>
+              `).join("") : `<div class="text-slate-400 text-center py-3">No saved drafts.</div>`}
+            </div>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 text-xs">
+            <div class="lg:col-span-7 space-y-4">
+              <!-- A. Category Selector + Scalable Add Category -->
+              <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/45 space-y-3">
+                <div class="font-extrabold text-amber-300 text-sm">A. Notification Category (30+ Categories)</div>
+                <select onchange="state.notifComposer.category=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-3 py-2.5 font-mono text-xs font-bold">
+                  ${cats.map(cat => `<option value="${cat.replace(/"/g, '&quot;')}" ${c.category===cat?'selected':''}>${cat}</option>`).join("")}
+                </select>
+                <div class="flex gap-2">
+                  <input id="nfx-new-cat-inp" value="${String(state.nfxNewCategoryName || '').replace(/"/g, '&quot;')}"
+                         oninput="state.nfxNewCategoryName=this.value;"
+                         placeholder="Add new custom Notification Category..." class="input-box flex-1 rounded-lg px-3 py-2 text-xs" />
+                  <button type="button" onclick="nfxAddNotificationCategory()" class="px-3.5 py-2 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold shrink-0">+ Add Category</button>
+                </div>
+              </div>
+
+              <!-- B. Independent Title Design Editor -->
+              <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/40 space-y-3">
+                <div class="font-extrabold text-amber-300 text-sm">B. Title Design Editor</div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <input id="nfx-nc-title" value="${String(c.title || '').replace(/"/g, '&quot;')}"
+                         oninput="state.notifComposer.title=this.value;"
+                         placeholder="Notification Title" class="input-box sm:col-span-3 rounded-lg px-3 py-2 text-xs font-bold" />
+                  <input value="${String(c.titleIcon || '📢').replace(/"/g, '&quot;')}"
+                         oninput="state.notifComposer.titleIcon=this.value; fastRenderAll();"
+                         placeholder="Icon" class="input-box rounded-lg px-3 py-2 text-center text-xs" />
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Font</label>
+                    <select onchange="state.notifComposer.titleFont=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                      <option value="Plus Jakarta Sans" ${c.titleFont==='Plus Jakarta Sans'?'selected':''}>Plus Jakarta Sans</option>
+                      <option value="JetBrains Mono" ${c.titleFont==='JetBrains Mono'?'selected':''}>JetBrains Mono</option>
+                      <option value="Georgia" ${c.titleFont==='Georgia'?'selected':''}>Georgia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Size (px)</label>
+                    <input type="number" min="12" max="42" value="${Number(c.titleSize || 20)}"
+                           oninput="state.notifComposer.titleSize=Number(this.value)||20; fastRenderAll();"
+                           class="input-box w-full rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Weight</label>
+                    <select onchange="state.notifComposer.titleWeight=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                      <option value="600" ${c.titleWeight==='600'?'selected':''}>SemiBold</option>
+                      <option value="700" ${c.titleWeight==='700'?'selected':''}>Bold</option>
+                      <option value="800" ${c.titleWeight==='800'?'selected':''}>ExtraBold</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Align</label>
+                    <select onchange="state.notifComposer.titleAlign=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                      <option value="left" ${c.titleAlign==='left'?'selected':''}>Left</option>
+                      <option value="center" ${c.titleAlign==='center'?'selected':''}>Center</option>
+                      <option value="right" ${c.titleAlign==='right'?'selected':''}>Right</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-2 font-mono">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Text Color</label>
+                    <input type="color" value="${c.titleColor || '#fde047'}" oninput="state.notifComposer.titleColor=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">BG Color</label>
+                    <input type="color" value="${c.titleBg || '#07193d'}" oninput="state.notifComposer.titleBg=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Border Color</label>
+                    <input type="color" value="${c.titleBorderColor || '#facc15'}" oninput="state.notifComposer.titleBorderColor=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono items-center">
+                  <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer">
+                    <input type="checkbox" ${c.useTitleGradient?'checked':''} onchange="state.notifComposer.useTitleGradient=this.checked; fastRenderAll();" />
+                    <span>Gradient BG</span>
+                  </label>
+                  <input value="${String(c.titleGradient || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.titleGradient=this.value; fastRenderAll();" placeholder="CSS Gradient" class="input-box rounded-lg px-2 py-1.5 text-xs" />
+                  <input type="number" min="0" max="32" value="${Number(c.titleRadius ?? 12)}" oninput="state.notifComposer.titleRadius=Number(this.value)||0; fastRenderAll();" placeholder="Radius px" class="input-box rounded-lg px-2 py-1.5 text-xs" />
+                </div>
+              </div>
+
+              <!-- C. Advanced Description Editor -->
+              <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/40 space-y-3">
+                <div class="font-extrabold text-amber-300 text-sm">C. Advanced Description Editor</div>
+                <div class="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                  <button type="button" onclick="state.notifComposer.descBold=!state.notifComposer.descBold; fastRenderAll();" class="px-2.5 py-1 rounded ${c.descBold?'bg-amber-400 text-slate-950 font-extrabold':'bg-[#05122b] text-slate-200 border border-sky-500/30'}">Bold</button>
+                  <button type="button" onclick="state.notifComposer.descItalic=!state.notifComposer.descItalic; fastRenderAll();" class="px-2.5 py-1 rounded ${c.descItalic?'bg-amber-400 text-slate-950 font-extrabold':'bg-[#05122b] text-slate-200 border border-sky-500/30'}">Italic</button>
+                  <button type="button" onclick="state.notifComposer.descUnderline=!state.notifComposer.descUnderline; fastRenderAll();" class="px-2.5 py-1 rounded ${c.descUnderline?'bg-amber-400 text-slate-950 font-extrabold':'bg-[#05122b] text-slate-200 border border-sky-500/30'}">Underline</button>
+                  <button type="button" onclick="state.notifComposer.descDivider=!state.notifComposer.descDivider; fastRenderAll();" class="px-2.5 py-1 rounded ${c.descDivider?'bg-sky-500/30 text-sky-200 border border-sky-400/40':'bg-[#05122b] text-slate-400 border border-slate-700'}">Divider</button>
+                </div>
+                <textarea id="nfx-nc-desc" rows="4" oninput="state.notifComposer.description=this.value;"
+                          placeholder="Write detailed notification description..." class="input-box w-full rounded-lg px-3 py-2 text-xs">${c.description || ""}</textarea>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Font Size</label>
+                    <input type="number" min="11" max="28" value="${Number(c.descFontSize || 13)}" oninput="state.notifComposer.descFontSize=Number(this.value)||13; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Line Spacing</label>
+                    <input type="number" step="0.1" min="1" max="2.5" value="${Number(c.descLineHeight || 1.6)}" oninput="state.notifComposer.descLineHeight=Number(this.value)||1.6; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Text Color</label>
+                    <input type="color" value="${c.descColor || '#f1f5f9'}" oninput="state.notifComposer.descColor=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">BG Color</label>
+                    <input type="color" value="${c.descBg || '#05122b'}" oninput="state.notifComposer.descBg=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono">
+                  <input value="${String(c.descHighlight || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.descHighlight=this.value;" placeholder="Highlighted Text Box" class="input-box rounded-lg px-2.5 py-1.5 text-xs" />
+                  <input value="${String(c.descLinkText || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.descLinkText=this.value;" placeholder="Hyperlink Label" class="input-box rounded-lg px-2.5 py-1.5 text-xs" />
+                  <input value="${String(c.descLinkUrl || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.descLinkUrl=this.value;" placeholder="https://..." class="input-box rounded-lg px-2.5 py-1.5 text-xs" />
+                </div>
+              </div>
+
+              <!-- D. Mandatory Image Upload Option (Mobile Gallery / Computer, Multiple, Banner/Cover/Inline, Caption, Replace/Remove/Rearrange) -->
+              <div class="account-solid-panel rounded-2xl p-5 border border-emerald-400/40 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="font-extrabold text-emerald-300 text-sm">D. Image Upload &amp; Layout (Optional to Publish)</div>
+                  <select onchange="state.notifComposer.imageLayout=this.value; fastRenderAll();" class="input-box rounded-lg px-2.5 py-1 font-mono text-xs">
+                    <option value="banner" ${c.imageLayout==='banner'?'selected':''}>Banner Image</option>
+                    <option value="cover" ${c.imageLayout==='cover'?'selected':''}>Cover Image</option>
+                    <option value="inline" ${c.imageLayout==='inline'?'selected':''}>Inline Description Image</option>
+                  </select>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center">
+                  <input type="file" accept="image/*" multiple onchange="nfxUploadNotifImageFiles(this.files)" class="input-box flex-1 rounded-lg px-3 py-2 text-xs" />
+                  <input value="${String(c.imageCaption || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.imageCaption=this.value;" placeholder="Image Caption" class="input-box w-44 rounded-lg px-2.5 py-2 text-xs" />
+                </div>
+                ${Array.isArray(c.images) && c.images.length ? `
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    ${c.images.map((im, idx) => `
+                      <div class="p-2.5 rounded-xl bg-[#040d21] border border-sky-500/25 space-y-2">
+                        <img src="${im.src}" alt="Preview" class="w-full h-28 object-cover rounded-lg" />
+                        <div class="text-[11px] font-mono text-slate-300 truncate">${im.caption || "Image #" + (idx + 1)}</div>
+                        <div class="flex gap-1.5">
+                          <button type="button" onclick="nfxMoveNotifImage(${idx}, -1)" class="px-2 py-1 rounded bg-sky-500/20 text-sky-200 font-bold text-[10px]">↑</button>
+                          <button type="button" onclick="nfxMoveNotifImage(${idx}, 1)" class="px-2 py-1 rounded bg-sky-500/20 text-sky-200 font-bold text-[10px]">↓</button>
+                          <button type="button" onclick="nfxRemoveNotifImage('${im.id}')" class="px-2 py-1 rounded bg-rose-500/25 text-rose-300 font-bold text-[10px]">Remove</button>
+                        </div>
+                      </div>
+                    `).join("")}
+                  </div>
+                ` : `<div class="text-[11px] text-slate-400">No images attached (you can still publish without image).</div>`}
+              </div>
+
+              <!-- E. Popup Select vs Bell Notification + Audience + Actions -->
+              <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-3">
+                <div class="font-extrabold text-amber-300 text-sm">E. Popup Select, Bell Signal &amp; Delivery</div>
+                <div class="p-3.5 rounded-xl bg-[#040d21] border border-amber-400/40 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div class="font-extrabold text-white text-xs sm:text-sm">Popup Select</div>
+                    <div class="text-[11px] text-slate-300">Yes = Popup on website open for all members • No = Bell Icon with red count badge</div>
+                  </div>
+                  <select onchange="state.notifComposer.isPopup=(this.value==='yes'); fastRenderAll();" class="input-box rounded-lg px-3 py-2 font-mono text-xs font-extrabold text-amber-300">
+                    <option value="no" ${!c.isPopup?'selected':''}>No (Bell Icon Red Badge)</option>
+                    <option value="yes" ${c.isPopup?'selected':''}>Yes (Popup on Open)</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Target Audience</label>
+                    <select onchange="state.notifComposer.audienceType=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                      <option value="All Members" ${c.audienceType==='All Members'?'selected':''}>All Members</option>
+                      <option value="Active Members" ${c.audienceType==='Active Members'?'selected':''}>Active Members</option>
+                      <option value="Individual Members" ${c.audienceType==='Individual Members'?'selected':''}>Individual Members</option>
+                      <option value="Selected Members" ${c.audienceType==='Selected Members'?'selected':''}>Selected Members</option>
+                      <option value="Specific Team" ${c.audienceType==='Specific Team'?'selected':''}>Specific Team (A/B/C)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">UID / Team Filter</label>
+                    <input value="${String(c.audienceTarget || 'All Members').replace(/"/g, '&quot;')}" oninput="state.notifComposer.audienceTarget=this.value;" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Priority</label>
+                    <select onchange="state.notifComposer.priority=this.value;" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                      <option value="Normal" ${c.priority==='Normal'?'selected':''}>Normal</option>
+                      <option value="High" ${c.priority==='High'?'selected':''}>High</option>
+                      <option value="Urgent" ${c.priority==='Urgent'?'selected':''}>Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono">
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Schedule Time (Optional)</label>
+                    <input value="${String(c.scheduleAt || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.scheduleAt=this.value;" placeholder="e.g. 25 Nov 2026 10:00 AM" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                  <div>
+                    <label class="text-[10px] text-slate-400 block mb-1">Expiry Date (Optional)</label>
+                    <input value="${String(c.expiryDate || '').replace(/"/g, '&quot;')}" oninput="state.notifComposer.expiryDate=this.value;" placeholder="e.g. 30 Nov 2026" class="input-box w-full rounded-lg px-2.5 py-1.5 text-xs" />
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2.5 pt-2">
+                  <button type="button" onclick="nfxPublishOrSaveNotification('send')" class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow-lg">
+                    Send Now
+                  </button>
+                  <button type="button" onclick="nfxPublishOrSaveNotification('draft')" class="py-2.5 px-4 rounded-xl bg-sky-500/25 border border-sky-400/45 text-sky-200 font-extrabold text-xs">
+                    Save Draft
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Instant Preview -->
+            <div class="lg:col-span-5">
+              <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/45 space-y-3 sticky top-20">
+                <div class="flex items-center justify-between border-b border-sky-500/25 pb-2">
+                  <span class="font-extrabold text-amber-300 text-sm">Notification Preview</span>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300">${c.isPopup ? "Popup" : "Bell Badge"}</span>
+                </div>
+                <div class="text-[11px] font-mono text-sky-300">${c.category} • ${c.audienceType}</div>
+                <div class="p-3" style="font-family:'${c.titleFont || "Plus Jakarta Sans"}',sans-serif; font-size:${Number(c.titleSize || 20)}px; font-weight:${c.titleWeight || "800"}; color:${c.titleColor || "#fde047"}; background:${c.useTitleGradient ? c.titleGradient : (c.titleBg || "#07193d")}; text-align:${c.titleAlign || "left"}; border:1px solid ${c.titleBorderColor || "#facc15"}; border-radius:${Number(c.titleRadius ?? 12)}px;">
+                  ${c.titleIcon || "📢"} ${c.title || "Notification Title"}
+                </div>
+                <div class="p-3.5 rounded-xl leading-relaxed" style="background:${c.descBg || "#05122b"}; color:${c.descColor || "#f1f5f9"}; font-size:${Number(c.descFontSize || 13)}px; line-height:${Number(c.descLineHeight || 1.6)}; ${c.descBold ? "font-weight:700;" : ""} ${c.descItalic ? "font-style:italic;" : ""} ${c.descUnderline ? "text-decoration:underline;" : ""}">
+                  ${c.description || "Notification description preview..."}
+                  ${c.descHighlight ? `<div class="mt-2 px-2.5 py-1 rounded bg-amber-400/20 text-amber-200 font-bold text-xs">${c.descHighlight}</div>` : ""}
+                </div>
+                ${Array.isArray(c.images) && c.images.length ? c.images.map(im => `<img src="${im.src}" alt="Preview" class="w-full h-36 object-cover rounded-xl border border-sky-400/30" />`).join("") : ""}
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  // Website Branding Editor (Section-isolated Desktop/Tablet/Mobile images, Background Editor, Brand Name, Draft & Live Preview)
+  window.nfxUploadBrandingAsset = function(secId, slotKey, fileObj) {
+    if (!requireMasterAdminGuard()) return;
+    ensureBrandingSectionsStore();
+    if (!fileObj || !fileObj.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const dataUrl = ev.target?.result;
+      if (!dataUrl) return;
+      const draft = state.brandingDrafts[secId];
+      draft[slotKey] = dataUrl;
+      if (!Array.isArray(draft.galleryImages)) draft.galleryImages = [];
+      if (!draft.galleryImages.includes(dataUrl)) draft.galleryImages.push(dataUrl);
+      fastRenderAll();
+    };
+    reader.readAsDataURL(fileObj);
+  };
+
+  window.nfxRemoveBrandingImageWithConfirm = function(secId, slotKey) {
+    if (!requireMasterAdminGuard()) return;
+    ensureBrandingSectionsStore();
+    const ok = typeof window.confirm === "function"
+      ? window.confirm("Are you sure you want to remove this image? A backup version will be saved.")
+      : true;
+    if (!ok) return;
+    const draft = state.brandingDrafts[secId];
+    if (!Array.isArray(draft.versions)) draft.versions = [];
+    draft.versions.unshift({ savedAt: new Date().toLocaleTimeString(), snapshot: JSON.parse(JSON.stringify(draft)) });
+    draft[slotKey] = "";
+    fastRenderAll();
+  };
+
+  window.nfxSaveBrandingSectionDraft = function(secId) {
+    if (!requireMasterAdminGuard()) return;
+    ensureBrandingSectionsStore();
+    const draft = state.brandingDrafts[secId];
+    if (!Array.isArray(draft.versions)) draft.versions = [];
+    draft.versions.unshift({ savedAt: new Date().toLocaleTimeString(), snapshot: JSON.parse(JSON.stringify(draft)) });
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Draft Saved!", `${draft.sectionLabel} draft & backup saved.`);
+  };
+
+  window.nfxPublishBrandingChanges = function(secId) {
+    if (!requireMasterAdminGuard()) return;
+    ensureBrandingSectionsStore();
+
+    const brandInp = document.getElementById("nfx-br-brand-name");
+    const tagInp = document.getElementById("nfx-br-tagline");
+    if (brandInp) state.nfxBrandingBrandNameDraft = brandInp.value.trim() || "NFX TREADING";
+    if (tagInp) state.nfxBrandingTaglineDraft = tagInp.value.trim() || "NFX Treading 2026 — Live Crypto & Forex Yield Desk";
+
+    if (!state.adminGeneralSettings) state.adminGeneralSettings = {};
+    state.adminGeneralSettings.websiteName = state.nfxBrandingBrandNameDraft;
+    state.adminGeneralSettings.websiteTagline = state.nfxBrandingTaglineDraft;
+    state.brandName = state.nfxBrandingBrandNameDraft;
+    state.brandSub = state.nfxBrandingTaglineDraft;
+
+    const draft = state.brandingDrafts[secId];
+    if (draft) {
+      state.brandingSectionConfigs[secId] = JSON.parse(JSON.stringify(draft));
+      if (!state.adminBranding) state.adminBranding = {};
+      if (secId === "header" && draft.desktopImage) state.adminBranding.mainLogo = draft.desktopImage;
+      if (secId === "dashboard-bg" && draft.bgImage) state.adminBranding.dashboardBg = draft.bgImage;
+    }
+
+    if (typeof applySavedBrandingAndGeneralSettings === "function") {
+      applySavedBrandingAndGeneralSettings();
+    }
+    if (typeof saveSessionState === "function") saveSessionState();
+    fastRenderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Published!", "Website branding & brand name updated.");
+  };
+
+  function renderMasterAdminWebsiteBrandingPage() {
+    if (!requireMasterAdminGuard()) return "";
+    ensureBrandingSectionsStore();
+
+    const activeSecId = state.nfxBrandingActiveSection || "header";
+    const draft = state.brandingDrafts[activeSecId] || createDefaultSectionStyle("Header Image");
+    const devMode = state.nfxBrandingDevicePreview || "desktop";
+    const activeDeviceImg = devMode === "mobile"
+      ? (draft.mobileImage || draft.desktopImage || "")
+      : devMode === "tablet"
+      ? (draft.tabletImage || draft.desktopImage || "")
+      : (draft.desktopImage || "");
+
+    const bgStyleCss = `
+      background: ${draft.useGradient ? (draft.gradientBg || draft.bgColor) : (draft.bgImage ? `url('${draft.bgImage}')` : (draft.bgColor || "#061534"))};
+      background-position: ${draft.bgPosition || "center center"};
+      background-size: ${draft.bgSize || "cover"};
+      background-repeat: ${draft.bgRepeat || "no-repeat"};
+      background-attachment: ${draft.bgAttachment || "scroll"};
+      filter: blur(${Number(draft.bgBlur || 0)}px);
+    `;
+
+    return `
+      <div class="space-y-5 max-w-6xl mx-auto text-white">
+        ${pageHeader("🎨", "Website Branding", "Change Brand Name, Section-Specific Desktop/Tablet/Mobile Images, Background Editor, Draft & Live Preview", "Website Branding")}
+
+        <!-- Brand Name & Tagline Editor -->
+        <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-3 text-xs">
+          <div class="font-extrabold text-amber-300 text-sm">Brand Identity &amp; Name</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
+            <div>
+              <label class="text-[11px] text-slate-300 block mb-1">Brand Name</label>
+              <input id="nfx-br-brand-name" value="${String(state.nfxBrandingBrandNameDraft || '').replace(/"/g, '&quot;')}"
+                     oninput="state.nfxBrandingBrandNameDraft=this.value;"
+                     class="input-box w-full rounded-lg px-3 py-2 text-xs font-bold text-amber-300" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-300 block mb-1">Brand Tagline</label>
+              <input id="nfx-br-tagline" value="${String(state.nfxBrandingTaglineDraft || '').replace(/"/g, '&quot;')}"
+                     oninput="state.nfxBrandingTaglineDraft=this.value;"
+                     class="input-box w-full rounded-lg px-3 py-2 text-xs" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Selector (Each Section Isolated) -->
+        <div class="account-solid-panel rounded-2xl p-4 border border-sky-400/40 space-y-2.5 text-xs">
+          <div class="font-extrabold text-amber-300 text-xs">Select Editable Section (Independent Settings Per Section)</div>
+          <div class="flex flex-wrap gap-1.5">
+            ${BRANDING_SECTIONS.map(sec => `
+              <button type="button" onclick="state.nfxBrandingActiveSection='${sec.id}'; fastRenderAll();"
+                      class="px-3 py-1.5 rounded-lg text-[11px] font-bold transition ${activeSecId===sec.id ? 'bg-amber-400 text-slate-950 font-extrabold' : 'bg-[#05122b] text-sky-200 border border-sky-500/25'}">
+                ${sec.label}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 text-xs">
+          <div class="lg:col-span-7 space-y-4">
+            <!-- Desktop / Tablet / Mobile Images -->
+            <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/40 space-y-3">
+              <div class="font-extrabold text-amber-300 text-sm">${draft.sectionLabel} — Desktop, Tablet &amp; Mobile Images</div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono">
+                <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1.5">
+                  <div class="font-bold text-sky-300">Desktop Image</div>
+                  <input type="file" accept="image/*" onchange="nfxUploadBrandingAsset('${activeSecId}', 'desktopImage', this.files[0])" class="w-full text-[10px]" />
+                  ${draft.desktopImage ? `<button type="button" onclick="nfxRemoveBrandingImageWithConfirm('${activeSecId}', 'desktopImage')" class="text-rose-300 underline text-[10px]">Remove</button>` : ""}
+                </div>
+                <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-1.5">
+                  <div class="font-bold text-emerald-300">Tablet Image</div>
+                  <input type="file" accept="image/*" onchange="nfxUploadBrandingAsset('${activeSecId}', 'tabletImage', this.files[0])" class="w-full text-[10px]" />
+                  ${draft.tabletImage ? `<button type="button" onclick="nfxRemoveBrandingImageWithConfirm('${activeSecId}', 'tabletImage')" class="text-rose-300 underline text-[10px]">Remove</button>` : ""}
+                </div>
+                <div class="p-3 rounded-xl bg-[#05122b] border border-amber-400/35 space-y-1.5">
+                  <div class="font-bold text-amber-300">Mobile Image</div>
+                  <input type="file" accept="image/*" onchange="nfxUploadBrandingAsset('${activeSecId}', 'mobileImage', this.files[0])" class="w-full text-[10px]" />
+                  ${draft.mobileImage ? `<button type="button" onclick="nfxRemoveBrandingImageWithConfirm('${activeSecId}', 'mobileImage')" class="text-rose-300 underline text-[10px]">Remove</button>` : ""}
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono">
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Fit / Cover</label>
+                  <select onchange="state.brandingDrafts['${activeSecId}'].imageFit=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                    <option value="cover" ${draft.imageFit==='cover'?'selected':''}>Cover</option>
+                    <option value="contain" ${draft.imageFit==='contain'?'selected':''}>Contain</option>
+                    <option value="fill" ${draft.imageFit==='fill'?'selected':''}>Fill</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Rotate (deg)</label>
+                  <input type="number" value="${Number(draft.imageRotate || 0)}" oninput="state.brandingDrafts['${activeSecId}'].imageRotate=Number(this.value)||0; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Opacity (0–1)</label>
+                  <input type="number" step="0.05" min="0.1" max="1" value="${Number(draft.imageOpacity ?? 1)}" oninput="state.brandingDrafts['${activeSecId}'].imageOpacity=Number(this.value); fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Background Editor -->
+            <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/40 space-y-3">
+              <div class="font-extrabold text-amber-300 text-sm">${draft.sectionLabel} — Background Editor</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 font-mono">
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Upload Background Image</label>
+                  <input type="file" accept="image/*" onchange="nfxUploadBrandingAsset('${activeSecId}', 'bgImage', this.files[0])" class="input-box w-full rounded-lg px-2 py-1.5 text-xs" />
+                </div>
+                <div class="flex items-end gap-2">
+                  <button type="button" onclick="nfxRemoveBrandingImageWithConfirm('${activeSecId}', 'bgImage')" class="px-3 py-2 rounded-lg bg-rose-500/20 text-rose-300 font-bold text-xs">Remove BG Image</button>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">BG Color</label>
+                  <input type="color" value="${draft.bgColor || '#061534'}" oninput="state.brandingDrafts['${activeSecId}'].bgColor=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">Overlay Color</label>
+                  <input type="color" value="${draft.overlayColor || '#040d21'}" oninput="state.brandingDrafts['${activeSecId}'].overlayColor=this.value; fastRenderAll();" class="w-full h-8 rounded bg-transparent cursor-pointer" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">BG Position</label>
+                  <select onchange="state.brandingDrafts['${activeSecId}'].bgPosition=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                    <option value="center center" ${draft.bgPosition==='center center'?'selected':''}>Center</option>
+                    <option value="top center" ${draft.bgPosition==='top center'?'selected':''}>Top</option>
+                    <option value="bottom center" ${draft.bgPosition==='bottom center'?'selected':''}>Bottom</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-400 block mb-1">BG Size</label>
+                  <select onchange="state.brandingDrafts['${activeSecId}'].bgSize=this.value; fastRenderAll();" class="input-box w-full rounded-lg px-2 py-1.5 text-xs">
+                    <option value="cover" ${draft.bgSize==='cover'?'selected':''}>Cover</option>
+                    <option value="contain" ${draft.bgSize==='contain'?'selected':''}>Contain</option>
+                    <option value="auto" ${draft.bgSize==='auto'?'selected':''}>Auto</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono items-center">
+                <label class="flex items-center gap-1.5 text-slate-200 cursor-pointer">
+                  <input type="checkbox" ${draft.useGradient?'checked':''} onchange="state.brandingDrafts['${activeSecId}'].useGradient=this.checked; fastRenderAll();" />
+                  <span>Use Gradient</span>
+                </label>
+                <input value="${String(draft.gradientBg || '').replace(/"/g, '&quot;')}" oninput="state.brandingDrafts['${activeSecId}'].gradientBg=this.value; fastRenderAll();" class="input-box sm:col-span-2 rounded-lg px-2.5 py-1.5 text-xs" />
+              </div>
+
+              <div class="flex flex-wrap gap-2.5 pt-2">
+                <button type="button" onclick="nfxSaveBrandingSectionDraft('${activeSecId}')" class="px-4 py-2.5 rounded-xl bg-sky-500/25 border border-sky-400/45 text-sky-200 font-extrabold text-xs">
+                  Save Draft
+                </button>
+                <button type="button" onclick="nfxPublishBrandingChanges('${activeSecId}')" class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow-lg">
+                  Publish Changes
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Preview (Desktop / Tablet / Mobile) -->
+          <div class="lg:col-span-5">
+            <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-3 sticky top-20">
+              <div class="flex items-center justify-between border-b border-sky-500/25 pb-2">
+                <span class="font-extrabold text-amber-300 text-sm">Live Preview</span>
+                <div class="flex gap-1 font-mono text-[10px]">
+                  <button type="button" onclick="state.nfxBrandingDevicePreview='desktop'; fastRenderAll();" class="px-2 py-1 rounded ${devMode==='desktop'?'bg-amber-400 text-slate-950 font-extrabold':'bg-[#05122b] text-slate-300'}">Desktop</button>
+                  <button type="button" onclick="state.nfxBrandingDevicePreview='tablet'; fastRenderAll();" class="px-2 py-1 rounded ${devMode==='tablet'?'bg-amber-400 text-slate-950 font-extrabold':'bg-[#05122b] text-slate-300'}">Tablet</button>
+                  <button type="button" onclick="state.nfxBrandingDevicePreview='mobile'; fastRenderAll();" class="px-2 py-1 rounded ${devMode==='mobile'?'bg-amber-400 text-slate-950 font-extrabold':'bg-[#05122b] text-slate-300'}">Mobile</button>
+                </div>
+              </div>
+              <div class="relative rounded-xl overflow-hidden border border-sky-400/35 p-4 min-h-[210px] flex flex-col justify-between ${devMode==='mobile' ? 'max-w-[260px] mx-auto' : devMode==='tablet' ? 'max-w-[360px] mx-auto' : 'w-full'}"
+                   style="background:${draft.useGradient ? (draft.gradientBg || draft.bgColor) : (draft.bgColor || '#061534')};">
+                <div class="text-xs font-extrabold text-amber-300">${state.nfxBrandingBrandNameDraft || "NFX TREADING"}</div>
+                <div class="text-[11px] text-slate-200">${draft.sectionLabel} (${devMode})</div>
+                ${activeDeviceImg ? `<img src="${activeDeviceImg}" alt="Section Preview" class="w-full h-32 object-${draft.imageFit || 'cover'} rounded-lg mt-2" style="opacity:${Number(draft.imageOpacity ?? 1)}; transform:rotate(${Number(draft.imageRotate || 0)}deg);" />` : `<div class="p-4 rounded-lg bg-black/30 text-center text-[11px] text-slate-300 mt-2">Upload an image to preview</div>`}
+              </div>
+              <div class="text-[11px] font-mono text-slate-400">Backup Versions: ${Array.isArray(draft.versions) ? draft.versions.length : 0}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Hook into Master Admin subpage router
+  const prevSubRouterV56 = window.renderMasterAdminSubpageById;
+  window.renderMasterAdminSubpageById = function(pageId) {
+    if (pageId === "all-notification-setting") {
+      return renderMasterAdminAllNotificationSettingPage();
+    }
+    if (pageId === "website-branding") {
+      return renderMasterAdminWebsiteBrandingPage();
+    }
+    return typeof prevSubRouterV56 === "function" ? prevSubRouterV56(pageId) : "";
+  };
+
+  // Ensure all-notification-setting & website-branding exist in MASTER_ADMIN_SIDEBAR_ITEMS
+  if (Array.isArray(window.MASTER_ADMIN_SIDEBAR_ITEMS)) {
+    if (!window.MASTER_ADMIN_SIDEBAR_ITEMS.some(x => x && x.id === "website-branding")) {
+      window.MASTER_ADMIN_SIDEBAR_ITEMS.push({ id: "website-branding", label: "Website Branding", icon: "🎨" });
+    }
+    if (!window.MASTER_ADMIN_SIDEBAR_ITEMS.some(x => x && x.id === "all-notification-setting")) {
+      window.MASTER_ADMIN_SIDEBAR_ITEMS.push({ id: "all-notification-setting", label: "All Notification Setting", icon: "🔔" });
+    }
+  }
+
+  // Keep notifications & branding in session save/restore
+  const origSaveSessV56 = window.saveSessionState;
+  window.saveSessionState = function() {
+    if (typeof origSaveSessV56 === "function") origSaveSessV56();
+    try {
+      const raw = localStorage.getItem("nfx_treading_session_v16");
+      const obj = raw ? JSON.parse(raw) : {};
+      obj.notifCategoriesList = state.notifCategoriesList;
+      obj.adminPublishedNotifications = state.adminPublishedNotifications;
+      obj.adminDraftNotifications = state.adminDraftNotifications;
+      obj.brandingSectionConfigs = state.brandingSectionConfigs;
+      obj.brandingDrafts = state.brandingDrafts;
+      obj.nfxBrandingBrandNameDraft = state.nfxBrandingBrandNameDraft;
+      obj.nfxBrandingTaglineDraft = state.nfxBrandingTaglineDraft;
+      localStorage.setItem("nfx_treading_session_v16", JSON.stringify(obj));
+    } catch (e) {}
+  };
+
+  const origRestoreSessV56 = window.restoreSessionState;
+  window.restoreSessionState = function() {
+    const ok = typeof origRestoreSessV56 === "function" ? origRestoreSessV56() : false;
+    try {
+      const raw = localStorage.getItem("nfx_treading_session_v16");
+      if (raw) {
+        const obj = JSON.parse(raw);
+        if (Array.isArray(obj.notifCategoriesList)) state.notifCategoriesList = obj.notifCategoriesList;
+        if (Array.isArray(obj.adminPublishedNotifications)) state.adminPublishedNotifications = obj.adminPublishedNotifications;
+        if (Array.isArray(obj.adminDraftNotifications)) state.adminDraftNotifications = obj.adminDraftNotifications;
+        if (obj.brandingSectionConfigs) state.brandingSectionConfigs = obj.brandingSectionConfigs;
+        if (obj.brandingDrafts) state.brandingDrafts = obj.brandingDrafts;
+        if (obj.nfxBrandingBrandNameDraft) state.nfxBrandingBrandNameDraft = obj.nfxBrandingBrandNameDraft;
+        if (obj.nfxBrandingTaglineDraft) state.nfxBrandingTaglineDraft = obj.nfxBrandingTaglineDraft;
+      }
+    } catch (e) {}
+    return ok;
+  };
+
+  const origRenderAllV56 = window.renderAll;
+  window.renderAll = function() {
+    ensureNotificationDraft();
+    ensureBrandingSectionsStore();
+    syncNotificationsToMemberBellAndPopup();
+    if (typeof origRenderAllV56 === "function") origRenderAllV56();
+    if (typeof applySavedBrandingAndGeneralSettings === "function") applySavedBrandingAndGeneralSettings();
+    renderAdminPopupModalIfSelected();
+  };
+
+  setTimeout(() => {
+    if (typeof restoreSessionState === "function") restoreSessionState();
+    fastRenderAll();
+  }, 50);
 })();
 </script>
 
