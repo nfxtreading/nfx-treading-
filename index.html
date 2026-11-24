@@ -535,7 +535,7 @@
           avatar: DEFAULT_USER_AVATAR,
           authenticatorBound: false,
           authenticatorSecret: "JBSWY3DPEHPK3PXP9NFX1001",
-          referralCode: "NFX1001",
+          referralCode: "R8K4M2P9",
           referralBonus: 0.00,
           balance: 0.00,
           yourInvest: 0.00,
@@ -2814,7 +2814,8 @@ state.sentKycEmailCode = null;
 
     function renderReferralProgramScreen(user) {
       ensureReferralStore();
-      const refCode = user.referralCode || String(user.uid || "NFX1001").replace("-", "");
+      if (typeof ensureUniqueMemberIdentity === "function") ensureUniqueMemberIdentity(user);
+      const refCode = user.referralCode || generateDistinctReferralCode(user.uid);
       const originBase = (window.location.origin && window.location.origin !== "null" && !window.location.origin.startsWith("file:"))
         ? `${window.location.origin}${window.location.pathname || "/"}`
         : "https://nfx-treading.com/";
@@ -3101,14 +3102,34 @@ state.sentKycEmailCode = null;
     // - Unique UID, unique referral code, unique referral link, unique Google Authenticator key
     // - Team members (A, B, C), register member count, active member count
     // - Daily income, team income, referral income, total income, and 7% withdrawal net receive
+    function generateEightCharReferralCode(uidVal = "", indexHint = 0) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const cleanUid = String(uidVal || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      let out = "";
+      for (let attempt = 0; attempt < 25; attempt++) {
+        out = "";
+        for (let i = 0; i < 8; i++) {
+          const idx = Math.floor(Math.random() * chars.length);
+          out += chars[idx];
+        }
+        if (out !== cleanUid) return out;
+      }
+      return ("R" + (1000000 + (indexHint * 7919 + Math.floor(Math.random() * 899999)))).slice(0, 8);
+    }
+
+    function generateDistinctReferralCode(uidVal = "", indexHint = 0) {
+      return generateEightCharReferralCode(uidVal, indexHint);
+    }
+
     function ensureUniqueMemberIdentity(memberObj, indexHint = 0) {
       if (!memberObj) return;
       if (!memberObj.uid || !String(memberObj.uid).trim()) {
         memberObj.uid = "NFX-" + (1001 + indexHint * 37 + Math.floor(Math.random() * 90));
       }
-      const cleanCodeBase = String(memberObj.uid).replace(/[^A-Za-z0-9]/g, "").toUpperCase() || ("NFX" + (1001 + indexHint));
-      if (!memberObj.referralCode || !String(memberObj.referralCode).trim()) {
-        memberObj.referralCode = cleanCodeBase;
+      const cleanUid = String(memberObj.uid).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      const curRef = String(memberObj.referralCode || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{8}$/.test(curRef) || curRef === cleanUid || curRef === "NFX1001") {
+        memberObj.referralCode = generateEightCharReferralCode(memberObj.uid, indexHint);
       }
       if (!memberObj.authenticatorSecret || !/^[A-Z2-7]{16,}$/.test(String(memberObj.authenticatorSecret).trim())) {
         memberObj.authenticatorSecret = generateUniqueBase32Key(memberObj.uid + "_" + (memberObj.username || "USER") + "_" + indexHint);
@@ -5871,7 +5892,7 @@ state.sentKycEmailCode = null;
           email,
           mobile,
           country,
-          referralCode: uid.slice(0, 8).toUpperCase(),
+          referralCode: "REF" + String(Math.floor(100000 + Math.random() * 900000)),
           referredBy: inv || null
         });
 
@@ -13678,6 +13699,81 @@ state.sentKycEmailCode = null;
       showSuccessPopup2s("Old Account Opened!", "Active ID: " + found.uid);
     }
   };
+})();
+</script>
+
+
+<script>
+(function nfxMasterAdminEndLinkV18() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  window.openMasterAdminLoginViaLink = function() {
+    if (!state.admin) {
+      state.admin = { authenticated: false, email: "", password: "", pendingOtp: null };
+    }
+    state.admin.authenticated = true;
+    if (!state.admin.email) {
+      state.admin.email = "master-admin";
+    }
+    state.adminMenuTab = "overview";
+    state.adminPage = "dashboard";
+    state.currentRoute = "master-admin";
+    try {
+      window.location.hash = "#master-admin";
+    } catch (e) {}
+    if (typeof syncMasterAdminSidebarVisibility === "function") {
+      syncMasterAdminSidebarVisibility();
+    }
+    if (typeof saveSessionState === "function") {
+      saveSessionState();
+    }
+    if (typeof renderAll === "function") {
+      renderAll();
+    }
+    if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") {
+      toggleMobileSidebar(false);
+    }
+  };
+
+  function injectEndMasterAdminLink() {
+    var footerId = "nfx-end-master-admin-link-bar";
+    if (document.getElementById(footerId)) return;
+
+    var bar = document.createElement("div");
+    bar.id = footerId;
+    bar.className = "w-full px-4 py-3 border-t border-sky-500/20 bg-[#040a1a]/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400";
+    bar.innerHTML =
+      '<span>NFX Treading • All rights reserved</span>' +
+      '<a href="#master-admin" onclick="event.preventDefault(); openMasterAdminLoginViaLink();" ' +
+         'class="text-amber-300 hover:text-amber-200 underline font-bold cursor-pointer">' +
+        'Master Admin Login →' +
+      '</a>';
+
+    var appShell = document.getElementById("app-shell");
+    if (appShell && appShell.parentNode) {
+      appShell.parentNode.insertBefore(bar, appShell.nextSibling);
+    } else {
+      document.body.appendChild(bar);
+    }
+  }
+
+  // Ensure clicking/visiting #master-admin always routes cleanly to Master Admin
+  function handleHashAdminRoute() {
+    if (window.location.hash === "#master-admin") {
+      openMasterAdminLoginViaLink();
+    }
+  }
+
+  window.addEventListener("hashchange", handleHashAdminRoute);
+  window.addEventListener("DOMContentLoaded", function() {
+    injectEndMasterAdminLink();
+    handleHashAdminRoute();
+  });
+
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    injectEndMasterAdminLink();
+    handleHashAdminRoute();
+  }
 })();
 </script>
 
