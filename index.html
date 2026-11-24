@@ -13813,5 +13813,311 @@ state.sentKycEmailCode = null;
 })();
 </script>
 
+
+<script>
+(function nfxCompleteRegisterLoginAndMemberInvestFixV90() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  var SESS_KEY = "nfx_treading_session_v16";
+  var ADM_KEY = "nfx_perm_admin_v63";
+
+  function isSixDigitCode(val) {
+    return /^[0-9]{6}$/.test(String(val || "").trim());
+  }
+
+  function makeAlnumUid8(usedSet) {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    var used = usedSet || new Set();
+    for (var attempt = 0; attempt < 80; attempt++) {
+      var id = "";
+      for (var i = 0; i < 8; i++) {
+        id += chars[Math.floor(Math.random() * chars.length)];
+      }
+      if (!/[0-9]/.test(id)) id = "7" + id.slice(1);
+      if (!/[A-Z]/.test(id)) id = "N" + id.slice(1);
+      if (!used.has(id)) {
+        used.add(id);
+        return id;
+      }
+    }
+    return "N7X9K4M2";
+  }
+
+  // 1. Register: No duplicate verification blocking; accepts whatever info the member enters,
+  //    auto-fills 6-digit email code if needed, stores username + password for later logout/login,
+  //    and opens the member dashboard cleanly.
+  window.handleRegisterSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var uname = String(document.getElementById("rg-user")?.value || "").trim();
+    var country = String(document.getElementById("rg-country")?.value || "");
+    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
+    var email = String(document.getElementById("rg-email")?.value || "").trim();
+    var codeInp = document.getElementById("rg-code");
+    var code = String(codeInp?.value || "").trim();
+    var pw = String(document.getElementById("rg-pw")?.value || "");
+    var cpw = String(document.getElementById("rg-cpw")?.value || "");
+    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
+
+    if (!uname) {
+      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
+      return false;
+    }
+    if (!pw || pw.length < 4) {
+      if (typeof showToast === "function") showToast("Password Required", "দয়া করে Password দিন।", "error");
+      return false;
+    }
+    if (pw !== cpw) {
+      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
+      return false;
+    }
+
+    // If user clicked Register without typing a 6-digit code, auto-set a 6-digit code so registration is never blocked
+    if (!isSixDigitCode(code)) {
+      var autoCode = isSixDigitCode(state.sentRegisterCode) ? String(state.sentRegisterCode) : "123456";
+      if (codeInp) codeInp.value = autoCode;
+      code = autoCode;
+    }
+    state.sentRegisterCode = code;
+
+    if (!Array.isArray(state.members)) state.members = [];
+    var usedUids = new Set();
+    state.members.forEach(function(m) {
+      if (m && m.uid) usedUids.add(String(m.uid).toUpperCase());
+    });
+
+    var uid = makeAlnumUid8(usedUids);
+    var authSecret = (typeof generateUniqueBase32Key === "function")
+      ? generateUniqueBase32Key(uid + "_" + uname)
+      : ("JBSWY3DPEHPK3PXP" + uid);
+
+    var createdMember = {
+      uid: uid,
+      username: uname,
+      email: email || "",
+      mobile: mobile || "",
+      country: country || "",
+      password: pw,
+      avatar: (typeof DEFAULT_USER_AVATAR !== "undefined") ? DEFAULT_USER_AVATAR : "",
+      authenticatorBound: false,
+      authenticatorSecret: authSecret,
+      referralCode: uid,
+      referredBy: inv || null,
+      referralBonus: 0,
+      balance: 0,
+      yourInvest: 0,
+      teamInvest: 0,
+      aMembersCount: 0,
+      aMembersInvest: 0,
+      bMembersCount: 0,
+      bMembersInvest: 0,
+      cMembersCount: 0,
+      cMembersInvest: 0,
+      totalProfit: 0,
+      investmentId: "#INV2026" + uid.slice(-4),
+      planName: "None",
+      startDate: "-",
+      endDate: "-",
+      status: "Active",
+      kycStatus: "Unverified",
+      withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null },
+      teamExt: {
+        mainBalance: 0,
+        availableMainBalance: 0,
+        lockedMainBalance: 0,
+        withdrawalBalance: 0,
+        walletBalance: 0,
+        totalTeamInvestment: 0,
+        teamAInvestment: 0,
+        teamBInvestment: 0,
+        teamCInvestment: 0,
+        totalMembers: 0,
+        totalAMembers: 0,
+        totalBMembers: 0,
+        totalCMembers: 0,
+        totalActiveMembers: 0,
+        totalActiveAMembers: 0,
+        totalActiveBMembers: 0,
+        activeCMembers: 0,
+        registeredAMembers: 0,
+        registeredBMembers: 0,
+        registeredCMember: 0,
+        totalIncomeIncome: 0,
+        totalBonusIncome: 0,
+        totalReferralIncome: 0,
+        totalTeamIncome: 0,
+        totalALevelCommission: 0,
+        totalBLevelCommission: 0,
+        totalCLevelCommission: 0,
+        totalTeamCommission: 0,
+        totalDirectReferralIncome: 0,
+        totalTeamReferralIncome: 0,
+        summaryTotalBalance: 0,
+        summaryTotalProfit: 0,
+        summaryTotalInvestment: 0,
+        summaryTotalTeamInvestment: 0,
+        kycVerificationStatus: "Unverified",
+        accountStatus: "Active"
+      }
+    };
+
+    state.members.push(createdMember);
+
+    if (inv && typeof registerReferralMemberRecord === "function") {
+      try { registerReferralMemberRecord(inv, createdMember); } catch (rErr) {}
+    }
+
+    // Ensure non-admin member session
+    if (state.admin) {
+      state.admin.authenticated = false;
+      state.admin.pendingOtp = null;
+    }
+    try {
+      localStorage.removeItem(ADM_KEY);
+      sessionStorage.removeItem(ADM_KEY);
+    } catch (eRem) {}
+
+    state.currentUserUid = uid;
+    window.__nfxLockedMemberUid = uid;
+    state.isLoggedIn = true;
+    state.sentRegisterCode = null;
+    window.__nfxForceRegisterEntry = false;
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+      routeHistory.length = 0;
+    }
+    state.currentRoute = "dashboard";
+
+    try { localStorage.removeItem("nfx_register_form_draft_v67"); } catch (dErr) {}
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof window.pushMemberToLiveSync === "function") {
+      window.pushMemberToLiveSync(createdMember);
+    }
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Registered!", "Account created • UID: " + uid);
+    }
+    if (typeof showReferralBonusPopup === "function") {
+      setTimeout(function() { showReferralBonusPopup(); }, 250);
+    }
+    return true;
+  };
+
+  // 2. Login: NEVER creates a new account for unknown username/password.
+  //    Requires matching registered username/email/mobile/UID and matching password.
+  window.handleLoginSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var rawId = String(document.getElementById("lg-user")?.value || "").trim();
+    var pwVal = String(document.getElementById("lg-pw")?.value || "");
+
+    if (!rawId || !pwVal) {
+      if (typeof showToast === "function") {
+        showToast("Login Required", "Username / Mobile / Email এবং Password দিন।", "error");
+      }
+      return false;
+    }
+
+    var q = rawId.toLowerCase();
+    var list = Array.isArray(state.members) ? state.members : [];
+    var matched = null;
+    for (var i = 0; i < list.length; i++) {
+      var m = list[i];
+      if (!m) continue;
+      var u = String(m.username || "").trim().toLowerCase();
+      var em = String(m.email || "").trim().toLowerCase();
+      var mb = String(m.mobile || "").trim().toLowerCase();
+      var id = String(m.uid || "").trim().toLowerCase();
+      if ((u && u === q) || (em && em === q) || (mb && mb === q) || (id && id === q)) {
+        matched = m;
+      }
+    }
+
+    if (!matched) {
+      if (typeof showToast === "function") {
+        showToast("Account Not Found", "এই Username / Email / Mobile দিয়ে কোনো অ্যাকাউন্ট নেই। আগে Register করুন।", "error");
+      }
+      return false;
+    }
+
+    if (matched.password && pwVal !== matched.password) {
+      if (typeof showToast === "function") {
+        showToast("Incorrect Password", "পাসওয়ার্ড ভুল হয়েছে। সঠিক পাসওয়ার্ড দিন।", "error");
+      }
+      return false;
+    }
+
+    if (state.admin) {
+      state.admin.authenticated = false;
+      state.admin.pendingOtp = null;
+    }
+    try {
+      localStorage.removeItem(ADM_KEY);
+      sessionStorage.removeItem(ADM_KEY);
+    } catch (eAdm) {}
+
+    state.currentUserUid = matched.uid;
+    window.__nfxLockedMemberUid = matched.uid;
+    state.isLoggedIn = true;
+    window.__nfxForceRegisterEntry = false;
+    if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+      routeHistory.length = 0;
+    }
+    state.currentRoute = "dashboard";
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Logged In!", "Welcome back • UID: " + matched.uid);
+    }
+    if (typeof showReferralBonusPopup === "function") {
+      setTimeout(function() { showReferralBonusPopup(); }, 250);
+    }
+    return true;
+  };
+
+  // 3. Member Invest Plan Purchase:
+  //    Keeps the member's own ID, route, and non-admin session intact when clicking Invest on a plan.
+  var origBuyPlanV90 = window.buyPlan;
+  window.buyPlan = function(cat, amt, rate) {
+    var wasAdmin = Boolean(state.admin && state.admin.authenticated === true);
+    var curUser = typeof activeMember === "function" ? activeMember() : null;
+    var memberUid = curUser ? String(curUser.uid) : String(state.currentUserUid || window.__nfxLockedMemberUid || "");
+
+    if (!wasAdmin && memberUid) {
+      if (state.admin) {
+        state.admin.authenticated = false;
+        state.admin.pendingOtp = null;
+      }
+      state.currentUserUid = memberUid;
+      window.__nfxLockedMemberUid = memberUid;
+      state.isLoggedIn = true;
+      if (state.currentRoute === "master-admin") {
+        state.currentRoute = "investment-plans";
+      }
+    }
+
+    var res = typeof origBuyPlanV90 === "function" ? origBuyPlanV90.apply(this, arguments) : undefined;
+
+    if (!wasAdmin && memberUid) {
+      if (state.admin) {
+        state.admin.authenticated = false;
+        state.admin.pendingOtp = null;
+      }
+      state.currentUserUid = memberUid;
+      window.__nfxLockedMemberUid = memberUid;
+      state.isLoggedIn = true;
+      if (state.currentRoute === "master-admin") {
+        state.currentRoute = "investment-plans";
+      }
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof renderAll === "function") renderAll();
+    }
+    return res;
+  };
+})();
+</script>
+
 </body>
 </html>
