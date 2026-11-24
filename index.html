@@ -273,11 +273,6 @@
                     👤 Profile
                   </button>
                 </div>
-                <button type="button" onclick="openOldMemberAccessModal()"
-                        class="w-full py-2 px-3 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/55 text-amber-300 font-extrabold text-xs flex items-center justify-between">
-                  <span>🔑 Old Account</span>
-                  <span>→</span>
-                </button>
               </div>
             </div>
           </div>
@@ -520,7 +515,7 @@
     }
 
     const state = {
-      currentRoute: "register",
+      currentRoute: "dashboard",
       brandName: "NFX Treading",
       brandSub: "NFX Treading 2026",
       currentUserUid: "NFX-1001",
@@ -592,7 +587,7 @@
 
     const routeHistory = [];
     const AUTH_PAGES = new Set([]);
-    const ROOT_PAGES = new Set(["register", "login", "dashboard"]);
+    const ROOT_PAGES = new Set(["dashboard"]);
 
 
     function sanitizeLegacyDemoStrings(memberObj) {
@@ -759,7 +754,7 @@
         state.admin.pendingOtp = null;
       }
       routeHistory.length = 0;
-      state.currentRoute = "login";
+      state.currentRoute = "dashboard";
       if (typeof saveSessionState === "function") saveSessionState();
       renderAll();
       if (window.innerWidth < 1024) toggleMobileSidebar(false);
@@ -767,9 +762,8 @@
     }
 
     function navigateTo(route, isBack = false) {
-      if (route === "logout") {
-        logoutMemberAccount();
-        return;
+      if (route === "logout" || route === "register" || route === "login") {
+        route = "dashboard";
       }
       if (route === "login") {
         window.__nfxForceRegisterEntry = false;
@@ -9025,7 +9019,7 @@ state.sentKycEmailCode = null;
     if (state.currentRoute === "login" && !window.__nfxForceRegisterEntry) {
       return false;
     }
-    if (window.__nfxForceRegisterEntry && isReferralOrRegisterEntry()) {
+    if (false && window.__nfxForceRegisterEntry && isReferralOrRegisterEntry()) {
       state.currentRoute = "dashboard";
       if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.add === "function") {
         AUTH_PAGES.add("register");
@@ -9553,7 +9547,7 @@ state.sentKycEmailCode = null;
       var mainView = document.getElementById("main-view");
       if (mainView && typeof renderRouteContent === "function" && typeof activeMember === "function") {
         var prevRoute = (typeof state !== "undefined") ? state.currentRoute : "login";
-        if (typeof state !== "undefined") state.currentRoute = "login";
+        if (typeof state !== "undefined") state.currentRoute = "dashboard";
         mainView.innerHTML = renderRouteContent(activeMember());
         if (typeof state !== "undefined") state.currentRoute = prevRoute;
       }
@@ -13264,7 +13258,77 @@ state.sentKycEmailCode = null;
 
 
 <script>
-(function nfxOldAccountInTopRightMenuV16() {
+(function nfxDirectDashboardOnlyV15() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  function forceDirectDashboard() {
+    state.isLoggedIn = true;
+    if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.clear === "function") {
+      AUTH_PAGES.clear();
+    }
+    if (!state.currentUserUid || String(state.currentUserUid).trim() === "") {
+      state.currentUserUid = (Array.isArray(state.members) && state.members[0] && state.members[0].uid) ? state.members[0].uid : "NFX-1001";
+    }
+    if (state.currentRoute === "register" || state.currentRoute === "login" || state.currentRoute === "logout" || !state.currentRoute) {
+      state.currentRoute = "dashboard";
+    }
+    var sb = document.getElementById("left-sidebar");
+    var hdr = document.getElementById("top-header");
+    var mq = document.getElementById("top-marquee");
+    if (sb) sb.style.display = "";
+    if (hdr) hdr.style.display = "";
+    if (mq) mq.style.display = "";
+  }
+
+  var origNav = window.navigateTo;
+  if (typeof origNav === "function") {
+    window.navigateTo = function(route, isBack) {
+      if (route === "register" || route === "login" || route === "logout") {
+        route = "dashboard";
+      }
+      var res = origNav.call(this, route, isBack);
+      forceDirectDashboard();
+      return res;
+    };
+  }
+
+  var origLogout = window.logoutMemberAccount;
+  if (typeof origLogout === "function") {
+    window.logoutMemberAccount = function() {
+      state.isLoggedIn = true;
+      state.currentRoute = "dashboard";
+      forceDirectDashboard();
+      if (typeof window.renderAll === "function") {
+        try { window.renderAll(); } catch (e) {}
+      }
+    };
+  }
+
+  forceDirectDashboard();
+  window.addEventListener("DOMContentLoaded", function() {
+    forceDirectDashboard();
+    if (typeof window.renderAll === "function") {
+      try { window.renderAll(); } catch (e) {}
+    }
+    setTimeout(function() {
+      forceDirectDashboard();
+      if (typeof window.renderAll === "function") {
+        try { window.renderAll(); } catch (e) {}
+      }
+    }, 200);
+  });
+  window.addEventListener("hashchange", function() {
+    forceDirectDashboard();
+    if (typeof window.renderAll === "function") {
+      try { window.renderAll(); } catch (e) {}
+    }
+  });
+})();
+</script>
+
+
+<script>
+(function nfxOldMemberAccessModalV14_4() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
   function collectAllKnownMembers() {
@@ -13312,7 +13376,7 @@ state.sentKycEmailCode = null;
     var quickListHtml = knownMembers.length > 0
       ? (
         '<div class="space-y-1.5">' +
-          '<div class="text-[11px] text-slate-400 font-bold">Saved Accounts (' + knownMembers.length + ')</div>' +
+          '<div class="text-[11px] text-slate-400 font-bold">Saved Accounts in Browser (' + knownMembers.length + ')</div>' +
           '<div class="max-h-40 overflow-y-auto space-y-1.5 pr-1">' +
             knownMembers.map(function(m) {
               var label = (m.username ? m.username + " • " : "") + m.uid;
@@ -13332,17 +13396,17 @@ state.sentKycEmailCode = null;
     modal.innerHTML =
       '<div class="account-solid-panel rounded-2xl max-w-md w-full p-6 border-2 border-amber-400/75 space-y-4 text-xs text-white">' +
         '<div class="flex items-center justify-between border-b border-sky-500/25 pb-2.5">' +
-          '<h3 class="text-base font-extrabold text-amber-300">Old Account</h3>' +
+          '<h3 class="text-base font-extrabold text-amber-300">Old Member Account Access</h3>' +
           '<button type="button" onclick="closeOldMemberAccessModal()" class="text-slate-300 hover:text-white font-bold">✕</button>' +
         '</div>' +
-        '<p class="text-slate-300 leading-relaxed">Enter your Old Member UID, Referral Code, Email, or Username to return to your old account.</p>' +
+        '<p class="text-slate-300 leading-relaxed">Enter your existing Member UID, Referral Code, Email, or Username to switch directly into your old account.</p>' +
         '<form onsubmit="submitOldMemberUidForm(event)" class="space-y-3">' +
           '<div>' +
             '<label class="text-amber-300 font-bold block mb-1">Old UID / Username / Email</label>' +
-            '<input id="old-member-uid-input" required placeholder="e.g. NFX1001 or your old UID" class="input-box w-full rounded-lg px-3 py-2.5 font-mono text-xs" />' +
+            '<input id="old-member-uid-input" required placeholder="e.g. NFX1001 or your old UID/Username" class="input-box w-full rounded-lg px-3 py-2.5 font-mono text-xs" />' +
           '</div>' +
           '<button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow">' +
-            'Open Old Account →' +
+            'Switch to Old Account →' +
           '</button>' +
         '</form>' +
         quickListHtml +
@@ -13428,6 +13492,191 @@ state.sentKycEmailCode = null;
     if (e && e.preventDefault) e.preventDefault();
     var val = document.getElementById("old-member-uid-input")?.value || "";
     window.switchToExistingMemberIdV14(val);
+  };
+
+  var prevRenderTopBarV14_3 = window.renderTopBar;
+  if (typeof prevRenderTopBarV14_3 === "function") {
+    window.renderTopBar = function(user) {
+      var res = prevRenderTopBarV14_3.apply(this, arguments);
+      var card = document.getElementById("top-account-card");
+      if (card && !document.getElementById("nfx-old-member-switch-btn")) {
+        var btn = document.createElement("button");
+        btn.id = "nfx-old-member-switch-btn";
+        btn.type = "button";
+        btn.onclick = window.openOldMemberAccessModal;
+        btn.className = "w-full py-1.5 px-3 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-300 font-extrabold text-[11px]";
+        btn.textContent = "🔑 Switch / Enter Old Member UID";
+        card.appendChild(btn);
+      }
+      return res;
+    };
+  }
+
+  var prevRenderDashboardScreen = window.renderDashboardScreen;
+  if (typeof prevRenderDashboardScreen === "function") {
+    window.renderDashboardScreen = function(user) {
+      var html = prevRenderDashboardScreen.apply(this, arguments);
+      var oldBtnHtml = '<button type="button" onclick="openOldMemberAccessModal()" class="px-4 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/50 text-amber-300 font-extrabold text-xs shadow">🔑 Old Account</button>';
+      if (html && html.indexOf("openOldMemberAccessModal()") === -1) {
+        html = html.replace("👑 Invest\n              </button>", "👑 Invest\n              </button>\n              " + oldBtnHtml);
+      }
+      return html;
+    };
+  }
+})();
+</script>
+
+
+<script>
+(function nfxOldAccountSearchOnlyV17() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  var matchedOldAccountCandidate = null;
+
+  function findExactOldAccountByQuery(rawQuery) {
+    var q = String(rawQuery || "").trim().toLowerCase();
+    if (!q) return null;
+
+    var pool = [];
+    if (Array.isArray(state.members)) {
+      pool = pool.concat(state.members);
+    }
+    try {
+      var rawSess = localStorage.getItem("nfx_treading_session_v16") || sessionStorage.getItem("nfx_treading_session_v16");
+      if (rawSess) {
+        var sp = JSON.parse(rawSess);
+        if (sp && Array.isArray(sp.members)) pool = pool.concat(sp.members);
+      }
+    } catch (e1) {}
+    try {
+      var rawMap = localStorage.getItem("nfx_treading_realtime_members_v1");
+      if (rawMap) {
+        var mp = JSON.parse(rawMap);
+        if (mp && typeof mp === "object") pool = pool.concat(Object.values(mp));
+      }
+    } catch (e2) {}
+
+    return pool.find(function(m) {
+      if (!m) return false;
+      var uUid = String(m.uid || "").trim().toLowerCase();
+      return Boolean(uUid && uUid === q);
+    }) || null;
+  }
+
+  function renderMatchedOldAccountResultHtml() {
+    var box = document.getElementById("old-account-search-result");
+    if (!box) return;
+
+    if (!matchedOldAccountCandidate) {
+      box.innerHTML = "";
+      return;
+    }
+
+    var m = matchedOldAccountCandidate;
+    box.innerHTML =
+      '<div class="p-3.5 rounded-xl bg-[#040d21] border border-emerald-400/55 space-y-2.5">' +
+        '<div class="flex items-center justify-between gap-2">' +
+          '<div>' +
+            '<div class="text-xs font-extrabold text-emerald-300">✓ Old Account Found</div>' +
+            '<div class="text-xs font-bold text-white mt-0.5">' + (m.username ? m.username + ' • ' : '') + '<span class="font-mono text-sky-300">' + m.uid + '</span></div>' +
+          '</div>' +
+          '<span class="font-mono text-xs font-extrabold text-amber-300">$' + Number(m.balance || 0).toFixed(2) + ' USDT</span>' +
+        '</div>' +
+        '<button type="button" onclick="confirmOpenMatchedOldAccount()" ' +
+          'class="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-white font-extrabold text-xs sm:text-sm shadow">' +
+          'Open Old Account →' +
+        '</button>' +
+      '</div>';
+  }
+
+  window.openOldMemberAccessModal = function() {
+    var topCard = document.getElementById("top-account-card");
+    if (topCard) topCard.classList.add("hidden");
+
+    matchedOldAccountCandidate = null;
+
+    var modal = document.getElementById("nfx-old-member-modal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "nfx-old-member-modal";
+      modal.className = "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4";
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML =
+      '<div class="account-solid-panel rounded-2xl max-w-md w-full p-6 border-2 border-amber-400/75 space-y-4 text-xs text-white">' +
+        '<div class="flex items-center justify-between border-b border-sky-500/25 pb-2.5">' +
+          '<h3 class="text-base font-extrabold text-amber-300">Old Account</h3>' +
+          '<button type="button" onclick="closeOldMemberAccessModal()" class="text-slate-300 hover:text-white font-bold">✕</button>' +
+        '</div>' +
+        '<p class="text-slate-300 leading-relaxed">Enter your exact UID in the search box and click Search. Only an exact UID match will display your old account below.</p>' +
+        '<form onsubmit="searchOldMemberAccountByUid(event)" class="space-y-3">' +
+          '<div>' +
+            '<label class="text-amber-300 font-bold block mb-1">Your UID</label>' +
+            '<div class="flex gap-2">' +
+              '<input id="old-member-uid-input" required placeholder="Enter your UID" class="input-box flex-1 rounded-lg px-3 py-2.5 font-mono text-xs" />' +
+              '<button type="submit" class="px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shrink-0 shadow">' +
+                'Search' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+        '</form>' +
+        '<div id="old-account-search-result" class="space-y-2"></div>' +
+      '</div>';
+
+    modal.classList.remove("hidden");
+  };
+
+  window.closeOldMemberAccessModal = function() {
+    matchedOldAccountCandidate = null;
+    var modal = document.getElementById("nfx-old-member-modal");
+    if (modal) modal.classList.add("hidden");
+  };
+
+  window.searchOldMemberAccountByUid = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var val = String(document.getElementById("old-member-uid-input")?.value || "").trim();
+    if (!val) return;
+
+    var found = findExactOldAccountByQuery(val);
+    var resBox = document.getElementById("old-account-search-result");
+    if (!found) {
+      matchedOldAccountCandidate = null;
+      if (resBox) {
+        resBox.innerHTML =
+          '<div class="p-3 rounded-xl bg-rose-500/15 border border-rose-400/45 text-rose-200 text-xs font-semibold">' +
+            'No old account found for this UID. Please check your exact UID and try again.' +
+          '</div>';
+      }
+      return;
+    }
+
+    matchedOldAccountCandidate = found;
+    renderMatchedOldAccountResultHtml();
+  };
+
+  window.confirmOpenMatchedOldAccount = function() {
+    var found = matchedOldAccountCandidate;
+    if (!found) return;
+    if (!Array.isArray(state.members)) state.members = [];
+    if (!state.members.some(function(x) { return x && x.uid === found.uid; })) {
+      state.members.push(found);
+    }
+
+    state.currentUserUid = found.uid;
+    state.isLoggedIn = true;
+    state.currentRoute = "dashboard";
+    window.__nfxActiveMemberIdLock = found.uid;
+    try {
+      localStorage.setItem("nfx_locked_member_id_v14_2", found.uid);
+      sessionStorage.setItem("nfx_locked_member_id_v14_2", found.uid);
+    } catch (err) {}
+    if (typeof saveSessionState === "function") saveSessionState();
+    closeOldMemberAccessModal();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Old Account Opened!", "Active ID: " + found.uid);
+    }
   };
 })();
 </script>
