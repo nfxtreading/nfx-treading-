@@ -13502,5 +13502,316 @@ state.sentKycEmailCode = null;
 })();
 </script>
 
+
+<script>
+(function() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  function findExistingMemberRecord(uname, email, mobile) {
+    if (!Array.isArray(state.members)) return null;
+    var uLow = String(uname || "").trim().toLowerCase();
+    var eLow = String(email || "").trim().toLowerCase();
+    var mLow = String(mobile || "").trim().toLowerCase();
+    return state.members.find(function(m) {
+      if (!m) return false;
+      if (eLow && String(m.email || "").trim().toLowerCase() === eLow) return true;
+      if (uLow && String(m.username || "").trim().toLowerCase() === uLow) return true;
+      if (mLow && String(m.mobile || "").trim().toLowerCase() === mLow) return true;
+      return false;
+    }) || null;
+  }
+
+  var prevRegisterSubmitFn = window.handleRegisterSubmit;
+  window.handleRegisterSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var uname = String(document.getElementById("rg-user")?.value || "").trim();
+    var country = String(document.getElementById("rg-country")?.value || "");
+    var mobile = String(document.getElementById("rg-mobile")?.value || "").trim();
+    var email = String(document.getElementById("rg-email")?.value || "").trim();
+    var code = String(document.getElementById("rg-code")?.value || "").trim();
+    var pw = String(document.getElementById("rg-pw")?.value || "");
+    var cpw = String(document.getElementById("rg-cpw")?.value || "");
+    var inv = String(document.getElementById("rg-inv")?.value || "").trim();
+
+    if (!uname) {
+      if (typeof showToast === "function") showToast("Username Required", "দয়া করে Username দিন।", "error");
+      return false;
+    }
+    if (!pw || pw.length < 6) {
+      if (typeof showToast === "function") showToast("Password Required", "দয়া করে অন্তত ৬ অক্ষরের Password দিন।", "error");
+      return false;
+    }
+    if (pw !== cpw) {
+      if (typeof showToast === "function") showToast("Password Mismatch", "Password এবং Confirm Password এক হতে হবে।", "error");
+      return false;
+    }
+    if (!/^[0-9]{6}$/.test(code)) {
+      if (typeof showToast === "function") showToast("৬ সংখ্যার কোড দিন", "Email Code বক্সে যেকোনো ৬ সংখ্যার কোড দিন।", "error");
+      return false;
+    }
+
+    var matchedExisting = findExistingMemberRecord(uname, email, mobile);
+
+    // Try Firebase Auth createUser; if auth/email-already-in-use occurs, sign in with email & password and keep existing UID/profile
+    if (window.NFXFirebase && window.NFXFirebase.auth && email && pw) {
+      try {
+        if (typeof window.NFXFirebase.createUserWithEmailAndPassword === "function") {
+          var createdCred = await window.NFXFirebase.createUserWithEmailAndPassword(window.NFXFirebase.auth, email, pw);
+          if (createdCred && createdCred.user && createdCred.user.uid && !matchedExisting) {
+            // Keep 8-char member UID unless matchedExisting already has one
+          }
+        }
+      } catch (fbCreateErr) {
+        var errCode = String(fbCreateErr && fbCreateErr.code || "");
+        if (errCode === "auth/email-already-in-use" || String(fbCreateErr && fbCreateErr.message || "").indexOf("email-already-in-use") !== -1) {
+          try {
+            if (typeof window.NFXFirebase.signInWithEmailAndPassword === "function") {
+              await window.NFXFirebase.signInWithEmailAndPassword(window.NFXFirebase.auth, email, pw);
+            }
+          } catch (fbSignInErr) {}
+        }
+      }
+    }
+
+    // If an existing member record exists for this email/username/mobile, preserve its UID & data while updating username/password/mobile
+    if (matchedExisting) {
+      if (uname) matchedExisting.username = uname;
+      if (email) matchedExisting.email = email;
+      if (mobile) matchedExisting.mobile = mobile;
+      if (country) matchedExisting.country = country;
+      if (pw) matchedExisting.password = pw;
+      if (inv && !matchedExisting.referredBy) matchedExisting.referredBy = inv;
+      state.currentUserUid = matchedExisting.uid;
+      state.isLoggedIn = true;
+      state.sentRegisterCode = null;
+      if (typeof routeHistory !== "undefined" && Array.isArray(routeHistory)) {
+        routeHistory.length = 0;
+      }
+      state.currentRoute = "dashboard";
+      try { localStorage.removeItem("nfx_register_form_draft_v67"); } catch (dErr) {}
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof window.pushMemberToLiveSync === "function") {
+        window.pushMemberToLiveSync(matchedExisting);
+      }
+      if (typeof renderAll === "function") renderAll();
+      if (typeof showSuccessPopup2s === "function") {
+        showSuccessPopup2s("Welcome Back!", "Account synced. UID: " + matchedExisting.uid);
+      }
+      setTimeout(function() {
+        if (typeof showReferralBonusPopup === "function") showReferralBonusPopup();
+      }, 250);
+      return true;
+    }
+
+    if (typeof prevRegisterSubmitFn === "function") {
+      return await prevRegisterSubmitFn.apply(this, arguments);
+    }
+    return false;
+  };
+})();
+</script>
+
+
+<script>
+(function nfxDeterministicSessionAndSyncV75() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  var SESS_KEY = "nfx_treading_session_v16";
+  var ADM_KEY = "nfx_perm_admin_v63";
+  var REQ_KEY = "nfx_treading_realtime_requests_v1";
+  var LIVE_MAP_KEY = "nfx_treading_realtime_members_v1";
+
+  function readJson(storage, k) {
+    try {
+      var r = storage.getItem(k);
+      return r ? JSON.parse(r) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeJson(storage, k, v) {
+    try {
+      storage.setItem(k, JSON.stringify(v));
+    } catch (e) {}
+  }
+
+  function syncSessionSnapshots() {
+    var curUid = state.currentUserUid || window.__nfxLockedMemberUid || null;
+    if (state.isLoggedIn && curUid) {
+      window.__nfxLockedMemberUid = String(curUid);
+    }
+    var sess = readJson(localStorage, SESS_KEY) || readJson(sessionStorage, SESS_KEY) || {};
+    sess.isLoggedIn = Boolean(state.isLoggedIn);
+    if (curUid) sess.currentUserUid = curUid;
+    if (state.currentRoute) sess.currentRoute = state.currentRoute;
+    if (Array.isArray(state.members) && state.members.length > 0) sess.members = state.members;
+    if (state.extraData) sess.extraData = state.extraData;
+    if (Array.isArray(state.depositRequests)) sess.depositRequests = state.depositRequests;
+    if (Array.isArray(state.withdrawRequests)) sess.withdrawRequests = state.withdrawRequests;
+    if (Array.isArray(state.kycSubmissions)) sess.kycSubmissions = state.kycSubmissions;
+    if (state.admin) {
+      sess.adminAuthenticated = Boolean(state.admin.authenticated);
+      if (state.admin.email) sess.adminEmail = state.admin.email;
+    }
+    if (state.adminPage) sess.adminPage = state.adminPage;
+    if (state.adminMenuTab) sess.adminMenuTab = state.adminMenuTab;
+    writeJson(localStorage, SESS_KEY, sess);
+    writeJson(sessionStorage, SESS_KEY, sess);
+
+    if (state.admin && state.admin.authenticated) {
+      var admSnap = {
+        authenticated: true,
+        role: "master_admin",
+        email: state.admin.email || "MasterAdmin",
+        username: state.admin.username || state.admin.email || "MasterAdmin",
+        adminPage: state.adminPage || "dashboard",
+        adminMenuTab: state.adminMenuTab || "overview"
+      };
+      writeJson(localStorage, ADM_KEY, admSnap);
+      writeJson(sessionStorage, ADM_KEY, admSnap);
+    }
+  }
+
+  function restoreSessionSnapshots() {
+    var sess = readJson(localStorage, SESS_KEY) || readJson(sessionStorage, SESS_KEY);
+    var admSnap = readJson(localStorage, ADM_KEY) || readJson(sessionStorage, ADM_KEY);
+    var reqSnap = readJson(localStorage, REQ_KEY);
+    var liveMap = readJson(localStorage, LIVE_MAP_KEY);
+
+    if (sess) {
+      if (Array.isArray(sess.members) && sess.members.length > 0) {
+        state.members = sess.members;
+      }
+      if (sess.extraData) {
+        state.extraData = Object.assign({}, state.extraData || {}, sess.extraData);
+      }
+      if (sess.currentUserUid) {
+        state.currentUserUid = sess.currentUserUid;
+        window.__nfxLockedMemberUid = String(sess.currentUserUid);
+      }
+      if (sess.isLoggedIn === true) {
+        state.isLoggedIn = true;
+      }
+      if (Array.isArray(sess.depositRequests)) {
+        state.depositRequests = sess.depositRequests;
+      }
+      if (Array.isArray(sess.withdrawRequests)) {
+        state.withdrawRequests = sess.withdrawRequests;
+      }
+      if (Array.isArray(sess.kycSubmissions)) {
+        state.kycSubmissions = sess.kycSubmissions;
+      }
+      if (sess.adminAuthenticated === true) {
+        state.admin = Object.assign({}, state.admin || {}, {
+          authenticated: true,
+          email: sess.adminEmail || (state.admin && state.admin.email) || "MasterAdmin"
+        });
+        state.isLoggedIn = true;
+      }
+      if (sess.currentRoute && (state.isLoggedIn || (state.admin && state.admin.authenticated))) {
+        state.currentRoute = sess.currentRoute;
+      }
+    }
+
+    if (admSnap && admSnap.authenticated === true) {
+      state.admin = Object.assign({}, state.admin || {}, {
+        authenticated: true,
+        email: admSnap.email || admSnap.username || "MasterAdmin",
+        username: admSnap.username || admSnap.email || "MasterAdmin"
+      });
+      state.isLoggedIn = true;
+      if (admSnap.adminPage) state.adminPage = admSnap.adminPage;
+      if (admSnap.adminMenuTab) state.adminMenuTab = admSnap.adminMenuTab;
+      if (!state.currentRoute || state.currentRoute === "register" || state.currentRoute === "login") {
+        state.currentRoute = "master-admin";
+      }
+    }
+
+    if (reqSnap) {
+      if (Array.isArray(reqSnap.deposits) && reqSnap.deposits.length > 0) {
+        state.depositRequests = reqSnap.deposits;
+      }
+      if (Array.isArray(reqSnap.withdraws) && reqSnap.withdraws.length > 0) {
+        state.withdrawRequests = reqSnap.withdraws;
+      }
+      if (Array.isArray(reqSnap.kycs) && reqSnap.kycs.length > 0) {
+        state.kycSubmissions = reqSnap.kycs;
+      }
+    }
+
+    if (liveMap && Array.isArray(state.members)) {
+      Object.keys(liveMap).forEach(function(uidKey) {
+        var incoming = liveMap[uidKey];
+        if (!incoming || !incoming.uid) return;
+        var idx = state.members.findIndex(function(m) { return m && String(m.uid) === String(incoming.uid); });
+        if (idx >= 0) {
+          state.members[idx] = Object.assign({}, state.members[idx], incoming);
+        }
+      });
+    }
+  }
+
+  // Keep member UID intact on back/navigation
+  var prevNav75 = window.navigateTo;
+  if (typeof prevNav75 === "function") {
+    window.navigateTo = function(route, isBack) {
+      var lockedUid = state.isLoggedIn ? (state.currentUserUid || window.__nfxLockedMemberUid) : null;
+      var out = prevNav75.apply(this, arguments);
+      if (state.isLoggedIn && lockedUid) {
+        state.currentUserUid = lockedUid;
+        window.__nfxLockedMemberUid = String(lockedUid);
+      }
+      syncSessionSnapshots();
+      return out;
+    };
+  }
+
+  var prevBack75 = window.goBackStep;
+  if (typeof prevBack75 === "function") {
+    window.goBackStep = function() {
+      var lockedUid = state.isLoggedIn ? (state.currentUserUid || window.__nfxLockedMemberUid) : null;
+      var out = prevBack75.apply(this, arguments);
+      if (state.isLoggedIn && lockedUid) {
+        state.currentUserUid = lockedUid;
+        window.__nfxLockedMemberUid = String(lockedUid);
+        if (typeof window.renderAll === "function") window.renderAll();
+      }
+      syncSessionSnapshots();
+      return out;
+    };
+  }
+
+  // Ensure all member requests (Deposit, Withdraw, KYC) write to REQ_KEY and Firestore immediately
+  var prevSyncReqs75 = window.syncAllRequestsToMasterAdmin;
+  window.syncAllRequestsToMasterAdmin = function(broadcast) {
+    if (typeof prevSyncReqs75 === "function") {
+      try { prevSyncReqs75.apply(this, arguments); } catch (e) {}
+    }
+    writeJson(localStorage, REQ_KEY, {
+      deposits: Array.isArray(state.depositRequests) ? state.depositRequests : [],
+      withdraws: Array.isArray(state.withdrawRequests) ? state.withdrawRequests : [],
+      kycs: Array.isArray(state.kycSubmissions) ? state.kycSubmissions : [],
+      updatedAt: Date.now()
+    });
+    syncSessionSnapshots();
+  };
+
+  // Run after all earlier DOMContentLoaded hooks
+  window.addEventListener("DOMContentLoaded", function() {
+    restoreSessionSnapshots();
+    setTimeout(function() {
+      restoreSessionSnapshots();
+      if (typeof window.renderAll === "function") {
+        try { window.renderAll(); } catch (e) {}
+      }
+      syncSessionSnapshots();
+    }, 200);
+  });
+})();
+</script>
+
 </body>
 </html>
