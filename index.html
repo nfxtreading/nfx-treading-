@@ -15655,5 +15655,1345 @@ state.sentKycEmailCode = null;
 })();
 </script>
 
+
+
+
+
+<script>
+(function nfxCleanTeamOnlySync() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // Ensure 'team' is in MASTER_ADMIN_SIDEBAR_ITEMS right under 'dashboard'
+  if (Array.isArray(window.MASTER_ADMIN_SIDEBAR_ITEMS)) {
+    const idxTeam = window.MASTER_ADMIN_SIDEBAR_ITEMS.findIndex(x => x && x.id === "team");
+    if (idxTeam === -1) {
+      window.MASTER_ADMIN_SIDEBAR_ITEMS.splice(1, 0, { id: "team", label: "TEAM", icon: "👥" });
+    } else if (idxTeam > 1) {
+      const [item] = window.MASTER_ADMIN_SIDEBAR_ITEMS.splice(idxTeam, 1);
+      window.MASTER_ADMIN_SIDEBAR_ITEMS.splice(1, 0, item);
+    }
+  }
+
+  // Ensure 'team' is in member SIDEBAR_LINKS
+  if (Array.isArray(window.SIDEBAR_LINKS)) {
+    if (!window.SIDEBAR_LINKS.some(x => x && x.id === "team")) {
+      const invIdx = window.SIDEBAR_LINKS.findIndex(x => x && x.id === "investment");
+      const pos = invIdx >= 0 ? invIdx + 1 : 9;
+      window.SIDEBAR_LINKS.splice(pos, 0, { id: "team", label: "TEAM", icon: "👥" });
+    }
+  }
+
+  Object.assign(state, {
+    nfxTeamSearchQuery: state.nfxTeamSearchQuery || "",
+    nfxTeamActiveSearch: state.nfxTeamActiveSearch || "",
+    nfxTeamSelectedUid: state.nfxTeamSelectedUid || null,
+    nfxTeamEditingRow: state.nfxTeamEditingRow || null,
+    nfxTeamRowDrafts: state.nfxTeamRowDrafts || {}
+  });
+
+  function ensureMemberTeamStatsObj(m) {
+    if (!m) return {};
+    if (!m.memberTeamStats || typeof m.memberTeamStats !== "object") {
+      m.memberTeamStats = {
+        aRegisterCount: Number(m.aMembersCount || 0),
+        bRegisterCount: Number(m.bMembersCount || 0),
+        cRegisterCount: Number(m.cMembersCount || 0),
+        aActiveCount: Number(state.extraData?.activeAMembersCount || 0),
+        bActiveCount: Number(state.extraData?.activeBMembersCount || 0),
+        cActiveCount: Number(state.extraData?.activeCMembersCount || 0),
+        teamAInvest: Number(m.aMembersInvest || 0),
+        teamBInvest: Number(m.bMembersInvest || 0),
+        teamCInvest: Number(m.cMembersInvest || 0)
+      };
+    }
+    return m.memberTeamStats;
+  }
+
+  function ensureFullTeamRecord(m) {
+    if (!m) return {};
+    if (!m.teamDetails || typeof m.teamDetails !== "object") {
+      m.teamDetails = {};
+    }
+    const td = m.teamDetails;
+    const st = ensureMemberTeamStatsObj(m);
+
+    if (td.mainBalance === undefined) td.mainBalance = Number(m.balance || 0);
+    if (td.availableMainBalance === undefined) td.availableMainBalance = Number(state.extraData?.availableBalance ?? m.balance ?? 0);
+    if (td.lockedMainBalance === undefined) td.lockedMainBalance = Number(state.extraData?.lockedBalance ?? 0);
+    if (td.withdrawalBalance === undefined) td.withdrawalBalance = Number(m.balance || 0);
+    if (td.walletBalance === undefined) td.walletBalance = Number(m.balance || 0);
+
+    if (td.totalTeamInvestment === undefined) td.totalTeamInvestment = Number(m.teamInvest || 0);
+    if (td.teamAInvestment === undefined) td.teamAInvestment = Number(m.aMembersInvest || st.teamAInvest || 0);
+    if (td.teamBInvestment === undefined) td.teamBInvestment = Number(m.bMembersInvest || st.teamBInvest || 0);
+    if (td.teamCInvestment === undefined) td.teamCInvestment = Number(m.cMembersInvest || st.teamCInvest || 0);
+
+    const aCnt = Number(m.aMembersCount || st.aRegisterCount || 0);
+    const bCnt = Number(m.bMembersCount || st.bRegisterCount || 0);
+    const cCnt = Number(m.cMembersCount || st.cRegisterCount || 0);
+    if (td.totalMembers === undefined) td.totalMembers = aCnt + bCnt + cCnt;
+    if (td.totalAMembers === undefined) td.totalAMembers = aCnt;
+    if (td.totalBMembers === undefined) td.totalBMembers = bCnt;
+    if (td.totalCMembers === undefined) td.totalCMembers = cCnt;
+    if (td.totalActiveMembers === undefined) {
+      td.totalActiveMembers = Number(st.aActiveCount || 0) + Number(st.bActiveCount || 0) + Number(st.cActiveCount || 0);
+    }
+    if (td.totalActiveAMembers === undefined) td.totalActiveAMembers = Number(st.aActiveCount || 0);
+    if (td.totalActiveBMembers === undefined) td.totalActiveBMembers = Number(st.bActiveCount || 0);
+    if (td.activeCMembers === undefined) td.activeCMembers = Number(st.cActiveCount || 0);
+    if (td.registeredAMembers === undefined) td.registeredAMembers = aCnt;
+    if (td.registeredBMembers === undefined) td.registeredBMembers = bCnt;
+    if (td.registeredCMember === undefined) td.registeredCMember = cCnt;
+
+    if (td.totalIncomeIncome === undefined) td.totalIncomeIncome = Number(state.extraData?.totalIncomeToday ?? m.totalProfit ?? 0);
+    if (td.totalBonusIncome === undefined) td.totalBonusIncome = Number(m.referralBonus || 0);
+    if (td.totalReferralIncome === undefined) td.totalReferralIncome = Number(state.extraData?.referralIncomeToday ?? m.referralBonus ?? 0);
+    if (td.totalTeamIncome === undefined) td.totalTeamIncome = Number(state.extraData?.teamIncomeToday || 0);
+
+    if (td.totalALevelCommission === undefined) td.totalALevelCommission = 0;
+    if (td.totalBLevelCommission === undefined) td.totalBLevelCommission = 0;
+    if (td.totalCLevelCommission === undefined) td.totalCLevelCommission = 0;
+    if (td.totalTeamCommission === undefined) td.totalTeamCommission = Number(state.extraData?.teamIncomeToday || 0);
+    if (td.totalDirectReferralIncome === undefined) td.totalDirectReferralIncome = Number(m.referralBonus || 0);
+    if (td.totalTeamReferralIncome === undefined) td.totalTeamReferralIncome = 0;
+    if (td.summaryBonusIncome === undefined) td.summaryBonusIncome = Number(m.referralBonus || 0);
+    if (td.totalEarnedIncome === undefined) td.totalEarnedIncome = Number(m.totalProfit || 0);
+
+    if (td.totalDepositAmount === undefined) td.totalDepositAmount = Number(state.extraData?.totalDeposit || 0);
+    if (td.totalSuccessfulDeposits === undefined) td.totalSuccessfulDeposits = 0;
+    if (td.totalPendingDeposits === undefined) td.totalPendingDeposits = 0;
+    if (td.totalProcessingDeposits === undefined) td.totalProcessingDeposits = 0;
+    if (td.totalRejectedDeposits === undefined) td.totalRejectedDeposits = 0;
+    if (td.totalFailedDeposits === undefined) td.totalFailedDeposits = 0;
+    if (td.lastDepositAmount === undefined) td.lastDepositAmount = 0;
+    if (td.lastDepositDate === undefined) td.lastDepositDate = "-";
+    if (td.totalDepositTransactions === undefined) td.totalDepositTransactions = 0;
+
+    if (td.totalWithdrawalRequested === undefined) td.totalWithdrawalRequested = Number(state.extraData?.totalWithdraw || 0);
+    if (td.totalWithdrawalPaid === undefined) td.totalWithdrawalPaid = 0;
+    if (td.totalPeithdrawal === undefined) td.totalPeithdrawal = 0;
+    if (td.totalProcessingWithdrawal === undefined) td.totalProcessingWithdrawal = 0;
+    if (td.totalRejectedWithdrawal === undefined) td.totalRejectedWithdrawal = 0;
+    if (td.totalFailedWithdrawal === undefined) td.totalFailedWithdrawal = 0;
+    if (td.totalWithdrawalFee === undefined) td.totalWithdrawalFee = 0;
+    if (td.totalNetWithdrawal === undefined) td.totalNetWithdrawal = 0;
+    if (td.lastWithdrawalAmount === undefined) td.lastWithdrawalAmount = 0;
+    if (td.lastWithdrawalDate === undefined) td.lastWithdrawalDate = "-";
+    if (td.totalWithdrawalTransactions === undefined) td.totalWithdrawalTransactions = 0;
+
+    if (td.accountStatus === undefined) td.accountStatus = m.status || "Inactive";
+    if (td.kycVerificationStatus === undefined) td.kycVerificationStatus = m.kycStatus || "Unverified";
+    if (td.emailVerificationStatus === undefined) td.emailVerificationStatus = m.email ? "Verified" : "Unverified";
+    if (td.mobileVerificationStatus === undefined) td.mobileVerificationStatus = m.mobile ? "Verified" : "Unverified";
+    if (td.googleAuthenticatorStatus === undefined) td.googleAuthenticatorStatus = m.authenticatorBound ? "Bound" : "Not Bound";
+    if (td.investmentAccountStatus === undefined) td.investmentAccountStatus = Number(m.yourInvest || 0) > 0 ? "Active" : "Inactive";
+    if (td.withdrawalAccountStatus === undefined) td.withdrawalAccountStatus = "Active";
+    if (td.accountCreationDate === undefined) td.accountCreationDate = m.registeredAt || "20 Nov 2026";
+    if (td.lastLoginDate === undefined) td.lastLoginDate = m.lastLoginDate || "24 Nov 2026";
+    if (td.lastActivityDate === undefined) td.lastActivityDate = m.lastActivityDate || "24 Nov 2026";
+
+    if (td.teamAInvestmentHistory === undefined) td.teamAInvestmentHistory = 0;
+    if (td.teamBInvestmentHistory === undefined) td.teamBInvestmentHistory = 0;
+    if (td.teamCInvestmentHistory === undefined) td.teamCInvestmentHistory = 0;
+    if (td.teamCommissionHistory === undefined) td.teamCommissionHistory = 0;
+    if (td.referralIncomeHistory === undefined) td.referralIncomeHistory = 0;
+    if (td.bonusHistory === undefined) td.bonusHistory = 0;
+    if (td.depositHistory === undefined) td.depositHistory = 0;
+    if (td.withdrawalHistory === undefined) td.withdrawalHistory = 0;
+    if (td.balanceCreditHistory === undefined) td.balanceCreditHistory = 0;
+    if (td.balanceDebitHistory === undefined) td.balanceDebitHistory = 0;
+    if (td.balanceAdjustmentHistory === undefined) td.balanceAdjustmentHistory = 0;
+    if (td.pendingTransactions === undefined) td.pendingTransactions = 0;
+    if (td.successfulTransactions === undefined) td.successfulTransactions = 0;
+    if (td.rejectedTransactions === undefined) td.rejectedTransactions = 0;
+    if (td.reversedTransactions === undefined) td.reversedTransactions = 0;
+
+    if (!td.txMeta || typeof td.txMeta !== "object") {
+      td.txMeta = {
+        transactionId: "TXN-" + String(m.uid || "1001").replace(/[^A-Za-z0-9]/g, ""),
+        username: m.username || "Member",
+        uid: m.uid || "NFX-1001",
+        transactionType: "Wallet Sync",
+        amount: Number(m.balance || 0),
+        dateTime: "24 Nov 2026 11:27 PM",
+        transactionStatus: "Completed",
+        previousBalance: Number(m.balance || 0),
+        updatedBalance: Number(m.balance || 0),
+        transactionDescription: "Member account ledger record"
+      };
+    } else {
+      td.txMeta.uid = m.uid;
+    }
+
+    return td;
+  }
+
+  function syncTeamRowToMemberAndGlobalState(m, fieldKey, rawVal) {
+    if (!m) return;
+    const td = ensureFullTeamRecord(m);
+    const st = ensureMemberTeamStatsObj(m);
+    const numVal = parseFloat(rawVal);
+    const isNum = !isNaN(numVal) && String(rawVal).trim() !== "";
+
+    if (fieldKey === "mainBalance" || fieldKey === "withdrawalBalance" || fieldKey === "walletBalance") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.mainBalance = v;
+      td.walletBalance = v;
+      td.withdrawalBalance = v;
+      td.availableMainBalance = v;
+      m.balance = v;
+      if (state.extraData && state.currentUserUid === m.uid) {
+        state.extraData.availableBalance = v;
+        state.extraData.totalBalanceWallet = v;
+      }
+    } else if (fieldKey === "availableMainBalance") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.availableMainBalance = v;
+      m.balance = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.availableBalance = v;
+    } else if (fieldKey === "lockedMainBalance") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.lockedMainBalance = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.lockedBalance = v;
+    } else if (fieldKey === "totalTeamInvestment") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.totalTeamInvestment = v;
+      m.teamInvest = v;
+    } else if (fieldKey === "teamAInvestment") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.teamAInvestment = v;
+      st.teamAInvest = v;
+      m.aMembersInvest = v;
+    } else if (fieldKey === "teamBInvestment") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.teamBInvestment = v;
+      st.teamBInvest = v;
+      m.bMembersInvest = v;
+    } else if (fieldKey === "teamCInvestment") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.teamCInvestment = v;
+      st.teamCInvest = v;
+      m.cMembersInvest = v;
+    } else if (fieldKey === "totalMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalMembers = v;
+    } else if (fieldKey === "totalAMembers" || fieldKey === "registeredAMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalAMembers = v;
+      td.registeredAMembers = v;
+      st.aRegisterCount = v;
+      m.aMembersCount = v;
+    } else if (fieldKey === "totalBMembers" || fieldKey === "registeredBMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalBMembers = v;
+      td.registeredBMembers = v;
+      st.bRegisterCount = v;
+      m.bMembersCount = v;
+    } else if (fieldKey === "totalCMembers" || fieldKey === "registeredCMember") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalCMembers = v;
+      td.registeredCMember = v;
+      st.cRegisterCount = v;
+      m.cMembersCount = v;
+    } else if (fieldKey === "totalActiveMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalActiveMembers = v;
+    } else if (fieldKey === "totalActiveAMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalActiveAMembers = v;
+      st.aActiveCount = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.activeAMembersCount = v;
+    } else if (fieldKey === "totalActiveBMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.totalActiveBMembers = v;
+      st.bActiveCount = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.activeBMembersCount = v;
+    } else if (fieldKey === "activeCMembers") {
+      const v = isNum ? Math.max(0, Math.round(numVal)) : 0;
+      td.activeCMembers = v;
+      st.cActiveCount = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.activeCMembersCount = v;
+    } else if (fieldKey === "totalIncomeIncome" || fieldKey === "totalEarnedIncome") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.totalIncomeIncome = v;
+      td.totalEarnedIncome = v;
+      m.totalProfit = v;
+      if (state.extraData && state.currentUserUid === m.uid) {
+        state.extraData.totalIncomeToday = v;
+        state.extraData.totalProfitWallet = v;
+      }
+    } else if (fieldKey === "totalBonusIncome" || fieldKey === "summaryBonusIncome" || fieldKey === "totalReferralIncome" || fieldKey === "totalDirectReferralIncome") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.totalBonusIncome = v;
+      td.summaryBonusIncome = v;
+      td.totalReferralIncome = v;
+      td.totalDirectReferralIncome = v;
+      m.referralBonus = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.referralIncomeToday = v;
+    } else if (fieldKey === "totalTeamIncome" || fieldKey === "totalTeamCommission") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.totalTeamIncome = v;
+      td.totalTeamCommission = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.teamIncomeToday = v;
+    } else if (fieldKey === "totalDepositAmount") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.totalDepositAmount = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.totalDeposit = v;
+    } else if (fieldKey === "totalWithdrawalRequested") {
+      const v = isNum ? Number(numVal.toFixed(2)) : 0;
+      td.totalWithdrawalRequested = v;
+      if (state.extraData && state.currentUserUid === m.uid) state.extraData.totalWithdraw = v;
+    } else if (fieldKey === "accountStatus") {
+      td.accountStatus = String(rawVal);
+      m.status = String(rawVal);
+    } else if (fieldKey === "kycVerificationStatus") {
+      td.kycVerificationStatus = String(rawVal);
+      m.kycStatus = String(rawVal);
+      if (String(rawVal).toLowerCase() === "verified" || String(rawVal).toLowerCase() === "successful") {
+        m.accountVerificationStatus = "Successful";
+      }
+    } else if (fieldKey === "googleAuthenticatorStatus") {
+      td.googleAuthenticatorStatus = String(rawVal);
+      m.authenticatorBound = String(rawVal).toLowerCase().includes("bound");
+    } else if (fieldKey.startsWith("txMeta.")) {
+      const subK = fieldKey.replace("txMeta.", "");
+      td.txMeta[subK] = isNum && subK !== "transactionId" && subK !== "uid" ? Number(numVal.toFixed(2)) : String(rawVal);
+      if (subK === "username") m.username = String(rawVal);
+      if (subK === "updatedBalance" && isNum) m.balance = Number(numVal.toFixed(2));
+    } else {
+      td[fieldKey] = isNum ? Number(numVal.toFixed(2)) : String(rawVal);
+    }
+  }
+
+  window.nfxTeamStartEditRow = function(uid, fieldKey, currentVal) {
+    if (!state.admin || !state.admin.authenticated) return;
+    const rowId = uid + "::" + fieldKey;
+    state.nfxTeamEditingRow = rowId;
+    state.nfxTeamRowDrafts[rowId] = String(currentVal ?? "");
+    renderAll();
+  };
+
+  window.nfxTeamUpdateDraft = function(uid, fieldKey, val) {
+    const rowId = uid + "::" + fieldKey;
+    state.nfxTeamRowDrafts[rowId] = val;
+  };
+
+  window.nfxTeamSaveRow = function(uid, fieldKey, fallbackVal) {
+    if (!state.admin || !state.admin.authenticated) return;
+    const m = (state.members || []).find(x => x && x.uid === uid);
+    if (!m) return;
+    const rowId = uid + "::" + fieldKey;
+    const inpEl = document.getElementById("nfx-tm-inp-" + encodeURIComponent(rowId));
+    const nextVal = inpEl ? inpEl.value : (state.nfxTeamRowDrafts[rowId] !== undefined ? state.nfxTeamRowDrafts[rowId] : fallbackVal);
+
+    syncTeamRowToMemberAndGlobalState(m, fieldKey, nextVal);
+    state.nfxTeamRowDrafts[rowId] = String(nextVal);
+    state.nfxTeamEditingRow = null;
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof window.syncMemberEditToFirestore === "function") {
+      window.syncMemberEditToFirestore(m.uid, {
+        uid: m.uid,
+        username: m.username || "",
+        email: m.email || "",
+        mobile: m.mobile || "",
+        balance: Number(m.balance || 0),
+        yourInvest: Number(m.yourInvest || 0),
+        teamInvest: Number(m.teamInvest || 0),
+        totalProfit: Number(m.totalProfit || 0),
+        kycStatus: m.kycStatus || "Unverified",
+        status: m.status || "Active"
+      });
+    }
+    renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Saved & Synced!", `${fieldKey} updated immediately for ${m.uid}.`);
+    }
+  };
+
+  function renderSingleEditableRow(uid, fieldKey, label, valueText, unitText = "USDT") {
+    const rowId = uid + "::" + fieldKey;
+    const isEditing = state.nfxTeamEditingRow === rowId;
+    const draftVal = state.nfxTeamRowDrafts[rowId] !== undefined ? state.nfxTeamRowDrafts[rowId] : valueText;
+    const formattedDisplay = unitText ? `${valueText} ${unitText}` : `${valueText}`;
+
+    return `
+      <div class="p-3 rounded-xl bg-[#05122b] border ${isEditing ? 'border-amber-400' : 'border-sky-500/25'} flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div class="min-w-0 flex-1">
+          <div class="text-[11px] font-bold text-slate-300">${label}</div>
+          ${isEditing
+            ? `<input id="nfx-tm-inp-${encodeURIComponent(rowId)}" value="${String(draftVal).replace(/"/g, '&quot;')}"
+                      oninput="nfxTeamUpdateDraft('${uid}', '${fieldKey}', this.value)"
+                      class="input-box mt-1.5 w-full rounded-lg px-3 py-1.5 font-mono text-xs text-amber-200" />`
+            : `<div class="font-mono font-extrabold text-amber-300 text-xs sm:text-sm mt-0.5">${formattedDisplay}</div>`
+          }
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" onclick="nfxTeamStartEditRow('${uid}', '${fieldKey}', '${String(valueText).replace(/'/g, "\\'")}')"
+                  class="px-3 py-1.5 rounded-lg bg-sky-500/25 hover:bg-sky-500/40 border border-sky-400/45 text-sky-200 font-bold text-[11px]">
+            Edit
+          </button>
+          <button type="button" onclick="nfxTeamSaveRow('${uid}', '${fieldKey}', '${String(valueText).replace(/'/g, "\\'")}')"
+                  class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 hover:brightness-110 text-slate-950 font-extrabold text-[11px] shadow">
+            Save
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSectionCard(title, rowsHtml) {
+    return `
+      <div class="account-solid-panel rounded-2xl p-4 sm:p-5 border-2 border-amber-400/55 space-y-2.5 shadow-xl">
+        <div class="flex items-center justify-between pb-2 border-b border-amber-400/25">
+          <h3 class="text-sm sm:text-base font-extrabold text-amber-300 tracking-tight">${title}</h3>
+          <span class="text-[10px] font-mono text-sky-300">Row-by-Row Edit | Save</span>
+        </div>
+        <div class="space-y-2">
+          ${rowsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  window.nfxTeamSearchSubmit = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const q = String(document.getElementById("nfx-tm-search-input")?.value ?? state.nfxTeamSearchQuery ?? "").trim();
+    state.nfxTeamSearchQuery = q;
+    state.nfxTeamActiveSearch = q;
+    renderAll();
+  };
+
+  window.nfxTeamOpenMemberDetails = function(uid) {
+    state.nfxTeamSelectedUid = uid;
+    renderAll();
+  };
+
+  window.nfxTeamBackToSearchList = function() {
+    state.nfxTeamSelectedUid = null;
+    state.nfxTeamEditingRow = null;
+    renderAll();
+  };
+
+  window.renderMasterAdminTeamFullPage = function() {
+    if (!state.admin || !state.admin.authenticated) return "";
+    const members = Array.isArray(state.members) ? state.members : [];
+    members.forEach(m => ensureFullTeamRecord(m));
+
+    const q = String(state.nfxTeamActiveSearch || "").trim().toLowerCase();
+    const matchingMembers = q
+      ? members.filter(m =>
+          String(m.username || "").toLowerCase().includes(q) ||
+          String(m.uid || "").toLowerCase().includes(q) ||
+          String(m.mobile || "").toLowerCase().includes(q)
+        )
+      : members.slice(0, 4);
+
+    if (state.nfxTeamSelectedUid) {
+      const m = members.find(x => x.uid === state.nfxTeamSelectedUid) || members[0];
+      if (m) {
+        const td = ensureFullTeamRecord(m);
+        const tx = td.txMeta || {};
+        return `
+          <div class="space-y-5 max-w-5xl mx-auto text-white" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <button type="button" onclick="nfxTeamBackToSearchList()"
+                        class="px-3.5 py-2 rounded-xl bg-[#0a1d42] hover:bg-sky-600 border border-sky-400/45 text-sky-200 hover:text-white font-extrabold text-xs">
+                  ← Back to Profiles
+                </button>
+                <div>
+                  <h1 class="text-xl sm:text-2xl font-extrabold text-amber-300">Team Details — ${m.username || "Member"} (${m.uid})</h1>
+                  <p class="text-xs text-slate-300">Edit any row individually and click Save to sync immediately to the member account</p>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/45">
+                Live Sync Active
+              </span>
+            </div>
+
+            <div class="account-solid-panel rounded-2xl p-4 sm:p-5 border-2 border-amber-400/65 flex flex-wrap items-center justify-between gap-4 text-xs">
+              <div class="flex items-center gap-3.5">
+                <img src="${m.avatar || (typeof DEFAULT_USER_AVATAR !== 'undefined' ? DEFAULT_USER_AVATAR : '')}" alt="Profile"
+                     class="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shrink-0" />
+                <div class="space-y-1 font-mono">
+                  <div class="text-base font-sans font-extrabold text-white">${m.username || "Member"}</div>
+                  <div class="text-sky-300">UID: <strong class="text-white">${m.uid}</strong></div>
+                  <div class="text-slate-300">Email: <strong class="text-white">${m.email || "-"}</strong> • Mobile: <strong class="text-white">${m.mobile || "-"}</strong></div>
+                </div>
+              </div>
+            </div>
+
+            ${renderSectionCard("3. MEMBER ACCOUNT & BALANCE DETAILS — A. Wallet Balance", [
+              renderSingleEditableRow(m.uid, "mainBalance", "Main Balance", Number(td.mainBalance || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "availableMainBalance", "Available Main Balance", Number(td.availableMainBalance || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "lockedMainBalance", "Locked Main Balance", Number(td.lockedMainBalance || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "withdrawalBalance", "Withdrawal Balance", Number(td.withdrawalBalance || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "walletBalance", "Wallet Balance", Number(td.walletBalance || 0).toFixed(2), "USDT")
+            ].join(""))}
+
+            ${renderSectionCard("5. TEAM INVESTMENT DETAILS", [
+              renderSingleEditableRow(m.uid, "totalTeamInvestment", "Total Team Investment", Number(td.totalTeamInvestment || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "teamAInvestment", "Team A Investment", Number(td.teamAInvestment || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "teamBInvestment", "Team B Investment", Number(td.teamBInvestment || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "teamCInvestment", "Team C Investment", Number(td.teamCInvestment || 0).toFixed(2), "USDT")
+            ].join(""))}
+
+            ${renderSectionCard("7. TEAM MEMBER DETAILS", [
+              renderSingleEditableRow(m.uid, "totalMembers", "Total Members", Number(td.totalMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "totalAMembers", "Total A Members", Number(td.totalAMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "totalBMembers", "Total B Members", Number(td.totalBMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "totalCMembers", "Total C Members", Number(td.totalCMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "totalActiveMembers", "Total Active Members", Number(td.totalActiveMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "totalActiveAMembers", "Total Active A Members", Number(td.totalActiveAMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "totalActiveBMembers", "Total Active B Members", Number(td.totalActiveBMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "activeCMembers", "Active C Members", Number(td.activeCMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "registeredAMembers", "Registered A Members", Number(td.registeredAMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "registeredBMembers", "Registered B Members", Number(td.registeredBMembers || 0), ""),
+              renderSingleEditableRow(m.uid, "registeredCMember", "Registered C Member", Number(td.registeredCMember || 0), "")
+            ].join(""))}
+
+            ${renderSectionCard("10. INCOME DETAILS", [
+              renderSingleEditableRow(m.uid, "totalIncomeIncome", "Total Income Income", Number(td.totalIncomeIncome || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalBonusIncome", "Total Bonus Income", Number(td.totalBonusIncome || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalReferralIncome", "Total Referral Income", Number(td.totalReferralIncome || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalTeamIncome", "Total Team Income", Number(td.totalTeamIncome || 0).toFixed(2), "USDT")
+            ].join(""))}
+
+            ${renderSectionCard("12. TOTAL INCOME SUMMARY", [
+              renderSingleEditableRow(m.uid, "totalALevelCommission", "Total A Level Commission", Number(td.totalALevelCommission || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalBLevelCommission", "Total B Level Commission", Number(td.totalBLevelCommission || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalCLevelCommission", "Total C Level Commission", Number(td.totalCLevelCommission || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalTeamCommission", "Total Team Commission", Number(td.totalTeamCommission || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalDirectReferralIncome", "Total Direct Referral Income", Number(td.totalDirectReferralIncome || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalTeamReferralIncome", "Total Team Referral Income", Number(td.totalTeamReferralIncome || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "summaryBonusIncome", "Total Bonus Income", Number(td.summaryBonusIncome || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalEarnedIncome", "Total Earned Income", Number(td.totalEarnedIncome || 0).toFixed(2), "USDT")
+            ].join(""))}
+
+            ${renderSectionCard("13. DEPOSIT DETAILS", [
+              renderSingleEditableRow(m.uid, "totalDepositAmount", "Total Deposit Amount", Number(td.totalDepositAmount || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalSuccessfulDeposits", "Total Successful Deposits", Number(td.totalSuccessfulDeposits || 0), ""),
+              renderSingleEditableRow(m.uid, "totalPendingDeposits", "Total Pending Deposits", Number(td.totalPendingDeposits || 0), ""),
+              renderSingleEditableRow(m.uid, "totalProcessingDeposits", "Total Processing Deposits", Number(td.totalProcessingDeposits || 0), ""),
+              renderSingleEditableRow(m.uid, "totalRejectedDeposits", "Total Rejected Deposits", Number(td.totalRejectedDeposits || 0), ""),
+              renderSingleEditableRow(m.uid, "totalFailedDeposits", "Total Failed Deposits", Number(td.totalFailedDeposits || 0), ""),
+              renderSingleEditableRow(m.uid, "lastDepositAmount", "Last Deposit Amount", Number(td.lastDepositAmount || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "lastDepositDate", "Last Deposit Date", td.lastDepositDate || "-", ""),
+              renderSingleEditableRow(m.uid, "totalDepositTransactions", "Total Deposit Transactions", Number(td.totalDepositTransactions || 0), "")
+            ].join(""))}
+
+            ${renderSectionCard("14. WITHDRAWAL DETAILS", [
+              renderSingleEditableRow(m.uid, "totalWithdrawalRequested", "Total Withdrawal Requested", Number(td.totalWithdrawalRequested || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalWithdrawalPaid", "Total Withdrawal Paid", Number(td.totalWithdrawalPaid || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalPeithdrawal", "Total Peithdrawal", Number(td.totalPeithdrawal || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalProcessingWithdrawal", "Total Processing Withdrawal", Number(td.totalProcessingWithdrawal || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalRejectedWithdrawal", "Total Rejected Withdrawal", Number(td.totalRejectedWithdrawal || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalFailedWithdrawal", "Total Failed Withdrawal", Number(td.totalFailedWithdrawal || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalWithdrawalFee", "Total Withdrawal Fee", Number(td.totalWithdrawalFee || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "totalNetWithdrawal", "Total Net Withdrawal", Number(td.totalNetWithdrawal || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "lastWithdrawalAmount", "Last Withdrawal Amount", Number(td.lastWithdrawalAmount || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "lastWithdrawalDate", "Last Withdrawal Date", td.lastWithdrawalDate || "-", ""),
+              renderSingleEditableRow(m.uid, "totalWithdrawalTransactions", "Total Withdrawal Transactions", Number(td.totalWithdrawalTransactions || 0), "")
+            ].join(""))}
+
+            ${renderSectionCard("VERIFICATION DETAILS", [
+              renderSingleEditableRow(m.uid, "accountStatus", "Account Status", td.accountStatus || "Inactive", ""),
+              renderSingleEditableRow(m.uid, "kycVerificationStatus", "KYC Verification Status", td.kycVerificationStatus || "Unverified", ""),
+              renderSingleEditableRow(m.uid, "emailVerificationStatus", "Email Verification Status", td.emailVerificationStatus || "Unverified", ""),
+              renderSingleEditableRow(m.uid, "mobileVerificationStatus", "Mobile Verification Status", td.mobileVerificationStatus || "Unverified", ""),
+              renderSingleEditableRow(m.uid, "googleAuthenticatorStatus", "Google Authenticator Status", td.googleAuthenticatorStatus || "Not Bound", ""),
+              renderSingleEditableRow(m.uid, "investmentAccountStatus", "Investment Account Status", td.investmentAccountStatus || "Inactive", ""),
+              renderSingleEditableRow(m.uid, "withdrawalAccountStatus", "Withdrawal Account Status", td.withdrawalAccountStatus || "Active", ""),
+              renderSingleEditableRow(m.uid, "accountCreationDate", "Account Creation Date", td.accountCreationDate || "-", ""),
+              renderSingleEditableRow(m.uid, "lastLoginDate", "Last Login Date", td.lastLoginDate || "-", ""),
+              renderSingleEditableRow(m.uid, "lastActivityDate", "Last Activity Date", td.lastActivityDate || "-", "")
+            ].join(""))}
+
+            ${renderSectionCard("17. TEAM TRANSACTION HISTORY & TRANSACTION RECORD", [
+              renderSingleEditableRow(m.uid, "teamAInvestmentHistory", "Team A Investment History", Number(td.teamAInvestmentHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "teamBInvestmentHistory", "Team B Investment History", Number(td.teamBInvestmentHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "teamCInvestmentHistory", "Team C Investment History", Number(td.teamCInvestmentHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "teamCommissionHistory", "Team Commission History", Number(td.teamCommissionHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "referralIncomeHistory", "Referral Income History", Number(td.referralIncomeHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "bonusHistory", "Bonus History", Number(td.bonusHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "depositHistory", "Deposit History", Number(td.depositHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "withdrawalHistory", "Withdrawal History", Number(td.withdrawalHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "balanceCreditHistory", "Balance Credit History", Number(td.balanceCreditHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "balanceDebitHistory", "Balance Debit History", Number(td.balanceDebitHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "balanceAdjustmentHistory", "Balance Adjustment History", Number(td.balanceAdjustmentHistory || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "pendingTransactions", "Pending Transactions", Number(td.pendingTransactions || 0), ""),
+              renderSingleEditableRow(m.uid, "successfulTransactions", "Successful Transactions", Number(td.successfulTransactions || 0), ""),
+              renderSingleEditableRow(m.uid, "rejectedTransactions", "Rejected Transactions", Number(td.rejectedTransactions || 0), ""),
+              renderSingleEditableRow(m.uid, "reversedTransactions", "Reversed Transactions", Number(td.reversedTransactions || 0), ""),
+              renderSingleEditableRow(m.uid, "txMeta.transactionId", "Transaction ID", tx.transactionId || "-", ""),
+              renderSingleEditableRow(m.uid, "txMeta.username", "Username", tx.username || m.username || "Member", ""),
+              renderSingleEditableRow(m.uid, "txMeta.uid", "UID", m.uid, ""),
+              renderSingleEditableRow(m.uid, "txMeta.transactionType", "Transaction Type", tx.transactionType || "Wallet Sync", ""),
+              renderSingleEditableRow(m.uid, "txMeta.amount", "Amount", Number(tx.amount || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "txMeta.dateTime", "Date & Time", tx.dateTime || "-", ""),
+              renderSingleEditableRow(m.uid, "txMeta.transactionStatus", "Transaction Status", tx.transactionStatus || "Completed", ""),
+              renderSingleEditableRow(m.uid, "txMeta.previousBalance", "Previous Balance", Number(tx.previousBalance || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "txMeta.updatedBalance", "Updated Balance", Number(tx.updatedBalance || m.balance || 0).toFixed(2), "USDT"),
+              renderSingleEditableRow(m.uid, "txMeta.transactionDescription", "Transaction Description", tx.transactionDescription || "-", "")
+            ].join(""))}
+          </div>
+        `;
+      }
+    }
+
+    return `
+      <div class="space-y-5 max-w-5xl mx-auto text-white" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+        ${typeof pageHeader === "function" ? pageHeader("👥", "TEAM Management", "Search member by Username, UID, or Mobile and click profile for full Team Details", "TEAM") : ""}
+
+        <div class="account-solid-panel rounded-2xl p-5 border-2 border-amber-400/65 space-y-3 text-xs">
+          <div class="font-extrabold text-amber-300 text-sm">SEARCH MEMBER</div>
+          <form onsubmit="nfxTeamSearchSubmit(event)" class="flex flex-col sm:flex-row gap-2.5">
+            <input id="nfx-tm-search-input"
+                   value="${String(state.nfxTeamSearchQuery || '').replace(/"/g, '&quot;')}"
+                   oninput="state.nfxTeamSearchQuery=this.value;"
+                   placeholder="Search by Username, UID, Mobile"
+                   class="input-box flex-1 rounded-xl px-4 py-2.5 font-mono text-xs" />
+            <button type="submit"
+                    class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:brightness-110 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shrink-0">
+              Search
+            </button>
+          </form>
+        </div>
+
+        <div class="account-solid-panel rounded-2xl p-5 border-2 border-sky-400/45 space-y-3 text-xs">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm sm:text-base font-extrabold text-amber-300">
+              ${q ? `Search Results (${matchingMembers.length})` : `Member Profiles (${matchingMembers.length})`}
+            </h2>
+            <span class="text-[11px] font-mono text-sky-300">Click a profile to open Team Details</span>
+          </div>
+
+          <div class="space-y-3">
+            ${matchingMembers.length > 0 ? matchingMembers.map(m => `
+              <div onclick="nfxTeamOpenMemberDetails('${m.uid}')"
+                   class="cursor-pointer p-4 rounded-2xl bg-[#05122b] hover:bg-[#081c42] border border-sky-400/35 hover:border-amber-400 transition flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                  <img src="${m.avatar || (typeof DEFAULT_USER_AVATAR !== 'undefined' ? DEFAULT_USER_AVATAR : '')}" alt="Profile"
+                       class="w-14 h-14 rounded-2xl object-cover border-2 border-sky-400 shrink-0" />
+                  <div class="space-y-0.5 font-mono">
+                    <div class="text-sm sm:text-base font-sans font-extrabold text-white">${m.username || "Member"}</div>
+                    <div class="text-sky-300">UID: <strong class="text-white">${m.uid}</strong></div>
+                    <div class="text-slate-300 text-[11px]">Email: <strong class="text-white">${m.email || "-"}</strong></div>
+                    <div class="text-amber-300 text-[11px]">Mobile: <strong class="text-white">${m.mobile || "-"}</strong></div>
+                  </div>
+                </div>
+                <span class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs shadow">
+                  Open Team Details →
+                </span>
+              </div>
+            `).join("") : `
+              <div class="p-6 rounded-xl bg-[#05122b] border border-sky-500/20 text-center text-slate-400">
+                No matching member found. Try searching by Username, UID, or Mobile number.
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  window.renderMemberTeamBoxPage = function(user) {
+    const u = user || (typeof activeMember === "function" ? activeMember() : null);
+    if (!u) return "";
+    const st = ensureMemberTeamStatsObj(u);
+
+    const aReg = Math.max(Number(u.aMembersCount || 0), Number(st.aRegisterCount || 0));
+    const bReg = Math.max(Number(u.bMembersCount || 0), Number(st.bRegisterCount || 0));
+    const cReg = Math.max(Number(u.cMembersCount || 0), Number(st.cRegisterCount || 0));
+    const totalReg = aReg + bReg + cReg;
+
+    const aAct = Math.max(Number(state.extraData?.activeAMembersCount || 0), Number(st.aActiveCount || 0));
+    const bAct = Math.max(Number(state.extraData?.activeBMembersCount || 0), Number(st.bActiveCount || 0));
+    const cAct = Math.max(Number(state.extraData?.activeCMembersCount || 0), Number(st.cActiveCount || 0));
+    const totalAct = aAct + bAct + cAct;
+
+    const invA = Number(u.aMembersInvest || st.teamAInvest || 0);
+    const invB = Number(u.bMembersInvest || st.teamBInvest || 0);
+    const invC = Number(u.cMembersInvest || st.teamCInvest || 0);
+    const totalTeamInv = Number((invA + invB + invC).toFixed(2));
+    u.teamInvest = totalTeamInv;
+
+    return `
+      <div class="max-w-4xl mx-auto space-y-4 text-white" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+        ${typeof pageHeader === "function" ? pageHeader("👥", "TEAM", "Register Members, Active Members & Team Investment (A, B, C)", "TEAM") : ""}
+
+        <div class="account-solid-panel rounded-2xl p-5 border-2 border-amber-400/60 space-y-3 text-xs">
+          <div class="flex items-center justify-between border-b border-sky-500/25 pb-2">
+            <h2 class="text-sm sm:text-base font-extrabold text-amber-300">Registered Members</h2>
+            <span class="font-mono font-extrabold text-white bg-sky-500/20 border border-sky-400/40 px-3 py-1 rounded-full">
+              Total Register Members: ${totalReg}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+            <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/35">
+              <div class="text-[11px] text-slate-300 font-sans">A Register member</div>
+              <div class="text-xl font-extrabold text-sky-300 mt-1">${aReg}</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-[#05122b] border border-emerald-400/35">
+              <div class="text-[11px] text-slate-300 font-sans">B register member</div>
+              <div class="text-xl font-extrabold text-emerald-300 mt-1">${bReg}</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/35">
+              <div class="text-[11px] text-slate-300 font-sans">C register member</div>
+              <div class="text-xl font-extrabold text-amber-300 mt-1">${cReg}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-solid-panel rounded-2xl p-5 border-2 border-emerald-400/55 space-y-3 text-xs">
+          <div class="flex items-center justify-between border-b border-sky-500/25 pb-2">
+            <h2 class="text-sm sm:text-base font-extrabold text-emerald-300">Active members</h2>
+            <span class="font-mono font-extrabold text-emerald-300 bg-emerald-500/15 border border-emerald-400/40 px-3 py-1 rounded-full">
+              Total active members: ${totalAct}
+            </span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+            <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/35">
+              <div class="text-[11px] text-slate-300 font-sans">A active members</div>
+              <div class="text-xl font-extrabold text-sky-300 mt-1">${aAct}</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-[#05122b] border border-emerald-400/35">
+              <div class="text-[11px] text-slate-300 font-sans">B active members</div>
+              <div class="text-xl font-extrabold text-emerald-300 mt-1">${bAct}</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/35">
+              <div class="text-[11px] text-slate-300 font-sans">C active members</div>
+              <div class="text-xl font-extrabold text-amber-300 mt-1">${cAct}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-solid-panel rounded-2xl p-5 border-2 border-amber-400/65 space-y-2 text-xs">
+          <h2 class="text-sm sm:text-base font-extrabold text-amber-300">Total Team Invest</h2>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-amber-400/40 flex items-center justify-between font-mono">
+            <span class="text-slate-200 font-sans font-bold">Total Team Invest (A + B + C)</span>
+            <strong class="text-2xl font-extrabold text-amber-300">$${totalTeamInv.toFixed(2)} USDT</strong>
+          </div>
+        </div>
+
+        <div class="account-solid-panel rounded-2xl p-5 border border-sky-400/45 space-y-2 text-xs">
+          <h2 class="text-sm sm:text-base font-extrabold text-sky-300">Team A</h2>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-sky-400/30 flex items-center justify-between font-mono">
+            <span class="text-slate-200 font-sans">Team A Total Invest</span>
+            <strong class="text-lg font-extrabold text-white">$${invA.toFixed(2)} USDT</strong>
+          </div>
+        </div>
+
+        <div class="account-solid-panel rounded-2xl p-5 border border-emerald-400/45 space-y-2 text-xs">
+          <h2 class="text-sm sm:text-base font-extrabold text-emerald-300">Team B</h2>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-emerald-400/30 flex items-center justify-between font-mono">
+            <span class="text-slate-200 font-sans">Team B Total Invest</span>
+            <strong class="text-lg font-extrabold text-white">$${invB.toFixed(2)} USDT</strong>
+          </div>
+        </div>
+
+        <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/45 space-y-2 text-xs">
+          <h2 class="text-sm sm:text-base font-extrabold text-amber-300">Team C</h2>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-amber-400/30 flex items-center justify-between font-mono">
+            <span class="text-slate-200 font-sans">Team C Total Invest</span>
+            <strong class="text-lg font-extrabold text-white">$${invC.toFixed(2)} USDT</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const prevSubpageFn = window.renderMasterAdminSubpageById;
+  window.renderMasterAdminSubpageById = function(pageId) {
+    if (pageId === "team") return window.renderMasterAdminTeamFullPage();
+    return typeof prevSubpageFn === "function" ? prevSubpageFn(pageId) : "";
+  };
+
+  const prevAdminPanelFn = window.renderMasterAdminPanelScreen;
+  window.renderMasterAdminPanelScreen = function() {
+    if (state.admin && state.admin.authenticated === true && state.adminPage === "team") {
+      return window.renderMasterAdminTeamFullPage();
+    }
+    return typeof prevAdminPanelFn === "function" ? prevAdminPanelFn() : "";
+  };
+
+  const origRenderRouteFn = window.renderRouteContent;
+  window.renderRouteContent = function(user) {
+    if (state.currentRoute === "team") {
+      return window.renderMemberTeamBoxPage(user);
+    }
+    return typeof origRenderRouteFn === "function" ? origRenderRouteFn(user) : "";
+  };
+
+  window.addEventListener("storage", function(ev) {
+    if (!ev) return;
+    if (ev.key === "nfx_treading_session_v16" || ev.key === "nfx_treading_realtime_members_v1") {
+      if (typeof restoreSessionState === "function") restoreSessionState();
+      if (typeof renderAll === "function") renderAll();
+    }
+  });
+})();
+</script>
+
+
+<script>
+(function nfxDistinctAlphanumericReferralV52() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const ALPHANUM = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  function makeDistinctAlphaNumRef(uidVal = "", salt = 0, usedSet = null) {
+    const cleanUid = String(uidVal || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    for (let attempt = 0; attempt < 60; attempt++) {
+      let code = "";
+      for (let i = 0; i < 8; i++) {
+        const idx = Math.floor(Math.random() * ALPHANUM.length);
+        code += ALPHANUM[idx];
+      }
+      if (code !== cleanUid && (!usedSet || !usedSet.has(code))) {
+        if (usedSet) usedSet.add(code);
+        return code;
+      }
+    }
+    const fallback = ("RF" + ((Math.abs(salt) * 7919 + Math.floor(Math.random() * 899999)) % 9000000)).slice(0, 8);
+    if (usedSet) usedSet.add(fallback);
+    return fallback;
+  }
+
+  window.generateEightCharReferralCode = function(uidVal = "", indexHint = 0) {
+    return makeDistinctAlphaNumRef(uidVal, indexHint, null);
+  };
+
+  window.generateDistinctReferralCode = function(uidVal = "", indexHint = 0) {
+    return makeDistinctAlphaNumRef(uidVal, indexHint, null);
+  };
+
+  function enforceAllMembersDistinctReferralCodes() {
+    if (!Array.isArray(state.members)) return;
+    const usedRefs = new Set();
+
+    state.members.forEach((m, idx) => {
+      if (!m) return;
+      const uidStr = String(m.uid || "").trim();
+      const cleanUid = uidStr.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      const curRef = String(m.referralCode || "").trim().toUpperCase();
+      const isSameAsUid = !curRef || curRef === cleanUid || curRef === uidStr.toUpperCase() || curRef === "NFX1001" || usedRefs.has(curRef);
+      const validFormat = /^[A-Z0-9]{6,10}$/.test(curRef) && /[A-Z]/.test(curRef) && /[0-9]/.test(curRef);
+
+      if (isSameAsUid || !validFormat) {
+        m.referralCode = makeDistinctAlphaNumRef(uidStr, idx + 1, usedRefs);
+      } else {
+        usedRefs.add(curRef);
+      }
+    });
+  }
+
+  const origEnsureIdentity = window.ensureUniqueMemberIdentity;
+  window.ensureUniqueMemberIdentity = function(memberObj, indexHint = 0) {
+    if (typeof origEnsureIdentity === "function") {
+      origEnsureIdentity.apply(this, arguments);
+    }
+    enforceAllMembersDistinctReferralCodes();
+    if (memberObj) {
+      const cleanUid = String(memberObj.uid || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      const curRef = String(memberObj.referralCode || "").trim().toUpperCase();
+      if (!curRef || curRef === cleanUid || curRef === String(memberObj.uid || "").toUpperCase()) {
+        memberObj.referralCode = makeDistinctAlphaNumRef(memberObj.uid, indexHint + 11, null);
+      }
+    }
+  };
+
+  const origBuildRefLink = window.buildMemberReferralLink;
+  window.buildMemberReferralLink = function(memberObj) {
+    if (memberObj) {
+      window.ensureUniqueMemberIdentity(memberObj, 0);
+    }
+    if (typeof origBuildRefLink === "function") {
+      return origBuildRefLink.apply(this, arguments);
+    }
+    const code = encodeURIComponent(String(memberObj?.referralCode || ""));
+    return `https://nfx-treading.com/?ref=${code}`;
+  };
+
+  const origRenderAll = window.renderAll;
+  window.renderAll = function() {
+    enforceAllMembersDistinctReferralCodes();
+    if (typeof origRenderAll === "function") {
+      return origRenderAll.apply(this, arguments);
+    }
+  };
+
+  enforceAllMembersDistinctReferralCodes();
+})();
+</script>
+
+
+<script>
+(function nfxAdminInboxAndNotificationsSyncV53() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  if (!Array.isArray(state.kycSubmissions)) state.kycSubmissions = [];
+  if (!Array.isArray(state.depositRequests)) state.depositRequests = [];
+  if (!Array.isArray(state.withdrawRequests)) state.withdrawRequests = [];
+  if (!Array.isArray(state.notifications)) state.notifications = [];
+
+  function pushAdminAlertNotification(category, title, msg, uid, uname) {
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+    const entry = {
+      id: "N-" + String(category || "SYS").toUpperCase() + "-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      category: category || "system",
+      title: String(title || "New Update"),
+      msg: String(msg || ""),
+      uid: uid || "",
+      username: uname || "",
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      read: false
+    };
+    state.notifications.unshift(entry);
+    if (state.notifications.length > 50) state.notifications.length = 50;
+  }
+
+  function persistAllSharedState() {
+    try {
+      if (typeof saveSessionState === "function") saveSessionState();
+    } catch (e) {}
+    try {
+      localStorage.setItem("nfx_treading_realtime_members_v1", JSON.stringify(state.members || []));
+    } catch (e) {}
+  }
+
+  // 1. Unified KYC submit handler (works with all KYC form input IDs)
+  window.submitAccountKycVerification = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!Array.isArray(state.kycSubmissions)) state.kycSubmissions = [];
+
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return false;
+
+    const unameEl = document.getElementById("kyc-username-input");
+    const uidEl = document.getElementById("kyc-uid-input");
+    const mobileEl = document.getElementById("kyc-mobile-input");
+    const emailEl = document.getElementById("kyc-email-input");
+    const codeEl = document.getElementById("kyc-email-code-input");
+    const g2faEl = document.getElementById("kyc-g2fa-input");
+    const pwEl = document.getElementById("kyc-password-input");
+    const invEl = document.getElementById("kyc-invite-input");
+
+    const uname = String(unameEl?.value || user.username || "Member").trim();
+    const uidVal = String(uidEl?.value || user.uid || "NFX-1001").trim();
+    const mobile = String(mobileEl?.value || user.mobile || "").trim();
+    const email = String(emailEl?.value || user.email || "").trim();
+    let code = String(codeEl?.value || "").trim();
+    const g2fa = String(g2faEl?.value || "").trim();
+    const pw = String(pwEl?.value || "");
+    const inv = String(invEl?.value || user.referredBy || "").trim();
+
+    if (!uname) {
+      if (typeof showToast === "function") showToast("Username Required", "Please enter your username.", "error");
+      return false;
+    }
+    if (!/^[0-9]{6}$/.test(code)) {
+      code = /^[0-9]{6}$/.test(String(state.sentKycEmailCode || "")) ? String(state.sentKycEmailCode) : "123456";
+    }
+
+    user.username = uname;
+    if (uidVal) user.uid = uidVal;
+    if (mobile) user.mobile = mobile;
+    if (email) user.email = email;
+    if (inv) user.referredBy = inv;
+    if (pw && !user.kycPin) user.kycPin = pw;
+
+    user.kycStatus = "KYC Pending";
+    user.accountVerificationStatus = "Pending";
+    user.status = "Pending";
+    state.sentKycEmailCode = null;
+
+    const submittedAt = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const kycId = "KYC-" + Math.floor(1000 + Math.random() * 9000);
+
+    const kycRecord = {
+      id: kycId,
+      uid: user.uid,
+      username: uname,
+      mobile: user.mobile || "",
+      email: user.email || "",
+      g2faCode: g2fa || "",
+      inviteCode: inv || "",
+      verificationStatus: "KYC Pending",
+      accountStatus: "Pending",
+      status: "KYC Pending",
+      submittedAt: submittedAt
+    };
+
+    const existingIdx = state.kycSubmissions.findIndex(k => k && k.uid === user.uid);
+    if (existingIdx >= 0) {
+      state.kycSubmissions[existingIdx] = Object.assign({}, state.kycSubmissions[existingIdx], kycRecord);
+    } else {
+      state.kycSubmissions.unshift(kycRecord);
+    }
+
+    pushAdminAlertNotification(
+      "kyc",
+      `New KYC Request: ${uname} (${user.uid})`,
+      `KYC verification submitted on ${submittedAt} — now in KYC Pending.`,
+      user.uid,
+      uname
+    );
+
+    persistAllSharedState();
+    if (typeof window.syncMemberEditToFirestore === "function") {
+      window.syncMemberEditToFirestore(user.uid, {
+        uid: user.uid,
+        username: uname,
+        email: user.email || "",
+        mobile: user.mobile || "",
+        balance: Number(user.balance || 0),
+        yourInvest: Number(user.yourInvest || 0),
+        teamInvest: Number(user.teamInvest || 0),
+        totalProfit: Number(user.totalProfit || 0),
+        kycStatus: "KYC Pending",
+        status: "Pending"
+      });
+    }
+
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("KYC Submitted!", "Sent to Master Admin KYC Pending & Notifications.");
+    }
+    return false;
+  };
+
+  // 2. Unified Deposit submit handler -> pushes to state.depositRequests & state.notifications
+  window.submitDepositRequestForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!Array.isArray(state.depositRequests)) state.depositRequests = [];
+
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+
+    const chain = String(document.getElementById("dep-chain-select")?.value || state.depositSelectedChain || "TRC20").trim();
+    const walletAddr = String(
+      document.getElementById("dep-chain-address")?.value ||
+      (typeof getDepositChainAddress === "function" ? getDepositChainAddress(chain) : "") ||
+      ""
+    ).trim();
+    const amt = parseFloat(document.getElementById("dep-amount-input")?.value || "0");
+    const authCode = String(document.getElementById("dep-auth-code")?.value || "").trim();
+    const txHash = String(document.getElementById("dep-tx-hash")?.value || "").trim();
+
+    if (!amt || amt <= 0) {
+      if (typeof showToast === "function") showToast("Amount Required", "Please enter a valid deposit amount.", "error");
+      return;
+    }
+
+    const txId = "DEP-" + Math.floor(1000 + Math.random() * 9000);
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    state.depositRequests.unshift({
+      id: txId,
+      username: user.username || "Member",
+      uid: user.uid || "NFX-1001",
+      email: user.email || "",
+      amount: Number(amt.toFixed(2)),
+      chain: chain,
+      wallet: walletAddr,
+      txHash: txHash || ("TX-" + Date.now().toString().slice(-6)),
+      authCode: authCode || "",
+      date: dateStr,
+      proof: "Submitted",
+      status: "Pending"
+    });
+
+    pushAdminAlertNotification(
+      "deposit",
+      `New Deposit Pending: ${Number(amt).toFixed(2)} USDT`,
+      `${user.username || "Member"} (${user.uid}) submitted ${chain} deposit (${txId}).`,
+      user.uid,
+      user.username || "Member"
+    );
+
+    persistAllSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Deposit Submitted!", `${txId} sent to Master Admin Deposit Pending.`);
+    }
+  };
+
+  // 3. Unified Withdraw submit handler -> pushes to state.withdrawRequests & state.notifications
+  window.submitUserWithdrawWithOtp = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!Array.isArray(state.withdrawRequests)) state.withdrawRequests = [];
+
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+
+    const ex = state.extraData || {};
+    const minWd = Number(state.adminConfig?.minWithdraw ?? 50);
+    const feePct = Number(state.adminConfig?.withdrawChargePct ?? 7);
+    const chainLabel = String(document.getElementById("wd-page-chain")?.value || state.withdrawSelectedChain || "USDT TRC20").trim();
+    const savedWallet = typeof getMemberSavedWithdrawAddress === "function"
+      ? String(getMemberSavedWithdrawAddress(user, chainLabel) || "").trim()
+      : String(document.getElementById("wd-auto-address")?.value || "").trim();
+    const amt = parseFloat(document.getElementById("wd-page-amount")?.value || "0");
+    const wdTxHash = String(document.getElementById("wd-page-tx-hash")?.value || "").trim();
+
+    const curBal = Number(user.balance || 0);
+    if (!amt || amt < minWd) {
+      if (typeof showNoticePopup3s === "function") {
+        showNoticePopup3s("Minimum Withdrawal 50 USDT", `Minimum withdrawal is <strong>${minWd} USDT</strong>.`);
+      }
+      return;
+    }
+    if (curBal < amt) {
+      if (typeof showNoticePopup3s === "function") {
+        showNoticePopup3s("Insufficient Wallet Balance", `Available balance: <strong>${curBal.toFixed(2)} USDT</strong>.`);
+      }
+      return;
+    }
+
+    const walletToUse = savedWallet || "Pending Wallet Setup";
+    const feeAmt = Number((amt * (feePct / 100)).toFixed(2));
+    const netAmt = Number((amt - feeAmt).toFixed(2));
+    const reqId = "WD-" + Math.floor(1000 + Math.random() * 9000);
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+    user.balance = Number((curBal - amt).toFixed(2));
+    ex.pendingBalance = Number(((Number(ex.pendingBalance) || 0) + amt).toFixed(2));
+
+    state.withdrawRequests.unshift({
+      id: reqId,
+      username: user.username || "Member",
+      uid: user.uid || "NFX-1001",
+      email: user.email || "",
+      txHash: wdTxHash || reqId,
+      amount: Number(amt.toFixed(2)),
+      fee: feeAmt,
+      netAmount: netAmt,
+      netReceive: netAmt,
+      chargePct: feePct,
+      chain: chainLabel,
+      wallet: walletToUse,
+      date: dateStr,
+      status: "Pending"
+    });
+
+    pushAdminAlertNotification(
+      "withdraw",
+      `New Withdrawal Pending: ${Number(amt).toFixed(2)} USDT`,
+      `${user.username || "Member"} (${user.uid}) requested withdrawal (${reqId}) via ${chainLabel}.`,
+      user.uid,
+      user.username || "Member"
+    );
+
+    persistAllSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Withdrawal Submitted!", `${reqId} sent to Master Admin Withdrawal Pending.`);
+    }
+  };
+
+  // 4. Ensure Master Admin subpage router & notifications display all pending requests cleanly
+  const prevSubRouterV53 = window.renderMasterAdminSubpageById;
+  window.renderMasterAdminSubpageById = function(pageId) {
+    if (pageId === "kyc-pending" && typeof renderAdminKycPendingPage === "function") {
+      return renderAdminKycPendingPage();
+    }
+    if (pageId === "deposit-pending") {
+      const deps = Array.isArray(state.depositRequests) ? state.depositRequests : [];
+      return `
+        <div class="space-y-4 text-white">
+          ${pageHeader("⬇️", "Deposit Pending", "Review and approve/reject member deposits", "Deposit Pending")}
+          <div class="account-solid-panel rounded-2xl p-5 space-y-3 text-xs">
+            ${deps.length ? deps.map(d => `
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-bold text-white">${d.id} — ${d.username || "Member"} (${d.uid}) • $${Number(d.amount || 0).toFixed(2)} USDT</div>
+                  <div class="font-mono text-[11px] text-slate-300">Chain: ${d.chain || "-"} | Hash: ${d.txHash || "-"} | Date: ${d.date || "-"} | Status: <strong class="text-amber-300">${d.status || "Pending"}</strong></div>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button" onclick="decideDepositRequest('${d.id}','Approved')" class="px-3 py-1.5 rounded-lg bg-emerald-500/25 text-emerald-300 font-bold">Approve</button>
+                  <button type="button" onclick="decideDepositRequest('${d.id}','Rejected')" class="px-3 py-1.5 rounded-lg bg-rose-500/25 text-rose-300 font-bold">Reject</button>
+                </div>
+              </div>
+            `).join("") : `<div class="text-slate-400 text-center py-4">No deposit requests found.</div>`}
+          </div>
+        </div>
+      `;
+    }
+    if (pageId === "withdrawal-pending") {
+      const wds = Array.isArray(state.withdrawRequests) ? state.withdrawRequests : [];
+      return `
+        <div class="space-y-4 text-white">
+          ${pageHeader("⬆️", "Withdrawal Pending", "Review and approve/reject member withdrawals", "Withdrawal Pending")}
+          <div class="account-solid-panel rounded-2xl p-5 space-y-3 text-xs">
+            ${wds.length ? wds.map(w => `
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-bold text-white">${w.id} — ${w.username || "Member"} (${w.uid}) • $${Number(w.amount || 0).toFixed(2)} USDT</div>
+                  <div class="font-mono text-[11px] text-slate-300">Chain: ${w.chain || "-"} | Wallet: ${w.wallet || "-"} | Net: $${Number(w.netReceive ?? w.netAmount ?? 0).toFixed(2)} | Status: <strong class="text-amber-300">${w.status || "Pending"}</strong></div>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button" onclick="decideWithdrawRequest('${w.id}','Approved')" class="px-3 py-1.5 rounded-lg bg-emerald-500/25 text-emerald-300 font-bold">Approve</button>
+                  <button type="button" onclick="decideWithdrawRequest('${w.id}','Rejected')" class="px-3 py-1.5 rounded-lg bg-rose-500/25 text-rose-300 font-bold">Reject</button>
+                </div>
+              </div>
+            `).join("") : `<div class="text-slate-400 text-center py-4">No withdrawal requests found.</div>`}
+          </div>
+        </div>
+      `;
+    }
+    return typeof prevSubRouterV53 === "function" ? prevSubRouterV53(pageId) : "";
+  };
+})();
+</script>
+
+
+<script>
+(function nfxSponsorTeamAutoCalcHookV54() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  function ensureStats(m) {
+    if (!m) return {};
+    if (!m.memberTeamStats || typeof m.memberTeamStats !== "object") {
+      m.memberTeamStats = {
+        aRegisterCount: Number(m.aMembersCount || 0),
+        bRegisterCount: Number(m.bMembersCount || 0),
+        cRegisterCount: Number(m.cMembersCount || 0),
+        aActiveCount: Number(state.extraData?.activeAMembersCount || 0),
+        bActiveCount: Number(state.extraData?.activeBMembersCount || 0),
+        cActiveCount: Number(state.extraData?.activeCMembersCount || 0),
+        teamAInvest: Number(m.aMembersInvest || 0),
+        teamBInvest: Number(m.bMembersInvest || 0),
+        teamCInvest: Number(m.cMembersInvest || 0)
+      };
+    }
+    return m.memberTeamStats;
+  }
+
+  function assignSponsorTeamSlotAndRegister(sponsorRefOrUid, newMember) {
+    if (!newMember) return null;
+    const rawRef = String(sponsorRefOrUid || "").trim();
+    if (!rawRef) return null;
+    const refUpper = rawRef.toUpperCase();
+    const sponsor = (state.members || []).find(s =>
+      s && s.uid !== newMember.uid && (
+        String(s.referralCode || "").trim().toUpperCase() === refUpper ||
+        String(s.uid || "").trim().toUpperCase() === refUpper
+      )
+    );
+    if (!sponsor) return null;
+
+    const st = ensureStats(sponsor);
+    const children = (state.members || []).filter(
+      x => x && x.uid !== newMember.uid && (
+        String(x.sponsorUid || "").toUpperCase() === String(sponsor.uid).toUpperCase() ||
+        String(x.referredBy || "").trim().toUpperCase() === String(sponsor.referralCode || "").trim().toUpperCase()
+      )
+    );
+    const slotIdx = children.length % 3;
+    const slot = slotIdx === 0 ? "A" : (slotIdx === 1 ? "B" : "C");
+
+    newMember.sponsorUid = sponsor.uid;
+    newMember.referredBy = sponsor.referralCode || sponsor.uid;
+    newMember.teamSlot = slot;
+
+    if (slot === "A") {
+      st.aRegisterCount = Number(st.aRegisterCount || 0) + 1;
+      sponsor.aMembersCount = st.aRegisterCount;
+    } else if (slot === "B") {
+      st.bRegisterCount = Number(st.bRegisterCount || 0) + 1;
+      sponsor.bMembersCount = st.bRegisterCount;
+    } else {
+      st.cRegisterCount = Number(st.cRegisterCount || 0) + 1;
+      sponsor.cMembersCount = st.cRegisterCount;
+    }
+
+    if (typeof registerReferralMemberRecord === "function") {
+      registerReferralMemberRecord(sponsor.referralCode || sponsor.uid, newMember);
+    }
+    return { sponsor, slot };
+  }
+
+  function creditSponsorOnMemberInvestConfirm(investorMember, investAmt) {
+    const amt = Number(investAmt) || 0;
+    if (!investorMember || amt <= 0) return;
+    const refCode = String(investorMember.referredBy || investorMember.sponsorUid || "").trim().toUpperCase();
+    if (!refCode) return;
+
+    const sponsor = (state.members || []).find(s =>
+      s && (
+        String(s.referralCode || "").trim().toUpperCase() === refCode ||
+        String(s.uid || "").trim().toUpperCase() === refCode
+      )
+    );
+    if (!sponsor) return;
+
+    const st = ensureStats(sponsor);
+    const slot = investorMember.teamSlot || "A";
+    investorMember.isTeamActive = true;
+
+    if (slot === "A") {
+      st.aActiveCount = Number(st.aActiveCount || 0) + 1;
+      st.teamAInvest = Number((Number(st.teamAInvest || 0) + amt).toFixed(2));
+      sponsor.aMembersInvest = st.teamAInvest;
+    } else if (slot === "B") {
+      st.bActiveCount = Number(st.bActiveCount || 0) + 1;
+      st.teamBInvest = Number((Number(st.teamBInvest || 0) + amt).toFixed(2));
+      sponsor.bMembersInvest = st.teamBInvest;
+    } else {
+      st.cActiveCount = Number(st.cActiveCount || 0) + 1;
+      st.teamCInvest = Number((Number(st.teamCInvest || 0) + amt).toFixed(2));
+      sponsor.cMembersInvest = st.teamCInvest;
+    }
+
+    sponsor.teamInvest = Number(
+      (Number(st.teamAInvest || 0) + Number(st.teamBInvest || 0) + Number(st.teamCInvest || 0)).toFixed(2)
+    );
+
+    if (state.currentUserUid === sponsor.uid && state.extraData) {
+      state.extraData.activeAMembersCount = st.aActiveCount;
+      state.extraData.activeBMembersCount = st.bActiveCount;
+      state.extraData.activeCMembersCount = st.cActiveCount;
+    }
+  }
+
+  window.assignSponsorTeamSlotAndRegister = assignSponsorTeamSlotAndRegister;
+  window.creditSponsorOnMemberInvestConfirm = creditSponsorOnMemberInvestConfirm;
+
+  const origReg = window.handleRegisterSubmit;
+  window.handleRegisterSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const invVal = (document.getElementById("rg-inv")?.value || "").trim();
+    const emVal = (document.getElementById("rg-email")?.value || "").trim();
+    const unameVal = (document.getElementById("rg-user")?.value || "").trim();
+    if (typeof origReg === "function") await origReg.apply(this, arguments);
+    const created = (state.members || []).find(
+      m => (emVal && String(m.email || "").toLowerCase() === emVal.toLowerCase()) ||
+           (unameVal && String(m.username || "").toLowerCase() === unameVal.toLowerCase() && m.uid !== "NFX-1001")
+    );
+    if (created && (invVal || created.referredBy)) {
+      assignSponsorTeamSlotAndRegister(invVal || created.referredBy, created);
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof renderAll === "function") renderAll();
+    }
+  };
+
+  const origBuy = window.buyPlan;
+  window.buyPlan = function(cat, amt, rate) {
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    const prevInvest = Number(user?.yourInvest || 0);
+    if (typeof origBuy === "function") origBuy.apply(this, arguments);
+    if (user && Number(user.yourInvest || 0) > prevInvest) {
+      const confirmedAmt = Number((Number(user.yourInvest || 0) - prevInvest).toFixed(2));
+      creditSponsorOnMemberInvestConfirm(user, confirmedAmt);
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof renderAll === "function") renderAll();
+    }
+  };
+})();
+</script>
+
 </body>
 </html>
