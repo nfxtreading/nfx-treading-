@@ -16995,5 +16995,161 @@ state.sentKycEmailCode = null;
 })();
 </script>
 
+
+<script>
+(function nfxPermanentReferralLockV55() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const STORAGE_KEY = "nfx_permanent_member_referrals_v1";
+  const ALPHANUM = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+  function loadStoredMap() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  function saveStoredMap(mapObj) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(mapObj));
+    } catch (e) {}
+  }
+
+  function hashString32(str) {
+    let h = 2166136261 >>> 0;
+    const s = String(str || "");
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function buildDeterministicDistinctCode(uidVal, unameVal, saltOffset, usedSet) {
+    const cleanUid = String(uidVal || "UID").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const cleanUname = String(unameVal || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    let seedVal = hashString32(cleanUid + "::" + cleanUname + "::" + String(saltOffset));
+
+    for (let attempt = 0; attempt < 120; attempt++) {
+      seedVal = (Math.imul(seedVal, 1664525) + 1013904223 + attempt * 97) >>> 0;
+      let code = "";
+      let temp = seedVal;
+      for (let i = 0; i < 8; i++) {
+        temp = (Math.imul(temp, 1103515245) + 12345 + i * 31) >>> 0;
+        code += ALPHANUM[temp % ALPHANUM.length];
+      }
+      const sharesPrefix = cleanUname.length >= 3 && code.startsWith(cleanUname.slice(0, 3));
+      const sameAsUid = code === cleanUid || code === String(uidVal || "").toUpperCase();
+      if (!sameAsUid && !sharesPrefix && (!usedSet || !usedSet.has(code))) {
+        if (usedSet) usedSet.add(code);
+        return code;
+      }
+    }
+
+    let numPart = String((seedVal % 899999) + 100000);
+    const fallback = ("X7" + numPart).slice(0, 8);
+    if (usedSet) usedSet.add(fallback);
+    return fallback;
+  }
+
+  function lockAllMemberReferralCodesPermanently() {
+    if (!Array.isArray(state.members)) return;
+    const storedMap = loadStoredMap();
+    const usedCodes = new Set();
+
+    state.members.forEach((m, idx) => {
+      if (!m) return;
+      const uidStr = String(m.uid || ("NFX-" + (1001 + idx))).trim();
+      if (!m.uid) m.uid = uidStr;
+      const cleanUid = uidStr.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      const cleanUname = String(m.username || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+
+      let candidate = "";
+      if (storedMap[uidStr] && /^[A-Z0-9]{8}$/.test(String(storedMap[uidStr]).toUpperCase())) {
+        candidate = String(storedMap[uidStr]).toUpperCase();
+      } else if (m.referralCodeLocked && /^[A-Z0-9]{8}$/.test(String(m.referralCode || "").trim().toUpperCase())) {
+        candidate = String(m.referralCode).trim().toUpperCase();
+      } else {
+        const existing = String(m.referralCode || "").trim().toUpperCase();
+        const isOldBad = !existing ||
+          existing === cleanUid ||
+          existing === uidStr.toUpperCase() ||
+          existing === "NFX1001" ||
+          (cleanUname.length >= 3 && existing.startsWith(cleanUname.slice(0, 3)));
+        if (!isOldBad && /^[A-Z0-9]{6,10}$/.test(existing) && !usedCodes.has(existing)) {
+          candidate = existing;
+        } else {
+          candidate = buildDeterministicDistinctCode(uidStr, m.username, idx + 101, usedCodes);
+        }
+      }
+
+      if (usedCodes.has(candidate) || candidate === cleanUid) {
+        candidate = buildDeterministicDistinctCode(uidStr, m.username, idx + 509, usedCodes);
+      }
+      usedCodes.add(candidate);
+      m.referralCode = candidate;
+      m.referralCodeLocked = true;
+      storedMap[uidStr] = candidate;
+    });
+
+    saveStoredMap(storedMap);
+  }
+
+  window.generateEightCharReferralCode = function(uidVal = "", indexHint = 0) {
+    const storedMap = loadStoredMap();
+    const uidStr = String(uidVal || "").trim();
+    if (uidStr && storedMap[uidStr]) return storedMap[uidStr];
+    return buildDeterministicDistinctCode(uidStr || "NEW", "", indexHint + 1, null);
+  };
+
+  window.generateDistinctReferralCode = function(uidVal = "", indexHint = 0) {
+    return window.generateEightCharReferralCode(uidVal, indexHint);
+  };
+
+  const origEnsure = window.ensureUniqueMemberIdentity;
+  window.ensureUniqueMemberIdentity = function(memberObj, indexHint = 0) {
+    if (memberObj && memberObj.referralCodeLocked && memberObj.referralCode) {
+      const lockedVal = String(memberObj.referralCode).trim().toUpperCase();
+      if (typeof origEnsure === "function") {
+        origEnsure.apply(this, arguments);
+      }
+      memberObj.referralCode = lockedVal;
+      memberObj.referralCodeLocked = true;
+      return;
+    }
+    if (typeof origEnsure === "function") {
+      origEnsure.apply(this, arguments);
+    }
+    lockAllMemberReferralCodesPermanently();
+  };
+
+  window.buildMemberReferralLink = function(memberObj) {
+    lockAllMemberReferralCodesPermanently();
+    const u = memberObj || (typeof activeMember === "function" ? activeMember() : null);
+    const code = String(u?.referralCode || "").trim().toUpperCase();
+    const originBase = (window.location.origin && window.location.origin !== "null" && !window.location.origin.startsWith("file:"))
+      ? `${window.location.origin}${window.location.pathname || "/"}`
+      : "https://nfx-treading.com/";
+    const cleanBase = originBase.endsWith("/") ? originBase : `${originBase}/`;
+    return `${cleanBase}?ref=${encodeURIComponent(code)}`;
+  };
+
+  const origRenderAll = window.renderAll;
+  window.renderAll = function() {
+    lockAllMemberReferralCodesPermanently();
+    if (typeof origRenderAll === "function") {
+      return origRenderAll.apply(this, arguments);
+    }
+  };
+
+  lockAllMemberReferralCodesPermanently();
+})();
+</script>
+
 </body>
 </html>
