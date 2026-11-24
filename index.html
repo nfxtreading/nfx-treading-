@@ -13076,5 +13076,431 @@ state.sentKycEmailCode = null;
 })();
 </script>
 
+
+<script>
+(function() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // =========================================================================
+  // 1. REGISTER SCREEN OTP (6 Seconds Display on Phone Screen, No Email Needed)
+  //    KYC, Withdraw, etc. remain completely untouched.
+  // =========================================================================
+  window.__nfxRegScreenOtpTimer = window.__nfxRegScreenOtpTimer || null;
+
+  function ensureRegScreenOtpBannerDom() {
+    var codeInp = document.getElementById("rg-code");
+    if (!codeInp) return null;
+    var parentContainer = codeInp.parentElement && codeInp.parentElement.parentElement
+      ? codeInp.parentElement.parentElement
+      : codeInp.parentElement;
+    if (!parentContainer) return null;
+
+    var banner = document.getElementById("rg-screen-otp-banner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "rg-screen-otp-banner";
+      banner.className = "hidden mt-2 p-3 rounded-xl bg-[#04132e] border-2 border-amber-400/80 shadow-lg flex items-center justify-between gap-3";
+      parentContainer.appendChild(banner);
+    }
+    return banner;
+  }
+
+  function showRegisterOtpOnPhoneScreenFor6Seconds(otpCode) {
+    var banner = ensureRegScreenOtpBannerDom();
+    var codeInp = document.getElementById("rg-code");
+    if (codeInp) {
+      codeInp.value = String(otpCode);
+      codeInp.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (!banner) {
+      if (typeof showToast === "function") {
+        showToast("Register OTP (6s)", "OTP: " + otpCode + " (Screen এ ৬ সেকেন্ড থাকবে)", "success");
+      }
+      return;
+    }
+
+    if (window.__nfxRegScreenOtpTimer) {
+      clearInterval(window.__nfxRegScreenOtpTimer);
+      window.__nfxRegScreenOtpTimer = null;
+    }
+
+    var remaining = 6;
+    function renderBanner() {
+      banner.classList.remove("hidden");
+      banner.innerHTML =
+        '<div>' +
+          '<div class="text-[10px] font-bold uppercase tracking-wider text-amber-300">Register OTP (Phone Screen)</div>' +
+          '<div class="text-lg font-extrabold font-mono text-emerald-300 tracking-widest mt-0.5">' + String(otpCode) + '</div>' +
+        '</div>' +
+        '<div class="text-right font-mono">' +
+          '<span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-400/20 text-amber-300 border border-amber-400/50">' + remaining + 's</span>' +
+        '</div>';
+    }
+
+    renderBanner();
+    window.__nfxRegScreenOtpTimer = setInterval(function() {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(window.__nfxRegScreenOtpTimer);
+        window.__nfxRegScreenOtpTimer = null;
+        var bNow = document.getElementById("rg-screen-otp-banner");
+        if (bNow) {
+          bNow.classList.add("hidden");
+          bNow.innerHTML = "";
+        }
+      } else {
+        var bCur = document.getElementById("rg-screen-otp-banner");
+        if (bCur && !bCur.classList.contains("hidden")) {
+          renderBanner();
+        }
+      }
+    }, 1000);
+  }
+
+  var prevSendEmailCodeForScreenOtp = window.sendEmailCode;
+  window.sendEmailCode = async function(mode, explicitEmail, btnEl) {
+    if (mode === "register") {
+      var sixDigit = String(Math.floor(100000 + Math.random() * 900000));
+      state.sentRegisterCode = sixDigit;
+      if (typeof saveSessionState === "function") saveSessionState();
+      showRegisterOtpOnPhoneScreenFor6Seconds(sixDigit);
+      return;
+    }
+    if (typeof prevSendEmailCodeForScreenOtp === "function") {
+      return prevSendEmailCodeForScreenOtp.apply(this, arguments);
+    }
+  };
+
+  // Allow any 6-digit code (or the screen OTP) on Register submit without blocking
+  var prevHandleRegisterForScreenOtp = window.handleRegisterSubmit;
+  window.handleRegisterSubmit = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    var codeVal = String(document.getElementById("rg-code")?.value || "").trim();
+    if (/^[0-9]{6}$/.test(codeVal)) {
+      state.sentRegisterCode = codeVal;
+    } else if (!state.sentRegisterCode) {
+      state.sentRegisterCode = "123456";
+      var rgCodeEl = document.getElementById("rg-code");
+      if (rgCodeEl && !rgCodeEl.value) rgCodeEl.value = "123456";
+    }
+
+    if (typeof prevHandleRegisterForScreenOtp === "function") {
+      return await prevHandleRegisterForScreenOtp.apply(this, arguments);
+    }
+  };
+
+  // =========================================================================
+  // 2. MEMBER SIDEBAR "TEAM" OPTION & SEPARATE BOXED TEAM PAGE
+  //    Placed right at the top of Member Sidebar menu list.
+  // =========================================================================
+  function injectMemberTeamMenuAtTop() {
+    if (typeof SIDEBAR_LINKS !== "undefined" && Array.isArray(SIDEBAR_LINKS)) {
+      var existingIdx = SIDEBAR_LINKS.findIndex(function(x) { return x.id === "team"; });
+      if (existingIdx !== -1) {
+        SIDEBAR_LINKS.splice(existingIdx, 1);
+      }
+      // Put "TEAM" at index 0 (top of menu list)
+      SIDEBAR_LINKS.unshift({ id: "team", label: "TEAM", icon: "👥" });
+    }
+  }
+
+  injectMemberTeamMenuAtTop();
+
+  // Assign A, B, or C team position automatically by Sponsor/Referral UID
+  function assignSponsorTeamPosition(sponsorMember, newMemberObj) {
+    if (!sponsorMember || !newMemberObj) return "A";
+    if (!sponsorMember.teamPositions || typeof sponsorMember.teamPositions !== "object") {
+      sponsorMember.teamPositions = { A: [], B: [], C: [] };
+    }
+    var pos = newMemberObj.teamPosition;
+    if (pos !== "A" && pos !== "B" && pos !== "C") {
+      var aLen = (sponsorMember.teamPositions.A || []).length;
+      var bLen = (sponsorMember.teamPositions.B || []).length;
+      var cLen = (sponsorMember.teamPositions.C || []).length;
+      if (aLen <= bLen && aLen <= cLen) pos = "A";
+      else if (bLen <= aLen && bLen <= cLen) pos = "B";
+      else pos = "C";
+    }
+    newMemberObj.teamPosition = pos;
+    newMemberObj.sponsorUid = sponsorMember.uid;
+
+    if (!sponsorMember.teamPositions[pos].some(function(item) { return item.uid === newMemberObj.uid; })) {
+      sponsorMember.teamPositions[pos].push({
+        uid: newMemberObj.uid,
+        username: newMemberObj.username || "Member",
+        investedAmount: Number(newMemberObj.yourInvest || 0),
+        active: Number(newMemberObj.yourInvest || 0) > 0
+      });
+    }
+    return pos;
+  }
+
+  // Recompute A/B/C register members, active members, A/B/C team invests & total team invest
+  function computeMemberTeamHierarchyMetrics(user) {
+    if (!user) {
+      return {
+        regA: 0, regB: 0, regC: 0, totalReg: 0,
+        actA: 0, actB: 0, actC: 0, totalAct: 0,
+        invA: 0, invB: 0, invC: 0, totalTeamInvest: 0
+      };
+    }
+
+    var allMembers = Array.isArray(state.members) ? state.members : [];
+    var ex = state.extraData || {};
+    var tx = user.teamExt || {};
+
+    // Collect downline members whose sponsorUid or referredBy matches this member's uid or referralCode
+    var myCodes = new Set([
+      String(user.uid || "").toUpperCase(),
+      String(user.referralCode || "").toUpperCase()
+    ].filter(Boolean));
+
+    var downline = allMembers.filter(function(m) {
+      if (!m || m.uid === user.uid) return false;
+      var refBy = String(m.referredBy || m.sponsorUid || "").toUpperCase();
+      return refBy && myCodes.has(refBy);
+    });
+
+    var posA = [];
+    var posB = [];
+    var posC = [];
+
+    downline.forEach(function(m) {
+      var p = m.teamPosition;
+      if (p !== "A" && p !== "B" && p !== "C") {
+        p = assignSponsorTeamPosition(user, m);
+      }
+      if (p === "A") posA.push(m);
+      else if (p === "B") posB.push(m);
+      else posC.push(m);
+    });
+
+    // Combine real downline counts with any admin-edited / manual counts
+    var regA = Math.max(posA.length, Number(user.aMembersCount || 0), Number(tx.registeredAMembers || 0), Number(tx.totalAMembers || 0));
+    var regB = Math.max(posB.length, Number(user.bMembersCount || 0), Number(tx.registeredBMembers || 0), Number(tx.totalBMembers || 0));
+    var regC = Math.max(posC.length, Number(user.cMembersCount || 0), Number(tx.registeredCMember || 0), Number(tx.totalCMembers || 0));
+    var totalReg = Math.max(regA + regB + regC, Number(tx.totalMembers || 0));
+
+    var activeDownA = posA.filter(function(m) { return Number(m.yourInvest || 0) > 0; }).length;
+    var activeDownB = posB.filter(function(m) { return Number(m.yourInvest || 0) > 0; }).length;
+    var activeDownC = posC.filter(function(m) { return Number(m.yourInvest || 0) > 0; }).length;
+
+    var actA = Math.max(activeDownA, Number(tx.totalActiveAMembers || 0), Number(ex.activeAMembersCount || 0));
+    var actB = Math.max(activeDownB, Number(tx.totalActiveBMembers || 0), Number(ex.activeBMembersCount || 0));
+    var actC = Math.max(activeDownC, Number(tx.activeCMembers || 0), Number(ex.activeCMembersCount || 0));
+    var totalAct = Math.max(actA + actB + actC, Number(tx.totalActiveMembers || 0));
+
+    var downInvA = posA.reduce(function(s, m) { return s + (Number(m.yourInvest || 0) > 0 ? Number(m.yourInvest || 0) : 0); }, 0);
+    var downInvB = posB.reduce(function(s, m) { return s + (Number(m.yourInvest || 0) > 0 ? Number(m.yourInvest || 0) : 0); }, 0);
+    var downInvC = posC.reduce(function(s, m) { return s + (Number(m.yourInvest || 0) > 0 ? Number(m.yourInvest || 0) : 0); }, 0);
+
+    var invA = Number(Math.max(downInvA, Number(user.aMembersInvest || 0), Number(tx.teamAInvestment || 0)).toFixed(2));
+    var invB = Number(Math.max(downInvB, Number(user.bMembersInvest || 0), Number(tx.teamBInvestment || 0)).toFixed(2));
+    var invC = Number(Math.max(downInvC, Number(user.cMembersInvest || 0), Number(tx.teamCInvestment || 0)).toFixed(2));
+    var totalTeamInvest = Number(Math.max(Number((invA + invB + invC).toFixed(2)), Number(user.teamInvest || 0), Number(tx.totalTeamInvestment || 0)).toFixed(2));
+
+    // Keep user & extraData synced
+    user.aMembersCount = regA;
+    user.bMembersCount = regB;
+    user.cMembersCount = regC;
+    user.aMembersInvest = invA;
+    user.bMembersInvest = invB;
+    user.cMembersInvest = invC;
+    user.teamInvest = totalTeamInvest;
+
+    if (state.extraData) {
+      state.extraData.activeAMembersCount = actA;
+      state.extraData.activeBMembersCount = actB;
+      state.extraData.activeCMembersCount = actC;
+    }
+
+    return {
+      regA: regA,
+      regB: regB,
+      regC: regC,
+      totalReg: totalReg,
+      actA: actA,
+      actB: actB,
+      actC: actC,
+      totalAct: totalAct,
+      invA: invA,
+      invB: invB,
+      invC: invC,
+      totalTeamInvest: totalTeamInvest
+    };
+  }
+
+  window.renderTeamScreen = function(user) {
+    var m = computeMemberTeamHierarchyMetrics(user);
+    return (
+      '<div class="space-y-4 max-w-4xl mx-auto text-white">' +
+        pageHeader("👥", "TEAM", "Sponsor/Referral UID Team Positions (A, B, C), Active Members & Team Invest", "TEAM") +
+
+        // Box 1: Registered Members
+        '<div class="rounded-2xl p-5 border-2 border-[#facc15]/75 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
+          '<div class="flex items-center justify-between border-b border-[#facc15]/25 pb-2">' +
+            '<h2 class="text-sm sm:text-base font-extrabold text-[#fde047]">Registered Members</h2>' +
+            '<span class="px-3 py-0.5 rounded-full font-mono font-extrabold bg-sky-500/20 text-sky-300 border border-sky-400/40">Total: ' + m.totalReg + '</span>' +
+          '</div>' +
+          '<div class="space-y-2 font-mono">' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-400/30 flex justify-between"><span class="font-sans text-slate-200 font-semibold">Total Register Members</span><strong class="text-white text-sm">' + m.totalReg + '</strong></div>' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-400/25 flex justify-between"><span class="font-sans text-sky-300 font-bold">A Register Member</span><strong class="text-white text-sm">' + m.regA + '</strong></div>' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/25 flex justify-between"><span class="font-sans text-emerald-300 font-bold">B Register Member</span><strong class="text-white text-sm">' + m.regB + '</strong></div>' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-amber-400/25 flex justify-between"><span class="font-sans text-amber-300 font-bold">C Register Member</span><strong class="text-white text-sm">' + m.regC + '</strong></div>' +
+          '</div>' +
+        '</div>' +
+
+        // Box 2: Active Members
+        '<div class="rounded-2xl p-5 border-2 border-emerald-400/60 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
+          '<div class="flex items-center justify-between border-b border-emerald-400/25 pb-2">' +
+            '<h2 class="text-sm sm:text-base font-extrabold text-emerald-300">Active Members</h2>' +
+            '<span class="px-3 py-0.5 rounded-full font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">Total Active: ' + m.totalAct + '</span>' +
+          '</div>' +
+          '<div class="space-y-2 font-mono">' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/30 flex justify-between"><span class="font-sans text-slate-200 font-semibold">Total Active Members</span><strong class="text-emerald-300 text-sm">' + m.totalAct + '</strong></div>' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-sky-400/25 flex justify-between"><span class="font-sans text-sky-300 font-bold">A Active Members</span><strong class="text-white text-sm">' + m.actA + '</strong></div>' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/25 flex justify-between"><span class="font-sans text-emerald-300 font-bold">B Active Members</span><strong class="text-white text-sm">' + m.actB + '</strong></div>' +
+            '<div class="p-3 rounded-xl bg-[#05122b] border border-amber-400/25 flex justify-between"><span class="font-sans text-amber-300 font-bold">C Active Members</span><strong class="text-white text-sm">' + m.actC + '</strong></div>' +
+          '</div>' +
+        '</div>' +
+
+        // Box 3: Total Team Invest
+        '<div class="rounded-2xl p-5 border-2 border-[#facc15]/75 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
+          '<div class="flex items-center justify-between border-b border-[#facc15]/25 pb-2">' +
+            '<h2 class="text-sm sm:text-base font-extrabold text-[#fde047]">Team Invest</h2>' +
+            '<span class="text-[11px] font-mono text-sky-300">A + B + C Confirmed</span>' +
+          '</div>' +
+          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/35 flex justify-between font-mono">' +
+            '<span class="font-sans text-slate-200 font-bold">Total Team Invest</span>' +
+            '<strong class="text-amber-300 text-base">' + m.totalTeamInvest.toFixed(2) + ' USDT</strong>' +
+          '</div>' +
+        '</div>' +
+
+        // Box 4: Team A
+        '<div class="rounded-2xl p-5 border-2 border-sky-400/55 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
+          '<h2 class="text-sm sm:text-base font-extrabold text-sky-300 border-b border-sky-400/25 pb-2">Team A</h2>' +
+          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/30 flex justify-between font-mono">' +
+            '<span class="font-sans text-slate-200 font-semibold">Team A Total Invest</span>' +
+            '<strong class="text-white text-sm">' + m.invA.toFixed(2) + ' USDT</strong>' +
+          '</div>' +
+        '</div>' +
+
+        // Box 5: Team B
+        '<div class="rounded-2xl p-5 border-2 border-emerald-400/55 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
+          '<h2 class="text-sm sm:text-base font-extrabold text-emerald-300 border-b border-emerald-400/25 pb-2">Team B</h2>' +
+          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-emerald-400/30 flex justify-between font-mono">' +
+            '<span class="font-sans text-slate-200 font-semibold">Team B Total Invest</span>' +
+            '<strong class="text-white text-sm">' + m.invB.toFixed(2) + ' USDT</strong>' +
+          '</div>' +
+        '</div>' +
+
+        // Box 6: Team C
+        '<div class="rounded-2xl p-5 border-2 border-amber-400/55 shadow-xl space-y-3 text-xs" style="background: linear-gradient(160deg, #0b2963 0%, #051129 100%);">' +
+          '<h2 class="text-sm sm:text-base font-extrabold text-amber-300 border-b border-amber-400/25 pb-2">Team C</h2>' +
+          '<div class="p-3.5 rounded-xl bg-[#05122b] border border-amber-400/30 flex justify-between font-mono">' +
+            '<span class="font-sans text-slate-200 font-semibold">Team C Total Invest</span>' +
+            '<strong class="text-white text-sm">' + m.invC.toFixed(2) + ' USDT</strong>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  };
+
+  // =========================================================================
+  // 3. REAL-TIME AUTO CALCULATION & MASTER ADMIN SYNC
+  //    - New registration under Sponsor/Referral UID auto-assigns A, B, or C
+  //    - When a member invests, sponsor's A/B/C active count & A/B/C/Total team invest update
+  //    - When Master Admin edits any A/B/C count, invest, balance, or field,
+  //      it reflects live on the member's ID and deducts/adds automatically when used.
+  // =========================================================================
+  var prevRecalcMetrics = window.recalculatePlatformAutoMetrics;
+  window.recalculatePlatformAutoMetrics = function(targetUser) {
+    var u = targetUser || (typeof activeMember === "function" ? activeMember() : null);
+    var hierarchy = computeMemberTeamHierarchyMetrics(u);
+    var baseRes = typeof prevRecalcMetrics === "function" ? prevRecalcMetrics.apply(this, arguments) : {};
+    return Object.assign({}, baseRes, {
+      regA: hierarchy.regA,
+      regB: hierarchy.regB,
+      regC: hierarchy.regC,
+      totalRegisterMembers: hierarchy.totalReg,
+      actA: hierarchy.actA,
+      actB: hierarchy.actB,
+      actC: hierarchy.actC,
+      totalActiveMembers: hierarchy.totalAct,
+      teamAInvestment: hierarchy.invA,
+      teamBInvestment: hierarchy.invB,
+      teamCInvestment: hierarchy.invC,
+      totalTeamInvestment: hierarchy.totalTeamInvest
+    });
+  };
+
+  // When a member buys a plan, update sponsor's A/B/C active members & A/B/C/Total team invest in real time
+  var prevBuyPlanForTeam = window.buyPlan;
+  window.buyPlan = function() {
+    var investor = typeof activeMember === "function" ? activeMember() : null;
+    var res = typeof prevBuyPlanForTeam === "function" ? prevBuyPlanForTeam.apply(this, arguments) : undefined;
+    if (investor && Array.isArray(state.members)) {
+      var refKey = String(investor.referredBy || investor.sponsorUid || "").trim().toUpperCase();
+      if (refKey) {
+        var sponsor = state.members.find(function(m) {
+          return String(m.uid || "").toUpperCase() === refKey || String(m.referralCode || "").toUpperCase() === refKey;
+        });
+        if (sponsor && sponsor.uid !== investor.uid) {
+          var pos = assignSponsorTeamPosition(sponsor, investor);
+          var dl = state.members.filter(function(m) {
+            if (!m || m.uid === sponsor.uid) return false;
+            var r = String(m.referredBy || m.sponsorUid || "").toUpperCase();
+            return r === String(sponsor.uid || "").toUpperCase() || r === String(sponsor.referralCode || "").toUpperCase();
+          });
+          var sumA = 0, sumB = 0, sumC = 0, actCountA = 0, actCountB = 0, actCountC = 0;
+          dl.forEach(function(dm) {
+            var p = dm.teamPosition || assignSponsorTeamPosition(sponsor, dm);
+            var invAmt = Number(dm.yourInvest || 0);
+            if (p === "A") {
+              if (invAmt > 0) { sumA += invAmt; actCountA += 1; }
+            } else if (p === "B") {
+              if (invAmt > 0) { sumB += invAmt; actCountB += 1; }
+            } else if (p === "C") {
+              if (invAmt > 0) { sumC += invAmt; actCountC += 1; }
+            }
+          });
+          sponsor.aMembersInvest = Number(sumA.toFixed(2));
+          sponsor.bMembersInvest = Number(sumB.toFixed(2));
+          sponsor.cMembersInvest = Number(sumC.toFixed(2));
+          sponsor.teamInvest = Number((sumA + sumB + sumC).toFixed(2));
+          if (!sponsor.teamExt) sponsor.teamExt = {};
+          sponsor.teamExt.teamAInvestment = sponsor.aMembersInvest;
+          sponsor.teamExt.teamBInvestment = sponsor.bMembersInvest;
+          sponsor.teamExt.teamCInvestment = sponsor.cMembersInvest;
+          sponsor.teamExt.totalTeamInvestment = sponsor.teamInvest;
+          sponsor.teamExt.totalActiveAMembers = actCountA;
+          sponsor.teamExt.totalActiveBMembers = actCountB;
+          sponsor.teamExt.activeCMembers = actCountC;
+          sponsor.teamExt.totalActiveMembers = actCountA + actCountB + actCountC;
+          if (typeof window.pushMemberToLiveSync === "function") {
+            window.pushMemberToLiveSync(sponsor);
+          }
+        }
+      }
+    }
+    return res;
+  };
+
+  // Ensure renderAll always keeps TEAM at top of member sidebar and refreshes live UI
+  var prevRenderAllForMemberTeam = window.renderAll;
+  window.renderAll = function() {
+    injectMemberTeamMenuAtTop();
+    var out = typeof prevRenderAllForMemberTeam === "function" ? prevRenderAllForMemberTeam.apply(this, arguments) : undefined;
+    // If on register route and an OTP was generated within 6s, keep banner synced
+    if (typeof state !== "undefined" && state.currentRoute === "register") {
+      ensureRegScreenOtpBannerDom();
+    }
+    return out;
+  };
+})();
+</script>
+
 </body>
 </html>
