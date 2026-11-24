@@ -273,6 +273,11 @@
                     👤 Profile
                   </button>
                 </div>
+                <button type="button" onclick="openOldMemberAccessModal()"
+                        class="w-full py-2 px-3 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/55 text-amber-300 font-extrabold text-xs flex items-center justify-between">
+                  <span>🔑 Old Account</span>
+                  <span>→</span>
+                </button>
               </div>
             </div>
           </div>
@@ -515,7 +520,7 @@
     }
 
     const state = {
-      currentRoute: "dashboard",
+      currentRoute: "register",
       brandName: "NFX Treading",
       brandSub: "NFX Treading 2026",
       currentUserUid: "NFX-1001",
@@ -587,7 +592,7 @@
 
     const routeHistory = [];
     const AUTH_PAGES = new Set([]);
-    const ROOT_PAGES = new Set(["dashboard"]);
+    const ROOT_PAGES = new Set(["register", "login", "dashboard"]);
 
 
     function sanitizeLegacyDemoStrings(memberObj) {
@@ -754,7 +759,7 @@
         state.admin.pendingOtp = null;
       }
       routeHistory.length = 0;
-      state.currentRoute = "dashboard";
+      state.currentRoute = "login";
       if (typeof saveSessionState === "function") saveSessionState();
       renderAll();
       if (window.innerWidth < 1024) toggleMobileSidebar(false);
@@ -762,8 +767,9 @@
     }
 
     function navigateTo(route, isBack = false) {
-      if (route === "logout" || route === "register" || route === "login") {
-        route = "dashboard";
+      if (route === "logout") {
+        logoutMemberAccount();
+        return;
       }
       if (route === "login") {
         window.__nfxForceRegisterEntry = false;
@@ -9019,7 +9025,7 @@ state.sentKycEmailCode = null;
     if (state.currentRoute === "login" && !window.__nfxForceRegisterEntry) {
       return false;
     }
-    if (false && window.__nfxForceRegisterEntry && isReferralOrRegisterEntry()) {
+    if (window.__nfxForceRegisterEntry && isReferralOrRegisterEntry()) {
       state.currentRoute = "dashboard";
       if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.add === "function") {
         AUTH_PAGES.add("register");
@@ -9547,7 +9553,7 @@ state.sentKycEmailCode = null;
       var mainView = document.getElementById("main-view");
       if (mainView && typeof renderRouteContent === "function" && typeof activeMember === "function") {
         var prevRoute = (typeof state !== "undefined") ? state.currentRoute : "login";
-        if (typeof state !== "undefined") state.currentRoute = "dashboard";
+        if (typeof state !== "undefined") state.currentRoute = "login";
         mainView.innerHTML = renderRouteContent(activeMember());
         if (typeof state !== "undefined") state.currentRoute = prevRoute;
       }
@@ -13258,71 +13264,171 @@ state.sentKycEmailCode = null;
 
 
 <script>
-(function nfxDirectDashboardOnlyV15() {
+(function nfxOldAccountInTopRightMenuV16() {
   if (typeof window === "undefined" || typeof state === "undefined") return;
 
-  function forceDirectDashboard() {
+  function collectAllKnownMembers() {
+    var map = {};
+    function addList(arr) {
+      if (!Array.isArray(arr)) return;
+      arr.forEach(function(m) {
+        if (m && m.uid) {
+          var key = String(m.uid).trim();
+          if (!map[key]) map[key] = m;
+        }
+      });
+    }
+    addList(state.members);
+    try {
+      var rawSess = localStorage.getItem("nfx_treading_session_v16") || sessionStorage.getItem("nfx_treading_session_v16");
+      if (rawSess) {
+        var sp = JSON.parse(rawSess);
+        if (sp && Array.isArray(sp.members)) addList(sp.members);
+      }
+    } catch (e1) {}
+    try {
+      var rawMap = localStorage.getItem("nfx_treading_realtime_members_v1");
+      if (rawMap) {
+        var mp = JSON.parse(rawMap);
+        if (mp && typeof mp === "object") addList(Object.values(mp));
+      }
+    } catch (e2) {}
+    return Object.values(map);
+  }
+
+  window.openOldMemberAccessModal = function() {
+    var topCard = document.getElementById("top-account-card");
+    if (topCard) topCard.classList.add("hidden");
+
+    var modal = document.getElementById("nfx-old-member-modal");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "nfx-old-member-modal";
+      modal.className = "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4";
+      document.body.appendChild(modal);
+    }
+
+    var knownMembers = collectAllKnownMembers();
+    var quickListHtml = knownMembers.length > 0
+      ? (
+        '<div class="space-y-1.5">' +
+          '<div class="text-[11px] text-slate-400 font-bold">Saved Accounts (' + knownMembers.length + ')</div>' +
+          '<div class="max-h-40 overflow-y-auto space-y-1.5 pr-1">' +
+            knownMembers.map(function(m) {
+              var label = (m.username ? m.username + " • " : "") + m.uid;
+              var balTxt = "$" + Number(m.balance || 0).toFixed(2);
+              return '<button type="button" onclick="switchToExistingMemberIdV14(\'' + String(m.uid).replace(/'/g, "\\'") + '\')" ' +
+                'class="w-full px-3 py-2 rounded-lg bg-[#040d21] hover:bg-sky-900/50 border border-sky-500/25 flex items-center justify-between text-left font-mono text-[11px]">' +
+                '<span class="text-white font-sans font-bold truncate">' + label + '</span>' +
+                '<span class="text-emerald-300 font-bold shrink-0 mx-2">' + balTxt + '</span>' +
+                '<span class="text-amber-300 font-bold shrink-0">Enter →</span>' +
+              '</button>';
+            }).join("") +
+          '</div>' +
+        '</div>'
+      )
+      : "";
+
+    modal.innerHTML =
+      '<div class="account-solid-panel rounded-2xl max-w-md w-full p-6 border-2 border-amber-400/75 space-y-4 text-xs text-white">' +
+        '<div class="flex items-center justify-between border-b border-sky-500/25 pb-2.5">' +
+          '<h3 class="text-base font-extrabold text-amber-300">Old Account</h3>' +
+          '<button type="button" onclick="closeOldMemberAccessModal()" class="text-slate-300 hover:text-white font-bold">✕</button>' +
+        '</div>' +
+        '<p class="text-slate-300 leading-relaxed">Enter your Old Member UID, Referral Code, Email, or Username to return to your old account.</p>' +
+        '<form onsubmit="submitOldMemberUidForm(event)" class="space-y-3">' +
+          '<div>' +
+            '<label class="text-amber-300 font-bold block mb-1">Old UID / Username / Email</label>' +
+            '<input id="old-member-uid-input" required placeholder="e.g. NFX1001 or your old UID" class="input-box w-full rounded-lg px-3 py-2.5 font-mono text-xs" />' +
+          '</div>' +
+          '<button type="submit" class="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm shadow">' +
+            'Open Old Account →' +
+          '</button>' +
+        '</form>' +
+        quickListHtml +
+      '</div>';
+
+    modal.classList.remove("hidden");
+  };
+
+  window.closeOldMemberAccessModal = function() {
+    var modal = document.getElementById("nfx-old-member-modal");
+    if (modal) modal.classList.add("hidden");
+  };
+
+  window.switchToExistingMemberIdV14 = function(rawInput) {
+    var q = String(rawInput || "").trim();
+    if (!q) return;
+    if (!Array.isArray(state.members)) state.members = [];
+
+    var allKnown = collectAllKnownMembers();
+    var found = allKnown.find(function(m) {
+      if (!m) return false;
+      return String(m.uid || "").trim().toLowerCase() === q.toLowerCase() ||
+             String(m.referralCode || "").trim().toLowerCase() === q.toLowerCase() ||
+             (m.username && String(m.username).trim().toLowerCase() === q.toLowerCase()) ||
+             (m.email && String(m.email).trim().toLowerCase() === q.toLowerCase());
+    });
+
+    if (found) {
+      if (!state.members.some(function(x) { return x && x.uid === found.uid; })) {
+        state.members.push(found);
+      }
+    } else {
+      found = {
+        uid: q.toUpperCase(),
+        username: q.includes("@") ? "" : q,
+        email: q.includes("@") ? q : "",
+        mobile: "",
+        country: "",
+        password: "User@1234",
+        avatar: (typeof DEFAULT_USER_AVATAR !== "undefined") ? DEFAULT_USER_AVATAR : "",
+        authenticatorBound: false,
+        authenticatorSecret: (typeof generateUniqueBase32Key === "function") ? generateUniqueBase32Key(q) : "JBSWY3DPEHPK3PXP9NFX1001",
+        referralCode: q.replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "NFX1001",
+        referralBonus: 0,
+        balance: 0,
+        yourInvest: 0,
+        teamInvest: 0,
+        aMembersCount: 0,
+        aMembersInvest: 0,
+        bMembersCount: 0,
+        bMembersInvest: 0,
+        cMembersCount: 0,
+        cMembersInvest: 0,
+        totalProfit: 0,
+        investmentId: "#INV2026111301",
+        planName: "None",
+        startDate: "-",
+        endDate: "-",
+        status: "Inactive",
+        kycStatus: "Unverified",
+        withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
+      };
+      state.members.push(found);
+    }
+
+    state.currentUserUid = found.uid;
     state.isLoggedIn = true;
-    if (typeof AUTH_PAGES !== "undefined" && AUTH_PAGES && typeof AUTH_PAGES.clear === "function") {
-      AUTH_PAGES.clear();
+    state.currentRoute = "dashboard";
+    window.__nfxActiveMemberIdLock = found.uid;
+    try {
+      localStorage.setItem("nfx_locked_member_id_v14_2", found.uid);
+      sessionStorage.setItem("nfx_locked_member_id_v14_2", found.uid);
+    } catch (e) {}
+    if (typeof saveSessionState === "function") saveSessionState();
+    closeOldMemberAccessModal();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Old Account Loaded!", "Active ID: " + found.uid);
     }
-    if (!state.currentUserUid || String(state.currentUserUid).trim() === "") {
-      state.currentUserUid = (Array.isArray(state.members) && state.members[0] && state.members[0].uid) ? state.members[0].uid : "NFX-1001";
-    }
-    if (state.currentRoute === "register" || state.currentRoute === "login" || state.currentRoute === "logout" || !state.currentRoute) {
-      state.currentRoute = "dashboard";
-    }
-    var sb = document.getElementById("left-sidebar");
-    var hdr = document.getElementById("top-header");
-    var mq = document.getElementById("top-marquee");
-    if (sb) sb.style.display = "";
-    if (hdr) hdr.style.display = "";
-    if (mq) mq.style.display = "";
-  }
+  };
 
-  var origNav = window.navigateTo;
-  if (typeof origNav === "function") {
-    window.navigateTo = function(route, isBack) {
-      if (route === "register" || route === "login" || route === "logout") {
-        route = "dashboard";
-      }
-      var res = origNav.call(this, route, isBack);
-      forceDirectDashboard();
-      return res;
-    };
-  }
-
-  var origLogout = window.logoutMemberAccount;
-  if (typeof origLogout === "function") {
-    window.logoutMemberAccount = function() {
-      state.isLoggedIn = true;
-      state.currentRoute = "dashboard";
-      forceDirectDashboard();
-      if (typeof window.renderAll === "function") {
-        try { window.renderAll(); } catch (e) {}
-      }
-    };
-  }
-
-  forceDirectDashboard();
-  window.addEventListener("DOMContentLoaded", function() {
-    forceDirectDashboard();
-    if (typeof window.renderAll === "function") {
-      try { window.renderAll(); } catch (e) {}
-    }
-    setTimeout(function() {
-      forceDirectDashboard();
-      if (typeof window.renderAll === "function") {
-        try { window.renderAll(); } catch (e) {}
-      }
-    }, 200);
-  });
-  window.addEventListener("hashchange", function() {
-    forceDirectDashboard();
-    if (typeof window.renderAll === "function") {
-      try { window.renderAll(); } catch (e) {}
-    }
-  });
+  window.submitOldMemberUidForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var val = document.getElementById("old-member-uid-input")?.value || "";
+    window.switchToExistingMemberIdV14(val);
+  };
 })();
 </script>
 
