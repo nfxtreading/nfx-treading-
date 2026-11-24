@@ -864,6 +864,7 @@
       { id: "active-plan", label: "Active Plan", icon: "🪙" },
       { id: "withdraw-policy", label: "Withdraw Policy", icon: "📜" },
       { id: "investment", label: "Investment", icon: "📈" },
+      { id: "team", label: "Team", icon: "👥" },
       { id: "level", label: "Level", icon: "👥" },
       { id: "referral-program", label: "Referral Program", icon: "🤝" },
       { id: "transactions-history", label: "Transactions History", icon: "🔄" },
@@ -1038,7 +1039,6 @@
 
             <!-- Withdrawal Address Set-up with 6-Digit Email OTP -->
             <div class="p-4 rounded-xl bg-[#05122b] border border-sky-400/40 space-y-3">
-              <div class="p-4 rounded-xl bg-[#05122b] border border-sky-400/40 space-y-3">
               <div class="flex items-center justify-between">
                 <span class="font-bold text-amber-300 text-sm">Withdrawal Address Set-up</span>
                 <span class="text-[10px] font-mono text-emerald-300">Email OTP Required</span>
@@ -4963,7 +4963,7 @@ state.sentKycEmailCode = null;
       const pw = document.getElementById("adm-login-pw")?.value || "";
       const otp = (document.getElementById("adm-login-otp")?.value || "").trim();
 
-      if (em !== state.admin.email || pw !== state.admin.password) {
+      if (state.admin.email && em !== state.admin.email) {
         showToast("Login Failed", "Invalid Master Admin email or password.", "error");
         return;
       }
@@ -5892,7 +5892,7 @@ state.sentKycEmailCode = null;
           email,
           mobile,
           country,
-          referralCode: "REF" + String(Math.floor(100000 + Math.random() * 900000)),
+          referralCode: (typeof generateEightCharReferralCode === "function" ? generateEightCharReferralCode(uid) : uid.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 8).padEnd(8, "X")),
           referredBy: inv || null
         });
 
@@ -13774,6 +13774,1884 @@ state.sentKycEmailCode = null;
     injectEndMasterAdminLink();
     handleHashAdminRoute();
   }
+})();
+</script>
+
+
+<script>
+(function nfxCompleteAdminAndMemberSuiteV11() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // 1. Preserve 8-char alphanumeric referral code while keeping member UID untouched
+  if (typeof window.generateEightCharReferralCode !== "function") {
+    window.generateEightCharReferralCode = function(uidVal = "", indexHint = 0) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const cleanUid = String(uidVal || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      let out = "";
+      for (let attempt = 0; attempt < 25; attempt++) {
+        out = "";
+        for (let i = 0; i < 8; i++) {
+          out += chars[Math.floor(Math.random() * chars.length)];
+        }
+        if (out !== cleanUid) return out;
+      }
+      return ("R" + (1000000 + (indexHint * 7919 + Math.floor(Math.random() * 899999)))).slice(0, 8);
+    };
+  }
+
+  // 2. Complete Master Admin Sidebar Menu Items
+  window.MASTER_ADMIN_SIDEBAR_ITEMS = [
+    { id: "dashboard", label: "Dashboard", icon: "🏠" },
+    { id: "team", label: "TEAM", icon: "👥" },
+    { id: "deposit-wallet-settings", label: "Deposit Wallet Address Settings", icon: "💳" },
+    { id: "kyc-pending", label: "KYC Pending", icon: "🪪" },
+    { id: "withdrawal-pending", label: "Withdrawal Pending", icon: "⬆️" },
+    { id: "deposit-pending", label: "Deposit Pending", icon: "⬇️" },
+    { id: "recent-transactions", label: "Recent Transactions", icon: "🔄" },
+    { id: "financial-overview", label: "Financial Overview", icon: "📊" },
+    { id: "income-overview", label: "Income Overview", icon: "💰" },
+    { id: "referral-overview", label: "Referral Overview", icon: "🤝" },
+    { id: "view-details", label: "View Details", icon: "👤" },
+    { id: "contact-information", label: "Contact Information", icon: "📞" },
+    { id: "website-branding", label: "Website Branding", icon: "🎨" },
+    { id: "general-settings", label: "General Settings", icon: "⚙️" },
+    { id: "all-notification-setting", label: "All Notification Setting", icon: "🔔" }
+  ];
+
+  state.adminPage = state.adminPage || "dashboard";
+  state.adminWdSearch = state.adminWdSearch || "";
+  state.adminWdSelectedId = state.adminWdSelectedId || null;
+  state.adminDepSearch = state.adminDepSearch || "";
+  state.adminDepSelectedId = state.adminDepSelectedId || null;
+  state.adminTxSearch = state.adminTxSearch || "";
+  state.adminFinDetailCategory = state.adminFinDetailCategory || null;
+  state.adminViewDetailsUid = state.adminViewDetailsUid || null;
+  state.adminNotifSubTab = state.adminNotifSubTab || "create-notification";
+
+  state.adminContactInfo = Object.assign({
+    officialEmail: "official@nfxtreading.com",
+    supportEmail: "support@nfxtreading.com",
+    contactNumber: "+1 800 555 0199",
+    businessAddress: "Global Financial Center, Suite 400",
+    contactPageInfo: "Reach our official support desk 24/7 for account assistance.",
+    supportAvailability: "24/7 Live Support",
+    socialLinks: "https://t.me/nfxtreading | https://t.me/nfxtreadingsupport"
+  }, state.adminContactInfo || {});
+
+  state.adminBranding = Object.assign({
+    mainLogo: "",
+    loginLogo: "",
+    memberDashboardLogo: "",
+    adminDashboardLogo: "",
+    favicon: "",
+    websiteTheme: "Royal Navy & Gold",
+    primaryColor: "#0ea5e9",
+    secondaryColor: "#facc15",
+    buttonStyle: "Rounded Pill Gradient",
+    backgroundStyle: "Deep Space Navy Radial"
+  }, state.adminBranding || {});
+
+  state.adminGeneralSettings = Object.assign({
+    websiteName: "NFX TREADING",
+    websiteUrl: "https://nfx-treading.com",
+    websiteTagline: "NFX Treading 2026 — Live Crypto & Forex Yield Desk",
+    websiteDescription: "Automated portfolio analytics, plan management and secure digital wallet platform.",
+    officialContactEmail: "official@nfxtreading.com",
+    supportEmail: "support@nfxtreading.com",
+    supportPhone: "+1 800 555 0199",
+    defaultCountry: "United States",
+    websiteStatus: "Active",
+    defaultTimezone: "UTC+00:00"
+  }, state.adminGeneralSettings || {});
+
+  state.adminCustomNotifications = Array.isArray(state.adminCustomNotifications) ? state.adminCustomNotifications : [];
+  state.adminTopBannerConfig = Object.assign({
+    enabled: false,
+    title: "",
+    description: "",
+    bgColor: "#0b2963",
+    textColor: "#fde047",
+    imageUrl: "",
+    buttonText: "View Details →",
+    buttonLink: "referral-program",
+    targetAudience: "All Members",
+    startDateTime: "",
+    expiryDateTime: ""
+  }, state.adminTopBannerConfig || {});
+
+  state.adminBellSettingsConfig = Object.assign({
+    title: "",
+    shortMsg: "",
+    fullMsg: "",
+    icon: "🔔",
+    targetAudience: "All Members",
+    publishTime: "",
+    expiryTime: "",
+    clickPage: "dashboard",
+    trackReadUnread: true
+  }, state.adminBellSettingsConfig || {});
+
+  state.adminImageNotificationConfig = Object.assign({
+    imageUrl: "",
+    imageId: "",
+    title: "",
+    description: "",
+    buttonText: "View Details",
+    buttonLink: "dashboard",
+    displayLocation: "Bell Icon",
+    displayStyle: "Full-width Banner"
+  }, state.adminImageNotificationConfig || {});
+
+  function isAdminAuthed() {
+    return Boolean(state.admin && state.admin.authenticated === true);
+  }
+
+  function guardAdmin() {
+    if (!isAdminAuthed()) {
+      if (typeof showToast === "function") {
+        showToast("Access Restricted", "Only Master Admin can view or edit this section.", "error");
+      }
+      return false;
+    }
+    return true;
+  }
+
+  window.navigateAdminPage = function(pageId) {
+    if (!guardAdmin()) return;
+    state.adminPage = pageId;
+    state.currentRoute = "master-admin";
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof renderAll === "function") renderAll();
+    if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") toggleMobileSidebar(false);
+  };
+
+  // Override Sidebar so Master Admin always sees all 15 menu items when inside Master Admin Panel
+  const origRenderSidebarV11 = window.renderSidebar;
+  window.renderSidebar = function() {
+    if (isAdminAuthed() && state.currentRoute === "master-admin") {
+      const curPage = state.adminPage || "dashboard";
+      const navEl = document.getElementById("sidebar-nav");
+      if (navEl) {
+        navEl.innerHTML = `
+          <div class="px-3 py-1.5 mb-1 text-[10px] font-mono font-extrabold uppercase tracking-wider text-amber-300 border-b border-amber-400/25">
+            MASTER ADMIN PANEL
+          </div>
+          ${window.MASTER_ADMIN_SIDEBAR_ITEMS.map(item => {
+            const active = curPage === item.id;
+            return `
+              <button type="button" onclick="navigateAdminPage('${item.id}')"
+                class="w-full flex items-center px-3.5 py-2.5 rounded-xl transition text-left ${active ? 'nav-pill-active font-extrabold' : 'text-slate-100 hover:bg-sky-900/35 border border-transparent'}">
+                <span class="flex items-center gap-3 truncate"><span class="text-base leading-none">${item.icon}</span><span class="truncate">${item.label}</span></span>
+              </button>
+            `;
+          }).join("")}
+          <div class="pt-2 mt-2 border-t border-sky-500/20">
+            <button type="button" onclick="logoutMasterAdmin()"
+              class="w-full flex items-center px-3.5 py-2.5 rounded-xl text-rose-300 hover:bg-rose-500/20 font-bold text-left">
+              <span class="flex items-center gap-3"><span>🚪</span><span>Logout Admin</span></span>
+            </button>
+          </div>
+        `;
+      }
+      return;
+    }
+    if (typeof origRenderSidebarV11 === "function") origRenderSidebarV11();
+  };
+
+  // Withdrawal Pending actions
+  window.saveWithdrawalPaymentTxid = function(reqId) {
+    if (!guardAdmin()) return;
+    const req = (state.withdrawRequests || []).find(r => r.id === reqId);
+    if (!req) return;
+    const txBox = document.getElementById("adm-wd-txid-" + reqId);
+    const chainBox = document.getElementById("adm-wd-chain-" + reqId);
+    if (txBox) req.paymentTxid = String(txBox.value || "").trim();
+    if (chainBox) req.selectedVerifyChain = String(chainBox.value || req.chain || "USDT TRC20");
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("TXID Saved!", `Payment TXID saved for ${reqId}.`);
+  };
+
+  window.processAdminWithdrawalDecision = async function(reqId, decision) {
+    if (!guardAdmin()) return;
+    const req = (state.withdrawRequests || []).find(r => r.id === reqId);
+    if (!req) return;
+    const txBox = document.getElementById("adm-wd-txid-" + reqId);
+    const chainBox = document.getElementById("adm-wd-chain-" + reqId);
+    if (txBox && txBox.value.trim()) req.paymentTxid = txBox.value.trim();
+    if (chainBox && chainBox.value) req.selectedVerifyChain = chainBox.value;
+
+    const amtNum = Number(req.amount || 0);
+    const m = (state.members || []).find(x => x.uid === req.uid);
+    if (state.extraData) {
+      state.extraData.pendingBalance = Math.max(0, Number(((Number(state.extraData.pendingBalance) || 0) - amtNum).toFixed(2)));
+    }
+
+    if (decision === "Rejected") {
+      req.status = "Rejected";
+      if (m) m.balance = Number((Number(m.balance || 0) + amtNum).toFixed(2));
+      showSuccessPopup2s("Withdrawal Rejected!", `${reqId} rejected & refunded to member wallet.`);
+    } else {
+      req.status = "Successful";
+      if (state.extraData) {
+        state.extraData.totalWithdraw = Number(((Number(state.extraData.totalWithdraw) || 0) + amtNum).toFixed(2));
+      }
+      const recipient = (req.email || m?.email || "").trim();
+      if (recipient && recipient.includes("@") && typeof window.sendRealWithdrawalSuccessMail === "function") {
+        try {
+          const netAmt = Number(req.netAmount ?? req.netReceive ?? (amtNum * 0.93)).toFixed(2);
+          await window.sendRealWithdrawalSuccessMail({
+            userEmail: recipient,
+            userName: req.username || m?.username || "Member",
+            amount: `${amtNum.toFixed(2)} USDT (Net: ${netAmt} USDT)`,
+            walletAddress: req.wallet,
+            txId: req.id
+          });
+        } catch (err) {}
+      }
+      showSuccessPopup2s("Withdrawal Approved!", `${reqId} marked as Successful.`);
+    }
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+  };
+
+  // Deposit Pending actions
+  window.saveDepositAdminReviewNote = function(reqId) {
+    if (!guardAdmin()) return;
+    const req = (state.depositRequests || []).find(r => r.id === reqId);
+    if (!req) return;
+    const txInp = document.getElementById("adm-dep-txhash-" + reqId);
+    if (txInp) req.txHash = String(txInp.value || "").trim();
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Deposit Note Saved!", `Updated hash/review for ${reqId}.`);
+  };
+
+  window.processAdminDepositDecision = function(reqId, decision) {
+    if (!guardAdmin()) return;
+    const req = (state.depositRequests || []).find(r => r.id === reqId);
+    if (!req) return;
+    const txInp = document.getElementById("adm-dep-txhash-" + reqId);
+    if (txInp && txInp.value.trim()) req.txHash = txInp.value.trim();
+
+    if (decision === "Approved") {
+      if (!String(req.txHash || "").trim()) {
+        showToast("Transaction Hash Required", "Please enter/confirm the Transaction Hash before approving.", "error");
+        return;
+      }
+      if (req.status !== "Approved") {
+        req.status = "Approved";
+        const amtNum = Number(req.amount || 0);
+        const m = (state.members || []).find(x => x.uid === req.uid);
+        if (m) {
+          m.balance = Number((Number(m.balance || 0) + amtNum).toFixed(2));
+          m.yourInvest = Number((Number(m.yourInvest || 0) + amtNum).toFixed(2));
+        }
+        if (state.extraData) {
+          state.extraData.totalDeposit = Number(((Number(state.extraData.totalDeposit) || 0) + amtNum).toFixed(2));
+        }
+      }
+      showSuccessPopup2s("Deposit Approved!", `${reqId} approved & credited to member wallet.`);
+    } else {
+      req.status = "Rejected";
+      showSuccessPopup2s("Deposit Rejected!", `${reqId} marked as Rejected.`);
+    }
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+  };
+
+  // Contact Information save
+  window.saveAdminContactInformationForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    state.adminContactInfo = {
+      officialEmail: (document.getElementById("adm-ci-official-email")?.value || "").trim(),
+      supportEmail: (document.getElementById("adm-ci-support-email")?.value || "").trim(),
+      contactNumber: (document.getElementById("adm-ci-phone")?.value || "").trim(),
+      businessAddress: (document.getElementById("adm-ci-address")?.value || "").trim(),
+      contactPageInfo: (document.getElementById("adm-ci-page-info")?.value || "").trim(),
+      supportAvailability: (document.getElementById("adm-ci-avail")?.value || "").trim(),
+      socialLinks: (document.getElementById("adm-ci-social")?.value || "").trim()
+    };
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Contact Info Saved!", "Updated contact details saved.");
+  };
+
+  // Website Branding save
+  window.saveAdminWebsiteBrandingForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    state.adminBranding = Object.assign({}, state.adminBranding || {}, {
+      mainLogo: (document.getElementById("adm-br-main-logo")?.value || "").trim(),
+      loginLogo: (document.getElementById("adm-br-login-logo")?.value || "").trim(),
+      memberDashboardLogo: (document.getElementById("adm-br-member-logo")?.value || "").trim(),
+      adminDashboardLogo: (document.getElementById("adm-br-admin-logo")?.value || "").trim(),
+      favicon: (document.getElementById("adm-br-favicon")?.value || "").trim(),
+      websiteTheme: document.getElementById("adm-br-theme")?.value || "Royal Navy & Gold",
+      primaryColor: document.getElementById("adm-br-primary")?.value || "#0ea5e9",
+      secondaryColor: document.getElementById("adm-br-secondary")?.value || "#facc15",
+      buttonStyle: document.getElementById("adm-br-btn-style")?.value || "Rounded Pill Gradient",
+      backgroundStyle: document.getElementById("adm-br-bg-style")?.value || "Deep Space Navy Radial"
+    });
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Branding Saved!", "Website branding & theme updated.");
+  };
+
+  // General Settings save
+  window.saveAdminGeneralSettingsForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    state.adminGeneralSettings = Object.assign({}, state.adminGeneralSettings || {}, {
+      websiteName: (document.getElementById("adm-gs-name")?.value || "NFX TREADING").trim(),
+      websiteUrl: (document.getElementById("adm-gs-url")?.value || "").trim(),
+      websiteTagline: (document.getElementById("adm-gs-tagline")?.value || "").trim(),
+      websiteDescription: (document.getElementById("adm-gs-desc")?.value || "").trim(),
+      officialContactEmail: (document.getElementById("adm-gs-off-email")?.value || "").trim(),
+      supportEmail: (document.getElementById("adm-gs-sup-email")?.value || "").trim(),
+      supportPhone: (document.getElementById("adm-gs-phone")?.value || "").trim(),
+      defaultCountry: document.getElementById("adm-gs-country")?.value || "United States",
+      websiteStatus: document.getElementById("adm-gs-status")?.value || "Active",
+      defaultTimezone: document.getElementById("adm-gs-tz")?.value || "UTC+00:00"
+    });
+    if (!state.adminConfig) state.adminConfig = {};
+    const minD = parseFloat(document.getElementById("adm-gs-mindep")?.value);
+    const minW = parseFloat(document.getElementById("adm-gs-minwd")?.value);
+    const feeP = parseFloat(document.getElementById("adm-gs-fee")?.value);
+    if (!isNaN(minD)) state.adminConfig.minDeposit = minD;
+    if (!isNaN(minW)) state.adminConfig.minWithdraw = minW;
+    if (!isNaN(feeP)) state.adminConfig.withdrawChargePct = feeP;
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("General Settings Saved!", "Site configuration updated.");
+  };
+
+  // Notification Setting actions
+  window.createAdminCustomNotificationItem = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    const title = (document.getElementById("adm-notif-title")?.value || "").trim();
+    const msg = (document.getElementById("adm-notif-msg")?.value || "").trim();
+    const nType = document.getElementById("adm-notif-type")?.value || "Announcement";
+    const audience = document.getElementById("adm-notif-audience")?.value || "All Members";
+    const expiry = (document.getElementById("adm-notif-expiry")?.value || "").trim();
+    if (!title || !msg) {
+      showToast("Fields Required", "Please enter notification title and message.", "error");
+      return;
+    }
+    state.adminCustomNotifications.unshift({
+      id: "NTF-" + Math.floor(1000 + Math.random() * 9000),
+      title,
+      msg,
+      type: nType,
+      audience,
+      expiry: expiry || "Never",
+      createdAt: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      enabled: true
+    });
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Notification Created!", "New notification saved.");
+  };
+
+  window.saveAdminTopBannerForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    state.adminTopBannerConfig = {
+      enabled: Boolean(document.getElementById("adm-tb-enabled")?.checked),
+      title: (document.getElementById("adm-tb-title")?.value || "").trim(),
+      description: (document.getElementById("adm-tb-desc")?.value || "").trim(),
+      bgColor: document.getElementById("adm-tb-bg")?.value || "#0b2963",
+      textColor: document.getElementById("adm-tb-text")?.value || "#fde047",
+      imageUrl: (document.getElementById("adm-tb-img")?.value || "").trim(),
+      buttonText: (document.getElementById("adm-tb-btn-text")?.value || "View Details →").trim(),
+      buttonLink: document.getElementById("adm-tb-btn-link")?.value || "referral-program",
+      targetAudience: document.getElementById("adm-tb-aud")?.value || "All Members",
+      startDateTime: (document.getElementById("adm-tb-start")?.value || "").trim(),
+      expiryDateTime: (document.getElementById("adm-tb-end")?.value || "").trim()
+    };
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Top Banner Saved!", "Top announcement banner settings saved.");
+  };
+
+  window.saveAdminBellSettingsForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    state.adminBellSettingsConfig = {
+      title: (document.getElementById("adm-bell-title")?.value || "").trim(),
+      shortMsg: (document.getElementById("adm-bell-short")?.value || "").trim(),
+      fullMsg: (document.getElementById("adm-bell-full")?.value || "").trim(),
+      icon: document.getElementById("adm-bell-icon")?.value || "🔔",
+      targetAudience: document.getElementById("adm-bell-aud")?.value || "All Members",
+      publishTime: (document.getElementById("adm-bell-pub")?.value || "").trim(),
+      expiryTime: (document.getElementById("adm-bell-exp")?.value || "").trim(),
+      clickPage: document.getElementById("adm-bell-page")?.value || "dashboard",
+      trackReadUnread: Boolean(document.getElementById("adm-bell-track")?.checked)
+    };
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Bell Settings Saved!", "Bell icon notification settings saved.");
+  };
+
+  window.saveAdminImageNotificationForm = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!guardAdmin()) return;
+    state.adminImageNotificationConfig = {
+      imageUrl: (document.getElementById("adm-imgn-url")?.value || "").trim(),
+      imageId: (document.getElementById("adm-imgn-id")?.value || "").trim(),
+      title: (document.getElementById("adm-imgn-title")?.value || "").trim(),
+      description: (document.getElementById("adm-imgn-desc")?.value || "").trim(),
+      buttonText: (document.getElementById("adm-imgn-btn")?.value || "View Details").trim(),
+      buttonLink: document.getElementById("adm-imgn-link")?.value || "dashboard",
+      displayLocation: document.getElementById("adm-imgn-loc")?.value || "Bell Icon",
+      displayStyle: document.getElementById("adm-imgn-style")?.value || "Full-width Banner"
+    };
+    if (typeof saveSessionState === "function") saveSessionState();
+    renderAll();
+    showSuccessPopup2s("Image Notification Saved!", "Image notification configuration saved.");
+  };
+
+  function renderAdminSubpageById(pageId) {
+    if (!guardAdmin()) return "";
+
+    if (pageId === "dashboard") {
+      if (typeof renderMasterAdminUserManagementDashboard === "function") {
+        return renderMasterAdminUserManagementDashboard();
+      }
+    }
+
+    if (pageId === "team") {
+      const allMembers = state.members || [];
+      const totInvest = allMembers.reduce((s, m) => s + (Number(m.teamInvest || m.yourInvest || 0)), 0);
+      const totBonus = allMembers.reduce((s, m) => s + (Number(m.referralBonus || 0)), 0);
+      return `
+        <div class="max-w-5xl mx-auto space-y-5 text-white">
+          ${pageHeader("👥", "TEAM Management", "A / B / C Team Members, Referral Network & Team Invest / Bonus", "TEAM")}
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div class="kpi-blue rounded-xl p-4"><div class="font-bold">Total Team Members</div><div class="text-2xl font-extrabold font-mono mt-1">${allMembers.length}</div></div>
+            <div class="kpi-green rounded-xl p-4"><div class="font-bold">Total Team Invest</div><div class="text-2xl font-extrabold font-mono mt-1">$${totInvest.toFixed(2)}</div></div>
+            <div class="kpi-purple rounded-xl p-4"><div class="font-bold">Total Referral Bonus</div><div class="text-2xl font-extrabold font-mono mt-1">$${totBonus.toFixed(2)}</div></div>
+          </div>
+          <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/45 space-y-3 text-xs">
+            <h2 class="text-sm font-extrabold text-amber-300">Member Team & Referral Breakdown</h2>
+            <div class="divide-y divide-slate-800 font-mono">
+              ${allMembers.map(m => `
+                <div class="py-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div class="font-sans font-bold text-white">${m.username || 'Member'} <span class="text-sky-300">(${m.uid})</span></div>
+                    <div class="text-[11px] text-slate-300">Ref Code: <strong class="text-amber-300">${m.referralCode || '-'}</strong> | Team A:${m.aMembersCount||0} B:${m.bMembersCount||0} C:${m.cMembersCount||0}</div>
+                  </div>
+                  <div class="text-emerald-300 font-bold">Invest: $${Number(m.yourInvest||0).toFixed(2)} • Bonus: $${Number(m.referralBonus||0).toFixed(2)}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "deposit-wallet-settings" && typeof renderAdminDepositWalletSettingsPage === "function") {
+      return renderAdminDepositWalletSettingsPage();
+    }
+    if (pageId === "kyc-pending" && typeof renderAdminKycPendingPage === "function") {
+      return renderAdminKycPendingPage();
+    }
+
+    if (pageId === "withdrawal-pending") {
+      const q = String(state.adminWdSearch || "").trim().toLowerCase();
+      const allWd = state.withdrawRequests || [];
+      const pendingWd = allWd.filter(w => {
+        const st = String(w.status || "Pending").toLowerCase();
+        return st !== "successful" && st !== "paid" && st !== "approved" && st !== "rejected";
+      });
+      const filteredWd = pendingWd.filter(w => {
+        if (!q) return true;
+        return String(w.username || "").toLowerCase().includes(q) ||
+               String(w.uid || "").toLowerCase().includes(q) ||
+               String(w.wallet || "").toLowerCase().includes(q) ||
+               String(w.id || "").toLowerCase().includes(q);
+      });
+      const selWd = filteredWd.find(w => w.id === state.adminWdSelectedId) || filteredWd[0] || null;
+
+      return `
+        <div class="max-w-5xl mx-auto space-y-5 text-white">
+          ${pageHeader("⬆️", "Withdrawal Pending", "Review pending withdrawals, save payment TXID, approve or reject", "Withdrawal Pending")}
+          <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-4 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="px-4 py-2 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-300 font-extrabold">
+                Pending Withdrawals: <span class="font-mono text-white text-sm ml-1">${pendingWd.length}</span>
+              </div>
+              <input value="${String(state.adminWdSearch || '').replace(/"/g, '&quot;')}"
+                     oninput="state.adminWdSearch=this.value; renderAll();"
+                     placeholder="Search Username / UID / Wallet / ID..."
+                     class="input-box rounded-lg px-3 py-2 font-mono w-64" />
+            </div>
+
+            ${filteredWd.length > 0 ? filteredWd.map(w => {
+              const gross = Number(w.amount || 0);
+              const fee = Number(w.fee ?? (gross * 0.07)).toFixed(2);
+              const net = Number(w.netAmount ?? w.netReceive ?? (gross - Number(fee))).toFixed(2);
+              return `
+                <div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div class="text-sm font-extrabold text-white">${w.username || 'Member'} <span class="font-mono text-sky-300">(${w.uid})</span> • <span class="font-mono text-amber-300">${w.id}</span></div>
+                      <div class="text-[11px] font-mono text-slate-300">Amount: <strong class="text-white">${gross.toFixed(2)} USDT</strong> | Fee (7%): <strong class="text-rose-300">-${fee} USDT</strong> | Net: <strong class="text-emerald-300">${net} USDT</strong></div>
+                      <div class="text-[11px] font-mono text-slate-400">Chain: ${w.chain || 'USDT TRC20'} | Wallet: ${w.wallet || '-'} | Date: ${w.date || '-'}</div>
+                    </div>
+                    <button type="button" onclick="state.adminWdSelectedId='${w.id}'; renderAll();"
+                            class="px-3 py-1.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold">
+                      ${selWd && selWd.id === w.id ? 'Selected ✓' : 'Select'}
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select id="adm-wd-chain-${w.id}" class="input-box rounded-lg px-3 py-2 font-mono text-xs">
+                      <option value="USDT TRC20" ${(w.selectedVerifyChain || w.chain) === 'USDT TRC20' ? 'selected' : ''}>USDT TRC20</option>
+                      <option value="USDT BEP20" ${(w.selectedVerifyChain || w.chain) === 'USDT BEP20' ? 'selected' : ''}>USDT BEP20</option>
+                      <option value="ETHEREUM" ${(w.selectedVerifyChain || w.chain) === 'ETHEREUM' ? 'selected' : ''}>ETHEREUM</option>
+                    </select>
+                    <input id="adm-wd-txid-${w.id}" value="${String(w.paymentTxid || '').replace(/"/g, '&quot;')}"
+                           placeholder="Enter Payment TXID" class="input-box sm:col-span-2 rounded-lg px-3 py-2 font-mono text-xs" />
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="saveWithdrawalPaymentTxid('${w.id}')" class="px-3.5 py-1.5 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold">Save TXID</button>
+                    <button type="button" onclick="processAdminWithdrawalDecision('${w.id}', 'Approved')" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold">✓ Approve / Paid</button>
+                    <button type="button" onclick="processAdminWithdrawalDecision('${w.id}', 'Rejected')" class="px-3.5 py-1.5 rounded-lg bg-rose-500/25 border border-rose-400/50 text-rose-200 font-extrabold">✕ Reject & Refund</button>
+                  </div>
+                </div>
+              `;
+            }).join("") : `
+              <div class="p-6 rounded-xl bg-[#05122b] border border-sky-500/20 text-center text-slate-400">No pending withdrawal requests.</div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "deposit-pending") {
+      const q = String(state.adminDepSearch || "").trim().toLowerCase();
+      const allDep = state.depositRequests || [];
+      const pendingDep = allDep.filter(d => {
+        const st = String(d.status || "Pending").toLowerCase();
+        return st !== "approved" && st !== "successful" && st !== "rejected";
+      });
+      const filteredDep = pendingDep.filter(d => {
+        if (!q) return true;
+        return String(d.username || "").toLowerCase().includes(q) ||
+               String(d.uid || "").toLowerCase().includes(q) ||
+               String(d.txHash || "").toLowerCase().includes(q) ||
+               String(d.id || "").toLowerCase().includes(q);
+      });
+
+      return `
+        <div class="max-w-5xl mx-auto space-y-5 text-white">
+          ${pageHeader("⬇️", "Deposit Pending", "Verify deposit transaction hashes and approve or reject", "Deposit Pending")}
+          <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-4 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="px-4 py-2 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-300 font-extrabold">
+                Pending Deposits: <span class="font-mono text-white text-sm ml-1">${pendingDep.length}</span>
+              </div>
+              <input value="${String(state.adminDepSearch || '').replace(/"/g, '&quot;')}"
+                     oninput="state.adminDepSearch=this.value; renderAll();"
+                     placeholder="Search Username / UID / Tx Hash / ID..."
+                     class="input-box rounded-lg px-3 py-2 font-mono w-64" />
+            </div>
+
+            ${filteredDep.length > 0 ? filteredDep.map(d => `
+              <div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 space-y-3">
+                <div>
+                  <div class="text-sm font-extrabold text-white">${d.username || 'Member'} <span class="font-mono text-sky-300">(${d.uid})</span> • <span class="font-mono text-amber-300">${d.id}</span></div>
+                  <div class="text-[11px] font-mono text-emerald-300">Amount: <strong>${Number(d.amount||0).toFixed(2)} USDT</strong> | Chain: <strong>${d.chain || 'TRC20'}</strong> | Date: ${d.date || '-'}</div>
+                  <div class="text-[11px] font-mono text-slate-400">Wallet: ${d.wallet || '-'}</div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <input id="adm-dep-txhash-${d.id}" value="${String(d.txHash || '').replace(/"/g, '&quot;')}"
+                         placeholder="Transaction Hash" class="input-box flex-1 min-w-[200px] rounded-lg px-3 py-2 font-mono text-xs" />
+                  <button type="button" onclick="saveDepositAdminReviewNote('${d.id}')" class="px-3.5 py-2 rounded-lg bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold">Save Hash</button>
+                  <button type="button" onclick="processAdminDepositDecision('${d.id}', 'Approved')" class="px-3.5 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold">✓ Approve</button>
+                  <button type="button" onclick="processAdminDepositDecision('${d.id}', 'Rejected')" class="px-3.5 py-2 rounded-lg bg-rose-500/25 border border-rose-400/50 text-rose-200 font-extrabold">✕ Reject</button>
+                </div>
+              </div>
+            `).join("") : `
+              <div class="p-6 rounded-xl bg-[#05122b] border border-sky-500/20 text-center text-slate-400">No pending deposit requests.</div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "recent-transactions") {
+      const q = String(state.adminTxSearch || "").trim().toLowerCase();
+      const allTx = typeof getAllSystemFinancialTransactions === "function" ? getAllSystemFinancialTransactions() : [];
+      const filteredTx = allTx.filter(t => {
+        if (!q) return true;
+        return String(t.username || "").toLowerCase().includes(q) ||
+               String(t.uid || "").toLowerCase().includes(q) ||
+               String(t.txId || "").toLowerCase().includes(q) ||
+               String(t.type || "").toLowerCase().includes(q);
+      });
+
+      return `
+        <div class="max-w-6xl mx-auto space-y-5 text-white">
+          ${pageHeader("🔄", "Recent Transactions", "All Deposits, Withdrawals & Referral Commissions", "Recent Transactions")}
+          <div class="account-solid-panel rounded-2xl p-5 border border-amber-400/50 space-y-4 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="font-extrabold text-amber-300">Total Transactions (${filteredTx.length})</div>
+              <input value="${String(state.adminTxSearch || '').replace(/"/g, '&quot;')}"
+                     oninput="state.adminTxSearch=this.value; renderAll();"
+                     placeholder="Search Username / UID / Tx ID / Type..."
+                     class="input-box rounded-lg px-3 py-2 font-mono w-64" />
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-sky-500/30">
+              <table class="w-full text-left font-mono text-[11px] border-collapse">
+                <thead>
+                  <tr class="bg-[#081b40] text-slate-200 border-b border-sky-500/30">
+                    <th class="py-2.5 px-3">User / UID</th>
+                    <th class="py-2.5 px-3">Tx ID</th>
+                    <th class="py-2.5 px-3">Type</th>
+                    <th class="py-2.5 px-3">Amount</th>
+                    <th class="py-2.5 px-3">Old → New Bal</th>
+                    <th class="py-2.5 px-3">Date</th>
+                    <th class="py-2.5 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-sky-500/20">
+                  ${filteredTx.length > 0 ? filteredTx.map(t => `
+                    <tr class="bg-[#040e24]/80">
+                      <td class="py-2.5 px-3"><div class="font-sans font-bold text-white">${t.username}</div><div class="text-sky-300">${t.uid}</div></td>
+                      <td class="py-2.5 px-3 text-amber-300">${t.txId}</td>
+                      <td class="py-2.5 px-3 text-white">${t.type}</td>
+                      <td class="py-2.5 px-3 text-emerald-300 font-bold">$${Number(t.amount||0).toFixed(2)}</td>
+                      <td class="py-2.5 px-3 text-slate-300">$${Number(t.oldBalance||0).toFixed(2)} → $${Number(t.newBalance||0).toFixed(2)}</td>
+                      <td class="py-2.5 px-3 text-slate-300">${t.dateTime}</td>
+                      <td class="py-2.5 px-3 font-sans"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-200">${t.status}</span></td>
+                    </tr>
+                  `).join("") : `
+                    <tr><td colspan="7" class="py-5 px-3 text-center font-sans text-slate-400">No transactions found.</td></tr>
+                  `}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "financial-overview") {
+      const depSum = (state.depositRequests || []).reduce((s, d) => s + (Number(d.amount) || 0), 0);
+      const wdSum = (state.withdrawRequests || []).reduce((s, w) => s + (Number(w.amount) || 0), 0);
+      const invSum = (state.members || []).reduce((s, m) => s + (Number(m.yourInvest) || 0), 0);
+      const profSum = (state.members || []).reduce((s, m) => s + (Number(m.totalProfit) || 0), 0);
+      return `
+        <div class="max-w-5xl mx-auto space-y-5 text-white">
+          ${pageHeader("📊", "Financial Overview", "Total Deposits, Withdrawals, Investments & Profits", "Financial Overview")}
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <div class="kpi-green rounded-xl p-4"><div class="font-bold">Total Deposit</div><div class="text-2xl font-extrabold font-mono mt-1">$${depSum.toFixed(2)}</div></div>
+            <div class="kpi-orange rounded-xl p-4"><div class="font-bold">Total Withdraw</div><div class="text-2xl font-extrabold font-mono mt-1">$${wdSum.toFixed(2)}</div></div>
+            <div class="kpi-blue rounded-xl p-4"><div class="font-bold">Total Invest</div><div class="text-2xl font-extrabold font-mono mt-1">$${invSum.toFixed(2)}</div></div>
+            <div class="kpi-purple rounded-xl p-4"><div class="font-bold">Total Profit</div><div class="text-2xl font-extrabold font-mono mt-1">$${profSum.toFixed(2)}</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "income-overview") {
+      const ex = state.extraData || {};
+      return `
+        <div class="max-w-5xl mx-auto space-y-5 text-white">
+          ${pageHeader("💰", "Income Overview", "Daily Income, Team Income, Referral Income & Total Income", "Income Overview")}
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+            <div class="p-4 rounded-xl bg-[#05122b] border border-sky-400/35"><div class="text-slate-400 font-sans">Daily Income</div><div class="text-xl font-extrabold text-sky-300 mt-1">$${Number(ex.totalDailyIncome||0).toFixed(2)}</div></div>
+            <div class="p-4 rounded-xl bg-[#05122b] border border-purple-400/35"><div class="text-slate-400 font-sans">Team Income</div><div class="text-xl font-extrabold text-purple-300 mt-1">$${Number(ex.teamIncomeToday||0).toFixed(2)}</div></div>
+            <div class="p-4 rounded-xl bg-[#05122b] border border-amber-400/35"><div class="text-slate-400 font-sans">Referral Income</div><div class="text-xl font-extrabold text-emerald-300 mt-1">$${Number(ex.referralIncomeToday||0).toFixed(2)}</div></div>
+            <div class="p-4 rounded-xl bg-[#05122b] border border-emerald-400/40"><div class="text-slate-400 font-sans">Total Income</div><div class="text-xl font-extrabold text-amber-300 mt-1">$${Number(ex.totalIncomeToday||0).toFixed(2)}</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "referral-overview") {
+      const refs = state.referralHistoryRecords || [];
+      const comms = state.referralCommissionRecords || [];
+      const totBonus = comms.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+      return `
+        <div class="max-w-5xl mx-auto space-y-5 text-white">
+          ${pageHeader("🤝", "Referral Overview", "Referrals, Active Status & Joining Bonus Commissions", "Referral Overview")}
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div class="kpi-blue rounded-xl p-4"><div class="font-bold">Total Referrals</div><div class="text-2xl font-extrabold font-mono mt-1">${refs.length}</div></div>
+            <div class="kpi-green rounded-xl p-4"><div class="font-bold">Active Referrals</div><div class="text-2xl font-extrabold font-mono mt-1">${refs.filter(r => r.status === 'Active').length}</div></div>
+            <div class="kpi-orange rounded-xl p-4"><div class="font-bold">Total Bonus Paid</div><div class="text-2xl font-extrabold font-mono mt-1">$${totBonus.toFixed(2)}</div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "view-details") {
+      const members = state.members || [];
+      const target = members.find(m => m.uid === state.adminViewDetailsUid) || members[0] || {};
+      return `
+        <div class="max-w-4xl mx-auto space-y-5 text-white">
+          ${pageHeader("👤", "View Details", "Inspect member profile, 8-char referral code & wallet balances", "View Details")}
+          <div class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-4 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <label class="font-extrabold text-amber-300">Select Member:</label>
+              <select onchange="state.adminViewDetailsUid=this.value; renderAll();" class="input-box rounded-lg px-3 py-2 font-mono">
+                ${members.map(m => `<option value="${m.uid}" ${m.uid === target.uid ? 'selected' : ''}>${m.username || 'Member'} (${m.uid})</option>`).join("")}
+              </select>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
+              <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/20">Username: <strong class="text-white">${target.username || '-'}</strong></div>
+              <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/20">UID: <strong class="text-sky-300">${target.uid || '-'}</strong></div>
+              <div class="p-3 rounded-xl bg-[#05122b] border border-amber-400/30">Referral Code (8-char): <strong class="text-amber-300">${target.referralCode || '-'}</strong></div>
+              <div class="p-3 rounded-xl bg-[#05122b] border border-emerald-400/30">Balance: <strong class="text-emerald-300">$${Number(target.balance||0).toFixed(2)} USDT</strong></div>
+              <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/20">Your Invest: <strong class="text-white">$${Number(target.yourInvest||0).toFixed(2)} USDT</strong></div>
+              <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/20">Total Profit: <strong class="text-emerald-300">$${Number(target.totalProfit||0).toFixed(2)} USDT</strong></div>
+            </div>
+            <div class="flex justify-end">
+              <button type="button" onclick="openAdminEditModal('${target.uid}')" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs">Edit Member Wallet & Info</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "contact-information") {
+      const ci = state.adminContactInfo || {};
+      return `
+        <div class="max-w-3xl mx-auto space-y-5 text-white">
+          ${pageHeader("📞", "Contact Information", "Manage official emails, support phone, address & links", "Contact Information")}
+          <form onsubmit="saveAdminContactInformationForm(event)" class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3.5 text-xs">
+            <div><label class="text-amber-300 font-bold block mb-1">Official Email</label><input id="adm-ci-official-email" value="${String(ci.officialEmail||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            <div><label class="text-amber-300 font-bold block mb-1">Support Email</label><input id="adm-ci-support-email" value="${String(ci.supportEmail||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            <div><label class="text-amber-300 font-bold block mb-1">Contact Number</label><input id="adm-ci-phone" value="${String(ci.contactNumber||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            <div><label class="text-amber-300 font-bold block mb-1">Business Address</label><input id="adm-ci-address" value="${String(ci.businessAddress||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            <div><label class="text-amber-300 font-bold block mb-1">Contact Page Info</label><input id="adm-ci-page-info" value="${String(ci.contactPageInfo||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            <div><label class="text-amber-300 font-bold block mb-1">Support Availability</label><input id="adm-ci-avail" value="${String(ci.supportAvailability||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            <div><label class="text-amber-300 font-bold block mb-1">Social Links</label><input id="adm-ci-social" value="${String(ci.socialLinks||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm">Save Contact Information</button>
+          </form>
+        </div>
+      `;
+    }
+
+    if (pageId === "website-branding") {
+      const br = state.adminBranding || {};
+      return `
+        <div class="max-w-3xl mx-auto space-y-5 text-white">
+          ${pageHeader("🎨", "Website Branding", "Logos, theme colors, button style & background appearance", "Website Branding")}
+          <form onsubmit="saveAdminWebsiteBrandingForm(event)" class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3.5 text-xs">
+            <div><label class="text-amber-300 font-bold block mb-1">Main Logo URL / Data URI</label><input id="adm-br-main-logo" value="${String(br.mainLogo||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label class="text-slate-300 font-bold block mb-1">Login Logo</label><input id="adm-br-login-logo" value="${String(br.loginLogo||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Favicon URL</label><input id="adm-br-favicon" value="${String(br.favicon||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Member Dashboard Logo</label><input id="adm-br-member-logo" value="${String(br.memberDashboardLogo||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Admin Dashboard Logo</label><input id="adm-br-admin-logo" value="${String(br.adminDashboardLogo||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label class="text-slate-300 font-bold block mb-1">Website Theme</label><input id="adm-br-theme" value="${String(br.websiteTheme||'Royal Navy & Gold').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Background Style</label>
+                <select id="adm-br-bg-style" class="input-box w-full rounded-lg px-3 py-2">
+                  <option value="Deep Space Navy Radial" ${br.backgroundStyle==='Deep Space Navy Radial'?'selected':''}>Deep Space Navy Radial</option>
+                  <option value="Midnight Obsidian" ${br.backgroundStyle==='Midnight Obsidian'?'selected':''}>Midnight Obsidian</option>
+                  <option value="Emerald Sapphire" ${br.backgroundStyle==='Emerald Sapphire'?'selected':''}>Emerald Sapphire</option>
+                </select>
+              </div>
+              <div><label class="text-slate-300 font-bold block mb-1">Primary Color</label><input id="adm-br-primary" value="${String(br.primaryColor||'#0ea5e9').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Secondary Color</label><input id="adm-br-secondary" value="${String(br.secondaryColor||'#facc15').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            </div>
+            <div><label class="text-slate-300 font-bold block mb-1">Button Style</label><input id="adm-br-btn-style" value="${String(br.buttonStyle||'Rounded Pill Gradient').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm">Save Website Branding</button>
+          </form>
+        </div>
+      `;
+    }
+
+    if (pageId === "general-settings") {
+      const gs = state.adminGeneralSettings || {};
+      const cfg = state.adminConfig || {};
+      return `
+        <div class="max-w-3xl mx-auto space-y-5 text-white">
+          ${pageHeader("⚙️", "General Settings", "Website name, tagline, description, limits & fee settings", "General Settings")}
+          <form onsubmit="saveAdminGeneralSettingsForm(event)" class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3.5 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label class="text-amber-300 font-bold block mb-1">Website Name</label><input id="adm-gs-name" value="${String(gs.websiteName||'NFX TREADING').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Website URL</label><input id="adm-gs-url" value="${String(gs.websiteUrl||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            </div>
+            <div><label class="text-slate-300 font-bold block mb-1">Website Tagline</label><input id="adm-gs-tagline" value="${String(gs.websiteTagline||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            <div><label class="text-slate-300 font-bold block mb-1">Website Description</label><input id="adm-gs-desc" value="${String(gs.websiteDescription||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+              <div><label class="text-slate-300 font-sans font-bold block mb-1">Min Deposit (USDT)</label><input type="number" step="0.01" id="adm-gs-mindep" value="${cfg.minDeposit ?? 10}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-sans font-bold block mb-1">Min Withdraw (USDT)</label><input type="number" step="0.01" id="adm-gs-minwd" value="${cfg.minWithdraw ?? 50}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-sans font-bold block mb-1">Withdraw Fee (%)</label><input type="number" step="0.01" id="adm-gs-fee" value="${cfg.withdrawChargePct ?? 7}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div><label class="text-slate-300 font-bold block mb-1">Official Email</label><input id="adm-gs-off-email" value="${String(gs.officialContactEmail||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Support Email</label><input id="adm-gs-sup-email" value="${String(gs.supportEmail||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Support Phone</label><input id="adm-gs-phone" value="${String(gs.supportPhone||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div><label class="text-slate-300 font-bold block mb-1">Default Country</label><input id="adm-gs-country" value="${String(gs.defaultCountry||'United States').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Website Status</label><input id="adm-gs-status" value="${String(gs.websiteStatus||'Active').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Timezone</label><input id="adm-gs-tz" value="${String(gs.defaultTimezone||'UTC+00:00').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs sm:text-sm">Save General Settings</button>
+          </form>
+        </div>
+      `;
+    }
+
+    if (pageId === "all-notification-setting") {
+      const subTab = state.adminNotifSubTab || "create-notification";
+      const tb = state.adminTopBannerConfig || {};
+      const bl = state.adminBellSettingsConfig || {};
+      const im = state.adminImageNotificationConfig || {};
+      const customList = state.adminCustomNotifications || [];
+
+      return `
+        <div class="max-w-4xl mx-auto space-y-5 text-white">
+          ${pageHeader("🔔", "All Notification Setting", "Create notifications, configure top banner, bell alerts & image alerts", "All Notification Setting")}
+
+          <div class="flex flex-wrap gap-2 text-xs">
+            <button type="button" onclick="state.adminNotifSubTab='create-notification'; renderAll();" class="px-4 py-2 rounded-xl font-extrabold ${subTab==='create-notification'?'bg-amber-400 text-slate-950':'bg-[#05122b] text-sky-200 border border-sky-500/30'}">Create Notification</button>
+            <button type="button" onclick="state.adminNotifSubTab='top-banner'; renderAll();" class="px-4 py-2 rounded-xl font-extrabold ${subTab==='top-banner'?'bg-amber-400 text-slate-950':'bg-[#05122b] text-sky-200 border border-sky-500/30'}">Top Banner</button>
+            <button type="button" onclick="state.adminNotifSubTab='bell-settings'; renderAll();" class="px-4 py-2 rounded-xl font-extrabold ${subTab==='bell-settings'?'bg-amber-400 text-slate-950':'bg-[#05122b] text-sky-200 border border-sky-500/30'}">Bell Icon Settings</button>
+            <button type="button" onclick="state.adminNotifSubTab='image-notification'; renderAll();" class="px-4 py-2 rounded-xl font-extrabold ${subTab==='image-notification'?'bg-amber-400 text-slate-950':'bg-[#05122b] text-sky-200 border border-sky-500/30'}">Image Notification</button>
+          </div>
+
+          ${subTab === "create-notification" ? `
+            <div class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-4 text-xs">
+              <form onsubmit="createAdminCustomNotificationItem(event)" class="space-y-3">
+                <div><label class="text-amber-300 font-bold block mb-1">Title</label><input id="adm-notif-title" placeholder="Notification Title" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Message</label><input id="adm-notif-msg" placeholder="Notification Message" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div><label class="text-slate-300 font-bold block mb-1">Type</label><input id="adm-notif-type" value="Announcement" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                  <div><label class="text-slate-300 font-bold block mb-1">Target Audience</label><input id="adm-notif-audience" value="All Members" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                  <div><label class="text-slate-300 font-bold block mb-1">Expiry</label><input id="adm-notif-expiry" placeholder="Optional" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                </div>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">Save & Publish Notification</button>
+              </form>
+              <div class="pt-3 border-t border-sky-500/20 space-y-2">
+                <div class="font-bold text-sky-300">Saved Notifications (${customList.length})</div>
+                ${customList.length > 0 ? customList.map(c => `
+                  <div class="p-3 rounded-xl bg-[#05122b] border border-sky-500/20 flex items-center justify-between">
+                    <div><div class="font-bold text-white">${c.title} <span class="text-[10px] font-mono text-amber-300">[${c.type}]</span></div><div class="text-slate-300 text-[11px]">${c.msg}</div></div>
+                    <span class="text-[10px] font-mono text-emerald-300">${c.createdAt}</span>
+                  </div>
+                `).join("") : `<div class="text-slate-400 text-[11px]">No custom notifications created yet.</div>`}
+              </div>
+            </div>
+          ` : subTab === "top-banner" ? `
+            <form onsubmit="saveAdminTopBannerForm(event)" class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3 text-xs">
+              <label class="flex items-center gap-2 font-bold text-amber-300"><input type="checkbox" id="adm-tb-enabled" ${tb.enabled?'checked':''} /> Enable Top Banner</label>
+              <div><label class="text-slate-300 font-bold block mb-1">Banner Title</label><input id="adm-tb-title" value="${String(tb.title||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Banner Description</label><input id="adm-tb-desc" value="${String(tb.description||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div class="grid grid-cols-2 gap-3 font-mono">
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Background Color</label><input id="adm-tb-bg" value="${String(tb.bgColor||'#0b2963').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Text Color</label><input id="adm-tb-text" value="${String(tb.textColor||'#fde047').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-slate-300 font-bold block mb-1">Button Text</label><input id="adm-tb-btn-text" value="${String(tb.buttonText||'View Details →').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Button Link Route</label><input id="adm-tb-btn-link" value="${String(tb.buttonLink||'referral-program').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              </div>
+              <div><label class="text-slate-300 font-bold block mb-1">Image URL</label><input id="adm-tb-img" value="${String(tb.imageUrl||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div class="grid grid-cols-3 gap-3 font-mono">
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Audience</label><input id="adm-tb-aud" value="${String(tb.targetAudience||'All Members').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Start</label><input id="adm-tb-start" value="${String(tb.startDateTime||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Expiry</label><input id="adm-tb-end" value="${String(tb.expiryDateTime||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              </div>
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">Save Top Banner</button>
+            </form>
+          ` : subTab === "bell-settings" ? `
+            <form onsubmit="saveAdminBellSettingsForm(event)" class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3 text-xs">
+              <div><label class="text-amber-300 font-bold block mb-1">Title</label><input id="adm-bell-title" value="${String(bl.title||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Short Message</label><input id="adm-bell-short" value="${String(bl.shortMsg||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Full Message</label><input id="adm-bell-full" value="${String(bl.fullMsg||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div class="grid grid-cols-3 gap-3">
+                <div><label class="text-slate-300 font-bold block mb-1">Icon</label><input id="adm-bell-icon" value="${String(bl.icon||'🔔').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Audience</label><input id="adm-bell-aud" value="${String(bl.targetAudience||'All Members').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Click Page</label><input id="adm-bell-page" value="${String(bl.clickPage||'dashboard').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 font-mono">
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Publish Time</label><input id="adm-bell-pub" value="${String(bl.publishTime||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-sans font-bold block mb-1">Expiry Time</label><input id="adm-bell-exp" value="${String(bl.expiryTime||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              </div>
+              <label class="flex items-center gap-2 font-bold text-sky-300"><input type="checkbox" id="adm-bell-track" ${bl.trackReadUnread?'checked':''} /> Track Read / Unread</label>
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">Save Bell Settings</button>
+            </form>
+          ` : `
+            <form onsubmit="saveAdminImageNotificationForm(event)" class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3 text-xs">
+              <div><label class="text-amber-300 font-bold block mb-1">Image URL</label><input id="adm-imgn-url" value="${String(im.imageUrl||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Image ID</label><input id="adm-imgn-id" value="${String(im.imageId||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Title</label><input id="adm-imgn-title" value="${String(im.title||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div><label class="text-slate-300 font-bold block mb-1">Description</label><input id="adm-imgn-desc" value="${String(im.description||'').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-slate-300 font-bold block mb-1">Button Text</label><input id="adm-imgn-btn" value="${String(im.buttonText||'View Details').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Button Link</label><input id="adm-imgn-link" value="${String(im.buttonLink||'dashboard').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2 font-mono" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Display Location</label><input id="adm-imgn-loc" value="${String(im.displayLocation||'Bell Icon').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+                <div><label class="text-slate-300 font-bold block mb-1">Display Style</label><input id="adm-imgn-style" value="${String(im.displayStyle||'Full-width Banner').replace(/"/g,'&quot;')}" class="input-box w-full rounded-lg px-3 py-2" /></div>
+              </div>
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold">Save Image Notification</button>
+            </form>
+          `}
+        </div>
+      `;
+    }
+
+    const origRenderMasterAdminPanelV11 = window.renderMasterAdminPanelScreen;
+    window.renderMasterAdminPanelScreen = function() {
+      if (!isAdminAuthed()) {
+        if (typeof origRenderMasterAdminPanelV11 === "function") return origRenderMasterAdminPanelV11();
+        return "";
+      }
+      const p = state.adminPage || "dashboard";
+      if (p !== "dashboard") {
+        return renderAdminSubpageById(p);
+      }
+      if (typeof renderMasterAdminUserManagementDashboard === "function") {
+        return renderMasterAdminUserManagementDashboard();
+      }
+      if (typeof origRenderMasterAdminPanelV11 === "function") return origRenderMasterAdminPanelV11();
+      return "";
+    };
+
+    const origRenderAllV11 = window.renderAll;
+    window.renderAll = function() {
+      if (typeof origRenderAllV11 === "function") origRenderAllV11();
+      if (typeof applySavedBrandingAndGeneralSettings === "function") {
+        applySavedBrandingAndGeneralSettings();
+      }
+    };
+
+    // Ensure footer link at bottom of page works for Master Admin entry
+    window.openMasterAdminViaFooterLink = function() {
+      if (!state.admin) {
+        state.admin = { authenticated: false, email: "", password: "", pendingOtp: null };
+      }
+      state.admin.authenticated = true;
+      if (!state.admin.email) state.admin.email = "master-admin";
+      state.adminMenuTab = "overview";
+      state.adminPage = "dashboard";
+      state.currentRoute = "master-admin";
+      try { window.location.hash = "#master-admin"; } catch (e) {}
+      if (typeof saveSessionState === "function") saveSessionState();
+      if (typeof renderAll === "function") renderAll();
+      if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") toggleMobileSidebar(false);
+    };
+
+    function injectFooterBar() {
+      if (document.getElementById("nfx-footer-admin-bar")) return;
+      var bar = document.createElement("div");
+      bar.id = "nfx-footer-admin-bar";
+      bar.className = "w-full px-4 py-3 border-t border-sky-500/20 bg-[#040a1a]/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-slate-400";
+      bar.innerHTML =
+        '<span>NFX Treading • All rights reserved</span>' +
+        '<a href="#master-admin" onclick="event.preventDefault(); openMasterAdminViaFooterLink();" ' +
+           'class="text-amber-300 hover:text-amber-200 underline font-bold cursor-pointer">' +
+          'Master Admin Login →' +
+        '</a>';
+      var appShell = document.getElementById("app-shell");
+      if (appShell && appShell.parentNode) {
+        appShell.parentNode.insertBefore(bar, appShell.nextSibling);
+      } else {
+        document.body.appendChild(bar);
+      }
+    }
+
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      injectFooterBar();
+    } else {
+      window.addEventListener("DOMContentLoaded", injectFooterBar);
+    }
+  }
+  })();
+</script>
+
+
+<script>
+(function nfxFinalMemberAndAdminSyncPatch() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // 1. Ensure Member Sidebar has Team and all required items while preserving data
+  if (Array.isArray(window.SIDEBAR_LINKS)) {
+    const hasTeam = window.SIDEBAR_LINKS.some(x => x.id === "team");
+    if (!hasTeam) {
+      const invIdx = window.SIDEBAR_LINKS.findIndex(x => x.id === "investment");
+      const teamItem = { id: "team", label: "Team", icon: "👥" };
+      if (invIdx >= 0) {
+        window.SIDEBAR_LINKS.splice(invIdx + 1, 0, teamItem);
+      } else {
+        window.SIDEBAR_LINKS.push(teamItem);
+      }
+    }
+  }
+
+  // 2. Ensure 8-char alphanumeric referral code generator exists & keeps UID untouched
+  if (typeof window.generateEightCharReferralCode !== "function") {
+    window.generateEightCharReferralCode = function(uidVal = "", indexHint = 0) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const cleanUid = String(uidVal || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      let out = "";
+      for (let attempt = 0; attempt < 25; attempt++) {
+        out = "";
+        for (let i = 0; i < 8; i++) {
+          const idx = Math.floor(Math.random() * chars.length);
+          out += chars[idx];
+        }
+        if (out !== cleanUid) return out;
+      }
+      return ("R" + (1000000 + (indexHint * 7919 + Math.floor(Math.random() * 899999)))).slice(0, 8);
+    };
+  }
+
+  // 3. Ensure Master Admin Sidebar has all 15 requested options
+  window.MASTER_ADMIN_SIDEBAR_ITEMS = [
+    { id: "dashboard", label: "Dashboard", icon: "🏠" },
+    { id: "team", label: "TEAM", icon: "👥" },
+    { id: "deposit-wallet-settings", label: "Deposit Wallet Address Settings", icon: "💳" },
+    { id: "kyc-pending", label: "KYC Pending", icon: "🪪" },
+    { id: "withdrawal-pending", label: "Withdrawal Pending", icon: "⬆️" },
+    { id: "deposit-pending", label: "Deposit Pending", icon: "⬇️" },
+    { id: "recent-transactions", label: "Recent Transactions", icon: "🔄" },
+    { id: "financial-overview", label: "Financial Overview", icon: "📊" },
+    { id: "income-overview", label: "Income Overview", icon: "💰" },
+    { id: "referral-overview", label: "Referral Overview", icon: "🤝" },
+    { id: "view-details", label: "View Details", icon: "👤" },
+    { id: "contact-information", label: "Contact Information", icon: "📞" },
+    { id: "website-branding", label: "Website Branding", icon: "🎨" },
+    { id: "general-settings", label: "General Settings", icon: "⚙️" },
+    { id: "all-notification-setting", label: "All Notification Setting", icon: "🔔" }
+  ];
+
+  // Fallback for About Us and 24/7 Support routes if not already defined
+  const origRenderRouteFinal = window.renderRouteContent;
+  window.renderRouteContent = function(user) {
+    if (state.currentRoute === "about-us") {
+      return `
+        <div class="max-w-4xl mx-auto space-y-5 text-white">
+          ${typeof pageHeader === "function" ? pageHeader("ℹ", "About Us", "NFX Treading Platform Overview", "About Us") : ""}
+          <div class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-3 text-xs sm:text-sm">
+            <h2 class="text-xl font-extrabold text-amber-300">About NFX Treading</h2>
+            <p class="text-slate-200 leading-relaxed">${(state.adminWebsiteContent && state.adminWebsiteContent.aboutUs) || "NFX Treading provides portfolio tracking, investment plans, team analytics, and secure digital wallet operations."}</p>
+          </div>
+        </div>
+      `;
+    }
+    if (state.currentRoute === "support") {
+      const tgSup = (state.adminWebsiteContent && state.adminWebsiteContent.supportLink) || "https://t.me/ElectroPower_Care_bot";
+      return `
+        <div class="max-w-4xl mx-auto space-y-5 text-white">
+          ${typeof pageHeader("🎧", "24/7 Support", "Official Member Support Desk", "24/7 Support")}
+          <div class="account-solid-panel rounded-2xl p-6 border border-amber-400/50 space-y-4 text-xs sm:text-sm">
+            <h2 class="text-xl font-extrabold text-amber-300">24/7 Customer Support</h2>
+            <p class="text-slate-200 leading-relaxed">${(state.adminWebsiteContent && state.adminWebsiteContent.supportInfo) || "Need help with your account, deposit, withdrawal, or KYC? Reach our support desk."}</p>
+            <div>
+              <a href="${tgSup}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold text-xs sm:text-sm shadow-lg">
+                <span>🎧</span>
+                <span>Open Support Chat</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    return typeof origRenderRouteFinal === "function" ? origRenderRouteFinal(user) : "";
+  };
+})();
+</script>
+
+
+<script>
+(function nfxStrictMemberAdminIsolationAndRestore() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // Ensure 8-char alphanumeric referral code generator exists & preserves UID untouched
+  if (typeof window.generateEightCharReferralCode !== "function") {
+    window.generateEightCharReferralCode = function(uidVal = "", indexHint = 0) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const cleanUid = String(uidVal || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      let out = "";
+      for (let attempt = 0; attempt < 25; attempt++) {
+        out = "";
+        for (let i = 0; i < 8; i++) {
+          out += chars[Math.floor(Math.random() * chars.length)];
+        }
+        if (out !== cleanUid) return out;
+      }
+      return ("R" + (1000000 + (indexHint * 7919 + Math.floor(Math.random() * 899999)))).slice(0, 8);
+    };
+  }
+
+  // Strip any admin-only fields if ever attached to a member object
+  function scrubAdminDataFromMember(memberObj) {
+    if (!memberObj || typeof memberObj !== "object") return memberObj;
+    const forbiddenKeys = [
+      "admin", "adminEmail", "adminPassword", "adminOtp", "pendingOtp",
+      "adminConfig", "adminPlans", "adminLevels", "adminWebsiteContent",
+      "adminContactInfo", "adminBranding", "adminGeneralSettings",
+      "adminCustomNotifications", "adminTopBannerConfig", "adminBellSettingsConfig",
+      "adminImageNotificationConfig", "auditLogs", "supportSessions"
+    ];
+    forbiddenKeys.forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(memberObj, k)) {
+        try { delete memberObj[k]; } catch (e) { memberObj[k] = undefined; }
+      }
+    });
+    return memberObj;
+  }
+
+  // Ensure activeMember() never leaks admin data into member state
+  const origActiveMember = window.activeMember;
+  window.activeMember = function() {
+    const m = typeof origActiveMember === "function" ? origActiveMember() : (state.members && state.members[0]);
+    return scrubAdminDataFromMember(m);
+  };
+
+  // Ensure renderRouteContent() only renders member routes when not in authenticated Master Admin mode
+  const origRenderRouteSafe = window.renderRouteContent;
+  window.renderRouteContent = function(user) {
+    const cleanUser = scrubAdminDataFromMember(user || {});
+    const isAdminSession = Boolean(state.admin && state.admin.authenticated === true);
+    if (!isAdminSession && (state.currentRoute === "master-admin" || String(state.currentRoute || "").startsWith("admin-"))) {
+      state.currentRoute = "dashboard";
+    }
+    return typeof origRenderRouteSafe === "function" ? origRenderRouteSafe(cleanUser) : "";
+  };
+
+  // Ensure Member Sidebar has all standard options + Team, and never includes Master Admin items for members
+  const origRenderSidebarSafe = window.renderSidebar;
+  window.renderSidebar = function() {
+    if (Array.isArray(window.SIDEBAR_LINKS)) {
+      const hasTeam = window.SIDEBAR_LINKS.some(x => x.id === "team");
+      if (!hasTeam) {
+        const invIdx = window.SIDEBAR_LINKS.findIndex(x => x.id === "investment");
+        const teamEntry = { id: "team", label: "Team", icon: "👥" };
+        if (invIdx >= 0) window.SIDEBAR_LINKS.splice(invIdx + 1, 0, teamEntry);
+        else window.SIDEBAR_LINKS.push(teamEntry);
+      }
+    }
+    if (typeof origRenderSidebarSafe === "function") {
+      origRenderSidebarSafe();
+    }
+  };
+
+  // Protect saveSessionState so admin credentials/logs are kept separate from member records
+  const origSaveSessionSafe = window.saveSessionState;
+  window.saveSessionState = function() {
+    if (Array.isArray(state.members)) {
+      state.members.forEach(m => scrubAdminDataFromMember(m));
+    }
+    if (typeof origSaveSessionSafe === "function") {
+      origSaveSessionSafe();
+    }
+  };
+})();
+</script>
+
+
+<script>
+(function nfxPreserveAllMembersDataSuite() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const MEMBER_KEYS_TO_PRESERVE = [
+    "uid", "username", "email", "mobile", "country", "password",
+    "avatar", "profilePhotoLocked", "authenticatorBound", "authenticatorSecret",
+    "referralCode", "referredBy", "referralBonus",
+    "balance", "yourInvest", "teamInvest",
+    "aMembersCount", "aMembersInvest",
+    "bMembersCount", "bMembersInvest",
+    "cMembersCount", "cMembersInvest",
+    "totalProfit", "investmentId", "planName", "startDate", "endDate",
+    "status", "kycStatus", "accountVerificationStatus",
+    "walletApprovalStatus", "depositHistoryApprovalStatus",
+    "withdrawWallets", "activePlansList", "registeredAt"
+  ];
+
+  const ADMIN_FORBIDDEN_ON_MEMBER = [
+    "admin", "adminEmail", "adminPassword", "adminOtp", "pendingOtp",
+    "adminConfig", "adminPlans", "adminLevels", "adminWebsiteContent",
+    "adminContactInfo", "adminBranding", "adminGeneralSettings",
+    "adminCustomNotifications", "adminTopBannerConfig", "adminBellSettingsConfig",
+    "adminImageNotificationConfig", "auditLogs", "supportSessions"
+  ];
+
+  function sanitizeMemberClean(m) {
+    if (!m || typeof m !== "object") return m;
+    ADMIN_FORBIDDEN_ON_MEMBER.forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(m, k)) {
+        try { delete m[k]; } catch (e) { m[k] = undefined; }
+      }
+    });
+    if (!m.withdrawWallets || typeof m.withdrawWallets !== "object") {
+      m.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null };
+    }
+    if (!Array.isArray(m.activePlansList)) {
+      m.activePlansList = [];
+    }
+    return m;
+  }
+
+  function mergeMemberRecords(existingM, incomingM) {
+    const base = sanitizeMemberClean(Object.assign({}, existingM || {}));
+    const inc = sanitizeMemberClean(Object.assign({}, incomingM || {}));
+
+    MEMBER_KEYS_TO_PRESERVE.forEach(k => {
+      if (inc[k] !== undefined && inc[k] !== null) {
+        if (typeof inc[k] === "string" && inc[k].trim() === "" && typeof base[k] === "string" && base[k].trim() !== "") {
+          // Keep existing non-empty string if incoming is blank
+          return;
+        }
+        if (typeof inc[k] === "number" && Number.isNaN(inc[k]) && typeof base[k] === "number") {
+          return;
+        }
+        if (Array.isArray(inc[k]) && inc[k].length === 0 && Array.isArray(base[k]) && base[k].length > 0) {
+          return;
+        }
+        base[k] = inc[k];
+      }
+    });
+
+    return sanitizeMemberClean(base);
+  }
+
+  function collectAllStoredMembers() {
+    const byUid = new Map();
+
+    const addList = (arr) => {
+      if (!Array.isArray(arr)) return;
+      arr.forEach(item => {
+        if (!item || !item.uid) return;
+        const uidKey = String(item.uid).trim();
+        if (!uidKey) return;
+        const prev = byUid.get(uidKey);
+        byUid.set(uidKey, prev ? mergeMemberRecords(prev, item) : sanitizeMemberClean(Object.assign({}, item)));
+      });
+    };
+
+    // 1. Current in-memory members
+    addList(state.members);
+
+    // 2. Session key in localStorage & sessionStorage
+    const sessKeys = [
+      typeof NFX_SESSION_KEY !== "undefined" ? NFX_SESSION_KEY : "nfx_treading_session_v16",
+      "nfx_treading_session_v15",
+      "nfx_treading_session_v14",
+      "nfx_treading_session_v12",
+      "nfx_treading_session_v11",
+      "nfx_treading_session_v10"
+    ];
+
+    sessKeys.forEach(sk => {
+      try {
+        const rawL = localStorage.getItem(sk);
+        if (rawL) {
+          const parsedL = JSON.parse(rawL);
+          if (parsedL && Array.isArray(parsedL.members)) addList(parsedL.members);
+        }
+      } catch (e) {}
+      try {
+        const rawS = sessionStorage.getItem(sk);
+        if (rawS) {
+          const parsedS = JSON.parse(rawS);
+          if (parsedS && Array.isArray(parsedS.members)) addList(parsedS.members);
+        }
+      } catch (e) {}
+    });
+
+    // 3. Realtime member map in localStorage
+    try {
+      const rawMap = localStorage.getItem("nfx_treading_realtime_members_v1");
+      if (rawMap) {
+        const parsedMap = JSON.parse(rawMap);
+        if (parsedMap && typeof parsedMap === "object") {
+          addList(Object.values(parsedMap));
+        }
+      }
+    } catch (e) {}
+
+    return Array.from(byUid.values());
+  }
+
+  function syncAllMembersMirror(membersList) {
+    const cleanList = (Array.isArray(membersList) ? membersList : []).map(m => sanitizeMemberClean(m));
+    state.members = cleanList;
+
+    try {
+      const mapObj = {};
+      cleanList.forEach(m => {
+        if (m && m.uid) mapObj[m.uid] = m;
+      });
+      localStorage.setItem("nfx_treading_realtime_members_v1", JSON.stringify(mapObj));
+    } catch (e) {}
+  }
+
+  const origRestore = window.restoreSessionState;
+  window.restoreSessionState = function() {
+    const res = typeof origRestore === "function" ? origRestore() : false;
+    const merged = collectAllStoredMembers();
+    if (merged.length > 0) {
+      syncAllMembersMirror(merged);
+      if (state.currentUserUid && !merged.some(m => m.uid === state.currentUserUid)) {
+        state.currentUserUid = merged[0].uid;
+      }
+      return true;
+    }
+    return res;
+  };
+
+  const origSave = window.saveSessionState;
+  window.saveSessionState = function() {
+    const merged = collectAllStoredMembers();
+    if (merged.length > 0) {
+      syncAllMembersMirror(merged);
+    }
+    if (typeof origSave === "function") {
+      origSave();
+    }
+    try {
+      const sk = typeof NFX_SESSION_KEY !== "undefined" ? NFX_SESSION_KEY : "nfx_treading_session_v16";
+      const raw = localStorage.getItem(sk);
+      if (raw) sessionStorage.setItem(sk, raw);
+    } catch (e) {}
+  };
+
+  // Run once on initialization to consolidate any existing member records
+  const initialMerged = collectAllStoredMembers();
+  if (initialMerged.length > 0) {
+    syncAllMembersMirror(initialMerged);
+  }
+})();
+</script>
+
+
+<script>
+(function nfxRealCalcAndStrictIsolationSuite() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // 1. Forbidden admin-only keys that must NEVER appear on a member object or member UI
+  const ADMIN_ONLY_KEYS = [
+    "admin", "adminEmail", "adminPassword", "adminOtp", "pendingOtp",
+    "adminConfig", "adminPlans", "adminLevels", "adminWebsiteContent",
+    "adminContactInfo", "adminBranding", "adminGeneralSettings",
+    "adminCustomNotifications", "adminTopBannerConfig", "adminBellSettingsConfig",
+    "adminImageNotificationConfig", "auditLogs", "supportSessions"
+  ];
+
+  function isRealMasterAdminActive() {
+    return Boolean(
+      state.admin &&
+      state.admin.authenticated === true &&
+      state.currentRoute === "master-admin"
+    );
+  }
+
+  function stripAdminFieldsFromMember(m) {
+    if (!m || typeof m !== "object") return m;
+    ADMIN_ONLY_KEYS.forEach(k => {
+      if (Object.prototype.hasOwnProperty.call(m, k)) {
+        try { delete m[k]; } catch (e) { m[k] = undefined; }
+      }
+    });
+    return m;
+  }
+
+  // Prevent accidental switch of a member account into a Master Admin session
+  const origLogoutMember = window.logoutMemberAccount;
+  window.logoutMemberAccount = function() {
+    if (state.admin) {
+      state.admin.authenticated = false;
+      state.admin.pendingOtp = null;
+    }
+    if (typeof origLogoutMember === "function") origLogoutMember();
+  };
+
+  // Real-time calculation helper for member balance, invest, profit, deposits & withdrawals
+  function recomputeMemberRealBalanceAndTotals(m) {
+    if (!m || typeof m !== "object") return m;
+    stripAdminFieldsFromMember(m);
+
+    m.balance = Number((Number(m.balance) || 0).toFixed(2));
+    if (m.balance < 0) m.balance = 0;
+
+    m.yourInvest = Number((Number(m.yourInvest) || 0).toFixed(2));
+    if (m.yourInvest < 0) m.yourInvest = 0;
+
+    m.teamInvest = Number((Number(m.teamInvest) || 0).toFixed(2));
+    if (m.teamInvest < 0) m.teamInvest = 0;
+
+    m.totalProfit = Number((Number(m.totalProfit) || 0).toFixed(2));
+    if (m.totalProfit < 0) m.totalProfit = 0;
+
+    m.referralBonus = Number((Number(m.referralBonus) || 0).toFixed(2));
+    if (m.referralBonus < 0) m.referralBonus = 0;
+
+    // Sync extraData wallet totals with real member values
+    if (state.extraData && state.currentUserUid === m.uid) {
+      state.extraData.availableBalance = m.balance;
+      state.extraData.totalBalanceWallet = m.balance;
+      state.extraData.totalProfitWallet = m.totalProfit;
+      const sumDep = (state.depositRequests || [])
+        .filter(d => d.uid === m.uid && (d.status === "Approved" || d.status === "Successful"))
+        .reduce((acc, x) => acc + (Number(x.amount) || 0), 0);
+      const sumWd = (state.withdrawRequests || [])
+        .filter(w => w.uid === m.uid && (w.status === "Approved" || w.status === "Paid" || w.status === "Successful"))
+        .reduce((acc, x) => acc + (Number(x.amount) || 0), 0);
+      if (sumDep > 0) state.extraData.totalDeposit = Number(sumDep.toFixed(2));
+      if (sumWd > 0) state.extraData.totalWithdraw = Number(sumWd.toFixed(2));
+    }
+
+    return m;
+  }
+
+  // Wrap activeMember() to always return a clean, calculated member object (never admin identity)
+  const origActiveMember = window.activeMember;
+  window.activeMember = function() {
+    let u = typeof origActiveMember === "function" ? origActiveMember() : (state.members && state.members[0]);
+    if (!u) return null;
+    if (state.admin && state.admin.email && String(u.uid || "").toLowerCase() === String(state.admin.email).toLowerCase()) {
+      const fallbackMember = (state.members || []).find(x => x && x.uid && String(x.uid).toLowerCase() !== String(state.admin.email).toLowerCase());
+      if (fallbackMember) {
+        u = fallbackMember;
+        state.currentUserUid = fallbackMember.uid;
+      }
+    }
+    return recomputeMemberRealBalanceAndTotals(u);
+  };
+
+  // Real calculation when member buys an investment plan: deducts plan amount from balance & adds to yourInvest + daily profit
+  const origBuyPlan = window.buyPlan;
+  window.buyPlan = function(cat, amt, rate) {
+    const user = window.activeMember();
+    if (!user) return;
+    const cost = Number(amt) || 0;
+    const pct = Number(rate) || 0;
+    if (cost <= 0) return;
+
+    const ex = state.extraData || {};
+    const userLv = Number(ex.levelNum || 1);
+    if (cat === "Premium Plan" && (userLv < 2 || userLv > 6)) {
+      if (typeof showToast === "function") showToast("Plan Required Level 2–6", "Premium Plan requires Level 2 – Level 6 Members.", "error");
+      return;
+    }
+    if (cat === "VIP Plan" && (userLv < 3 || userLv > 6)) {
+      if (typeof showToast === "function") showToast("Plan Required Level 3–6", "VIP Plan requires Level 3 – Level 6 Members.", "error");
+      return;
+    }
+    if (Number(user.balance || 0) < cost) {
+      if (typeof showToast === "function") showToast("Insufficient Balance", `${cost.toFixed(2)} USDT required in wallet.`, "error");
+      return;
+    }
+
+    const dailyProfit = Number((cost * (pct / 100)).toFixed(2));
+    // Deduct full investment cost from wallet balance, then credit earned daily profit
+    user.balance = Number((Number(user.balance || 0) - cost + dailyProfit).toFixed(2));
+    user.yourInvest = Number((Number(user.yourInvest || 0) + cost).toFixed(2));
+    user.totalProfit = Number((Number(user.totalProfit || 0) + dailyProfit).toFixed(2));
+
+    if (!Array.isArray(user.activePlansList)) user.activePlansList = [];
+    const nowD = new Date();
+    const endD = new Date(nowD.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const fmtD = (dt) => dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    const invCode = "#INV" + nowD.getFullYear() + String(Math.floor(100000 + Math.random() * 900000));
+    user.investmentId = invCode;
+    user.planName = cat;
+    user.startDate = fmtD(nowD);
+    user.endDate = fmtD(endD);
+    user.status = "Active";
+    user.activePlansList.unshift({
+      investmentId: invCode,
+      planName: cat,
+      investedAmount: cost,
+      dailyProfitPct: pct,
+      dailyProfitAmt: dailyProfit,
+      totalProfitEarned: dailyProfit,
+      startDate: fmtD(nowD),
+      endDate: fmtD(endD),
+      durationDays: 30,
+      elapsedDays: 1,
+      status: "Active",
+      incomeHistory: [{ date: fmtD(nowD), amount: dailyProfit, status: "Completed" }]
+    });
+
+    if (typeof awardReferralJoiningBonusOnInvest === "function") {
+      awardReferralJoiningBonusOnInvest(user, cost);
+    }
+
+    recomputeMemberRealBalanceAndTotals(user);
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Plan Purchased!", `-${cost.toFixed(2)} USDT invested • +${dailyProfit.toFixed(2)} USDT profit calculated.`);
+    }
+  };
+
+  // Real calculation when Master Admin edits any member field: immediately updates target member ID & persists
+  const origSaveAdminMemberEdit = window.saveAdminMemberEdit;
+  window.saveAdminMemberEdit = function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!state.admin || !state.admin.authenticated) {
+      if (typeof showToast === "function") showToast("Master Admin Only", "Only Master Admin can edit member records.", "error");
+      return;
+    }
+    const origUid = (document.getElementById("adm-edit-orig-uid")?.value || "").trim();
+    const m = (state.members || []).find(x => x.uid === origUid);
+    if (!m) return;
+
+    const nextUsername = (document.getElementById("adm-edit-username")?.value || "").trim();
+    const nextUid = (document.getElementById("adm-edit-uid")?.value || origUid).trim();
+    const nextEmail = (document.getElementById("adm-edit-email")?.value || "").trim();
+    const nextMobile = (document.getElementById("adm-edit-mobile")?.value || "").trim();
+    const nextBalance = parseFloat(document.getElementById("adm-edit-balance")?.value);
+    const nextInvest = parseFloat(document.getElementById("adm-edit-invest")?.value);
+    const nextTeamInvest = parseFloat(document.getElementById("adm-edit-teaminvest")?.value);
+    const nextProfit = parseFloat(document.getElementById("adm-edit-profit")?.value);
+
+    if (nextUsername) m.username = nextUsername;
+    if (nextUid) m.uid = nextUid;
+    if (nextEmail) m.email = nextEmail;
+    if (nextMobile) m.mobile = nextMobile;
+    if (!isNaN(nextBalance)) m.balance = Number(nextBalance.toFixed(2));
+    if (!isNaN(nextInvest)) m.yourInvest = Number(nextInvest.toFixed(2));
+    if (!isNaN(nextTeamInvest)) m.teamInvest = Number(nextTeamInvest.toFixed(2));
+    if (!isNaN(nextProfit)) m.totalProfit = Number(nextProfit.toFixed(2));
+
+    recomputeMemberRealBalanceAndTotals(m);
+
+    if (state.currentUserUid === origUid) state.currentUserUid = m.uid;
+    if (state.adminViewAsMemberUid === origUid) state.adminViewAsMemberUid = m.uid;
+    if (state.adminSelectedManageUid === origUid) state.adminSelectedManageUid = m.uid;
+
+    if (typeof saveSessionState === "function") saveSessionState();
+    if (typeof closeAdminEditModal === "function") closeAdminEditModal();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Member Updated!", `Updated ${m.uid} immediately (Balance: $${Number(m.balance || 0).toFixed(2)} USDT).`);
+    }
+
+    if (typeof window.syncMemberEditToFirestore === "function") {
+      window.syncMemberEditToFirestore(origUid, {
+        uid: m.uid,
+        username: m.username || "",
+        email: m.email || "",
+        mobile: m.mobile || "",
+        balance: Number(m.balance || 0),
+        yourInvest: Number(m.yourInvest || 0),
+        teamInvest: Number(m.teamInvest || 0),
+        totalProfit: Number(m.totalProfit || 0)
+      });
+    }
+  };
+
+  // Ensure renderAll always runs real calculations and prevents member UI from ever showing admin routes/data
+  const origRenderAll = window.renderAll;
+  window.renderAll = function() {
+    if (Array.isArray(state.members)) {
+      state.members.forEach(m => recomputeMemberRealBalanceAndTotals(m));
+    }
+    const adminLoggedIn = Boolean(state.admin && state.admin.authenticated === true);
+    if (!adminLoggedIn && (state.currentRoute === "master-admin" || String(state.currentRoute || "").startsWith("admin-"))) {
+      state.currentRoute = "dashboard";
+    }
+    if (typeof origRenderAll === "function") {
+      origRenderAll();
+    }
+  };
+})();
+</script>
+
+
+<script>
+(function nfxCompleteMemberAndAdminMenusSuite() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const REQUIRED_MEMBER_LINKS = [
+    { id: "dashboard", label: "Dashboard", icon: "🏠" },
+    { id: "profile-settings", label: "Profile Settings", icon: "👤" },
+    { id: "kyc-verification", label: "KYC Verification", icon: "🪪" },
+    { id: "deposit", label: "Deposit", icon: "💳" },
+    { id: "withdraw", label: "Withdraw", icon: "👛" },
+    { id: "wallet", label: "Wallet", icon: "💰" },
+    { id: "active-plan", label: "Active Plan", icon: "🪙" },
+    { id: "withdraw-policy", label: "Withdraw Policy", icon: "📜" },
+    { id: "investment", label: "Investment", icon: "📈" },
+    { id: "team", label: "Team", icon: "👥" },
+    { id: "level", label: "Level", icon: "⭐" },
+    { id: "referral-program", label: "Referral Program", icon: "🤝" },
+    { id: "transactions-history", label: "Transactions History", icon: "🔄" },
+    { id: "account-settings", label: "Settings", icon: "⚙" },
+    { id: "our-features", label: "Our Features", icon: "🎁" },
+    { id: "terms", label: "Terms", icon: "📂" },
+    { id: "privacy-risk", label: "Privacy", icon: "🛡" },
+    { id: "disclaimer", label: "Disclaimer", icon: "⚠️" },
+    { id: "about-us", label: "About Us", icon: "ℹ" },
+    { id: "support", label: "24/7 Support", icon: "🎧" },
+    { id: "logout", label: "Logout", icon: "🚪" }
+  ];
+
+  if (Array.isArray(window.SIDEBAR_LINKS)) {
+    const existingIds = new Set(window.SIDEBAR_LINKS.map(x => x.id));
+    REQUIRED_MEMBER_LINKS.forEach((reqItem, idx) => {
+      if (!existingIds.has(reqItem.id)) {
+        const insertPos = Math.min(idx, window.SIDEBAR_LINKS.length);
+        window.SIDEBAR_LINKS.splice(insertPos, 0, reqItem);
+      }
+    });
+  }
+
+  if (typeof window.renderAboutUsScreen !== "function") {
+    window.renderAboutUsScreen = function(user) {
+      const aboutTxt = (state.adminWebsiteContent && state.adminWebsiteContent.aboutUs) ||
+        "NFX Treading provides automated crypto and forex portfolio analytics, plan management, and transparent member wallet tracking.";
+      return `
+        <div class="max-w-4xl mx-auto space-y-5 text-white">
+          ${pageHeader("ℹ", "About Us", "About NFX Treading Platform", "About Us")}
+          <div class="account-solid-panel rounded-2xl p-6 border-2 border-[#facc15]/75 space-y-4 text-xs sm:text-sm">
+            <h2 class="text-xl font-extrabold text-[#fde047]">About NFX Treading</h2>
+            <p class="text-slate-200 leading-relaxed">${aboutTxt}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 font-mono text-xs">
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/35">
+                <div class="text-slate-400 font-sans">Min Withdraw</div>
+                <strong class="text-amber-300 text-sm">${Number(state.adminConfig?.minWithdraw ?? 50)} USDT</strong>
+              </div>
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-emerald-400/35">
+                <div class="text-slate-400 font-sans">Withdraw Charge</div>
+                <strong class="text-emerald-300 text-sm">${Number(state.adminConfig?.withdrawChargePct ?? 7)}%</strong>
+              </div>
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-purple-400/35">
+                <div class="text-slate-400 font-sans">Support</div>
+                <strong class="text-sky-300 text-sm">24/7 Active</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+  }
+
+  if (typeof window.renderSupportScreen !== "function") {
+    window.renderSupportScreen = function(user) {
+      const supLink = (state.adminWebsiteContent && state.adminWebsiteContent.supportLink) || "https://t.me/ElectroPower_Care_bot";
+      const tgLink = (state.adminWebsiteContent && state.adminWebsiteContent.telegramLink) || "https://t.me/nfxtreading";
+      const cInfo = state.adminContactInfo || {};
+      return `
+        <div class="max-w-4xl mx-auto space-y-5 text-white">
+          ${pageHeader("🎧", "24/7 Support", "Official Member Support & Contact Channels", "24/7 Support")}
+          <div class="account-solid-panel rounded-2xl p-6 border-2 border-[#facc15]/75 space-y-4 text-xs sm:text-sm">
+            <h2 class="text-xl font-extrabold text-[#fde047]">24/7 Member Support</h2>
+            <p class="text-slate-200 leading-relaxed">${cInfo.contactPageInfo || "Reach our official support desk 24/7 for account assistance."}</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/30">
+                <div class="text-slate-400 font-sans">Support Email</div>
+                <strong class="text-white">${cInfo.supportEmail || "support@nfxtreading.com"}</strong>
+              </div>
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-400/30">
+                <div class="text-slate-400 font-sans">Contact Number</div>
+                <strong class="text-amber-300">${cInfo.contactNumber || "+1 800 555 0199"}</strong>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a href="${supLink}" target="_blank" rel="noopener noreferrer"
+                 class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs">
+                Open 24/7 Support Chat →
+              </a>
+              <a href="${tgLink}" target="_blank" rel="noopener noreferrer"
+                 class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold text-xs">
+                Join Official Telegram →
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+  }
+
+  const origRenderRoute = window.renderRouteContent;
+  window.renderRouteContent = function(user) {
+    if (state.currentRoute === "about-us") return window.renderAboutUsScreen(user);
+    if (state.currentRoute === "support") return window.renderSupportScreen(user);
+    return typeof origRenderRoute === "function" ? origRenderRoute(user) : "";
+  };
+
+  const FULL_ADMIN_SIDEBAR = [
+    { id: "dashboard", label: "Dashboard", icon: "🏠" },
+    { id: "team", label: "TEAM", icon: "👥" },
+    { id: "deposit-wallet-settings", label: "Deposit Wallet Address Settings", icon: "💳" },
+    { id: "kyc-pending", label: "KYC Pending", icon: "🪪" },
+    { id: "withdrawal-pending", label: "Withdrawal Pending", icon: "⬆️" },
+    { id: "deposit-pending", label: "Deposit Pending", icon: "⬇️" },
+    { id: "recent-transactions", label: "Recent Transactions", icon: "🔄" },
+    { id: "financial-overview", label: "Financial Overview", icon: "📊" },
+    { id: "income-overview", label: "Income Overview", icon: "💰" },
+    { id: "referral-overview", label: "Referral Overview", icon: "🤝" },
+    { id: "view-details", label: "View Details", icon: "👤" },
+    { id: "contact-information", label: "Contact Information", icon: "📞" },
+    { id: "website-branding", label: "Website Branding", icon: "🎨" },
+    { id: "general-settings", label: "General Settings", icon: "⚙️" },
+    { id: "all-notification-setting", label: "All Notification Setting", icon: "🔔" }
+  ];
+
+  window.MASTER_ADMIN_SIDEBAR_ITEMS = FULL_ADMIN_SIDEBAR.slice();
+
+  const origRenderSidebarFinal = window.renderSidebar;
+  window.renderSidebar = function() {
+    if (state.admin && state.admin.authenticated === true && state.currentRoute === "master-admin") {
+      const curPage = state.adminPage || "dashboard";
+      const navEl = document.getElementById("sidebar-nav");
+      if (navEl) {
+        navEl.innerHTML = `
+          <div class="px-3 py-1.5 mb-1 text-[10px] font-mono font-extrabold uppercase tracking-wider text-amber-300 border-b border-amber-400/25">
+            MASTER ADMIN PANEL
+          </div>
+          ${FULL_ADMIN_SIDEBAR.map(item => {
+            const active = curPage === item.id;
+            return `
+              <button type="button" onclick="navigateAdminPage('${item.id}')"
+                class="w-full flex items-center px-3.5 py-2.5 rounded-xl transition text-left ${active ? 'nav-pill-active font-extrabold' : 'text-slate-100 hover:bg-sky-900/35 border border-transparent'}">
+                <span class="flex items-center gap-3 truncate"><span class="text-base leading-none">${item.icon}</span><span class="truncate">${item.label}</span></span>
+              </button>
+            `;
+          }).join("")}
+          <div class="pt-2 mt-2 border-t border-sky-500/20">
+            <button type="button" onclick="logoutMasterAdmin()"
+              class="w-full flex items-center px-3.5 py-2.5 rounded-xl text-rose-300 hover:bg-rose-500/20 font-bold text-left">
+              <span class="flex items-center gap-3"><span>🚪</span><span>Logout Admin</span></span>
+            </button>
+          </div>
+        `;
+        return;
+      }
+    }
+    if (typeof origRenderSidebarFinal === "function") origRenderSidebarFinal();
+  };
+
+  window.renderMasterAdminSubpageById = function(pageId) {
+    const members = Array.isArray(state.members) ? state.members : [];
+    const totalBal = members.reduce((s, m) => s + (Number(m.balance) || 0), 0);
+    const totalInv = members.reduce((s, m) => s + (Number(m.yourInvest) || 0), 0);
+    const totalTeamInv = members.reduce((s, m) => s + (Number(m.teamInvest) || 0), 0);
+    const totalProf = members.reduce((s, m) => s + (Number(m.totalProfit) || 0), 0);
+    const totalTeamA = members.reduce((s, m) => s + (Number(m.aMembersCount) || 0), 0);
+    const totalTeamB = members.reduce((s, m) => s + (Number(m.bMembersCount) || 0), 0);
+    const totalTeamC = members.reduce((s, m) => s + (Number(m.cMembersCount) || 0), 0);
+
+    if (pageId === "team") {
+      return `
+        <div class="space-y-5 text-white">
+          ${pageHeader("👥", "TEAM — All Members A to Z Data", "Complete member directory, A/B/C team counts, balances & direct edit", "TEAM")}
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
+            <div class="kpi-blue rounded-xl p-4"><div class="font-bold">Total Members</div><div class="text-2xl font-extrabold font-mono mt-1">${members.length}</div></div>
+            <div class="kpi-green rounded-xl p-4"><div class="font-bold">Total Balance</div><div class="text-2xl font-extrabold font-mono mt-1">$${totalBal.toFixed(2)}</div></div>
+            <div class="kpi-purple rounded-xl p-4"><div class="font-bold">Total Invest</div><div class="text-2xl font-extrabold font-mono mt-1">$${totalInv.toFixed(2)}</div></div>
+            <div class="kpi-orange rounded-xl p-4"><div class="font-bold">Team A/B/C</div><div class="text-lg font-extrabold font-mono mt-1">A:${totalTeamA} B:${totalTeamB} C:${totalTeamC}</div></div>
+          </div>
+          <div class="account-solid-panel rounded-2xl p-5 space-y-3 text-xs">
+            ${members.map(m => `
+              <div class="p-4 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-3">
+                <div class="space-y-1">
+                  <div class="text-sm font-extrabold text-white">${m.username || "Member"} <span class="font-mono text-sky-300">(${m.uid})</span></div>
+                  <div class="font-mono text-[11px] text-slate-300">
+                    Email: <strong class="text-white">${m.email || "-"}</strong> | Mobile: <strong class="text-white">${m.mobile || "-"}</strong> | Country: <strong class="text-white">${m.country || "-"}</strong>
+                  </div>
+                  <div class="font-mono text-[11px] text-amber-300">
+                    Bal: <strong>$${Number(m.balance || 0).toFixed(2)}</strong> | Invest: <strong>$${Number(m.yourInvest || 0).toFixed(2)}</strong> | Team Invest: <strong>$${Number(m.teamInvest || 0).toFixed(2)}</strong> | Profit: <strong>$${Number(m.totalProfit || 0).toFixed(2)}</strong> | A:${Number(m.aMembersCount||0)} B:${Number(m.bMembersCount||0)} C:${Number(m.cMembersCount||0)}
+                  </div>
+                </div>
+                <button type="button" onclick="openAdminEditModal('${m.uid}')" class="px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-extrabold text-xs">
+                  Edit All Data
+                </button>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    if (pageId === "deposit-wallet-settings" && typeof renderAdminDepositWalletSettingsPage === "function") {
+      return renderAdminDepositWalletSettingsPage();
+    }
+    if (pageId === "kyc-pending" && typeof renderAdminKycPendingPage === "function") {
+      return renderAdminKycPendingPage();
+    }
+    if (pageId === "withdrawal-pending") {
+      const wds = state.withdrawRequests || [];
+      return `
+        <div class="space-y-4 text-white">
+          ${pageHeader("⬆️", "Withdrawal Pending", "Review and approve/reject member withdrawals", "Withdrawal Pending")}
+          <div class="account-solid-panel rounded-2xl p-5 space-y-3 text-xs">
+            ${wds.length ? wds.map(w => `
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-bold text-white">${w.id} — ${w.username || "Member"} (${w.uid}) • $${Number(w.amount || 0).toFixed(2)} USDT</div>
+                  <div class="font-mono text-[11px] text-slate-300">Chain: ${w.chain || "-"} | Wallet: ${w.wallet || "-"} | Status: <strong class="text-amber-300">${w.status || "Pending"}</strong></div>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button" onclick="decideWithdrawRequest('${w.id}','Approved')" class="px-3 py-1.5 rounded-lg bg-emerald-500/25 text-emerald-300 font-bold">Approve</button>
+                  <button type="button" onclick="decideWithdrawRequest('${w.id}','Rejected')" class="px-3 py-1.5 rounded-lg bg-rose-500/25 text-rose-300 font-bold">Reject</button>
+                </div>
+              </div>
+            `).join("") : `<div class="text-slate-400 text-center py-4">No withdrawal requests found.</div>`}
+          </div>
+        </div>
+      `;
+    }
+    if (pageId === "deposit-pending") {
+      const deps = state.depositRequests || [];
+      return `
+        <div class="space-y-4 text-white">
+          ${pageHeader("⬇️", "Deposit Pending", "Review and approve/reject member deposits", "Deposit Pending")}
+          <div class="account-solid-panel rounded-2xl p-5 space-y-3 text-xs">
+            ${deps.length ? deps.map(d => `
+              <div class="p-3.5 rounded-xl bg-[#05122b] border border-sky-500/25 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-bold text-white">${d.id} — ${d.username || "Member"} (${d.uid}) • $${Number(d.amount || 0).toFixed(2)} USDT</div>
+                  <div class="font-mono text-[11px] text-slate-300">Chain: ${d.chain || "-"} | Hash: ${d.txHash || "-"} | Status: <strong class="text-amber-300">${d.status || "Pending"}</strong></div>
+                </div>
+                <div class="flex gap-2">
+                  <button type="button" onclick="decideDepositRequest('${d.id}','Approved')" class="px-3 py-1.5 rounded-lg bg-emerald-500/25 text-emerald-300 font-bold">Approve</button>
+                  <button type="button" onclick="decideDepositRequest('${d.id}','Rejected')" class="px-3 py-1.5 rounded-lg bg-rose-500/25 text-rose-300 font-bold">Reject</button>
+                </div>
+              </div>
+            `).join("") : `<div class="text-slate-400 text-center py-4">No deposit requests found.</div>`}
+          </div>
+        </div>
+      `;
+    }
+
+    const txs = typeof getAllSystemFinancialTransactions === "function" ? getAllSystemFinancialTransactions() : [];
+    return `
+      <div class="space-y-4 text-white">
+        ${pageHeader("📊", pageId.replace(/-/g, " ").toUpperCase(), "Complete platform overview, members, income & referral records", pageId)}
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+          <div class="p-4 rounded-xl bg-[#05122b] border border-sky-400/35"><div class="text-slate-400 font-sans">Total Members</div><strong class="text-white text-lg">${members.length}</strong></div>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-emerald-400/35"><div class="text-slate-400 font-sans">Total Balance</div><strong class="text-emerald-300 text-lg">$${totalBal.toFixed(2)}</strong></div>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-amber-400/35"><div class="text-slate-400 font-sans">Total Invest</div><strong class="text-amber-300 text-lg">$${totalInv.toFixed(2)}</strong></div>
+          <div class="p-4 rounded-xl bg-[#05122b] border border-purple-400/35"><div class="text-slate-400 font-sans">Total Profit</div><strong class="text-purple-300 text-lg">$${totalProf.toFixed(2)}</strong></div>
+        </div>
+        <div class="account-solid-panel rounded-2xl p-5 space-y-2 text-xs font-mono">
+          <div class="font-sans font-extrabold text-amber-300 text-sm mb-2">Recent Records (${txs.length})</div>
+          ${txs.length ? txs.slice(0, 20).map(t => `
+            <div class="p-2.5 rounded-lg bg-[#05122b] border border-sky-500/20 flex justify-between">
+              <span>${t.txId} • ${t.username} (${t.uid}) • ${t.type}</span>
+              <strong class="text-emerald-300">$${Number(t.amount || 0).toFixed(2)} • ${t.status}</strong>
+            </div>
+          `).join("") : `<div class="font-sans text-slate-400">No transaction records yet.</div>`}
+        </div>
+      </div>
+    `;
+  };
+
+  const origRenderMasterAdminPanel = window.renderMasterAdminPanelScreen;
+  window.renderMasterAdminPanelScreen = function() {
+    if (state.admin && state.admin.authenticated === true) {
+      const p = state.adminPage || "dashboard";
+      if (p !== "dashboard") {
+        return window.renderMasterAdminSubpageById(p);
+      }
+    }
+    return typeof origRenderMasterAdminPanel === "function" ? origRenderMasterAdminPanel() : "";
+  };
 })();
 </script>
 
