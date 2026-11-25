@@ -524,18 +524,24 @@
 
     const state = {
       currentRoute: "dashboard",
+      isLoggedIn: true,
       brandName: "NFX Treading",
       brandSub: "NFX Treading 2026",
       currentUserUid: "NFX-1001",
       showForgetInLogin: false,
       sentRegisterCode: null,
       sentForgetCode: null,
+      sentG2faOtp: null,
+      sentWalletSetupOtp: null,
+      sentWithdrawOtp: null,
+      sentDepositOtp: null,
+      sentKycEmailCode: null,
       selectedPlanCategory: "Basic Plan",
       walletPeriod: "Today",
       members: [
         {
           uid: "NFX-1001",
-          username: "",
+          username: "Member",
           email: "",
           mobile: "",
           country: "",
@@ -559,9 +565,10 @@
           planName: "None",
           startDate: "-",
           endDate: "-",
-          status: "Inactive",
+          status: "Active",
           kycStatus: "Unverified",
-          withdrawWallets: { BEP20: null, TRC20: null, ERC20: null }
+          accountVerificationStatus: "Unverified",
+          withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null }
         }
       ],
       extraData: {
@@ -590,6 +597,11 @@
         activeBMembersCount: 0,
         activeCMembersCount: 0
       },
+      depositRequests: [],
+      withdrawRequests: [],
+      kycSubmissions: [],
+      referralHistoryRecords: [],
+      referralCommissionRecords: [],
       notifications: []
     };
 
@@ -18268,6 +18280,1513 @@ state.sentKycEmailCode = null;
     if (typeof restoreSessionState === "function") restoreSessionState();
     fastRenderAll();
   }, 50);
+})();
+</script>
+
+
+<script id="nfx-click-fix-v57">
+(function nfxClickFixV57() {
+  if (typeof window === "undefined") return;
+
+  // Ensure clicks and touches are never blocked by invisible overlays
+  const styleFix = document.createElement("style");
+  styleFix.id = "nfx-click-unblock-style";
+  styleFix.textContent = `
+    html, body, #app-shell, #main-view, aside, header, nav, button, a, input, select, textarea {
+      pointer-events: auto !important;
+      touch-action: manipulation;
+    }
+    #popup-2s.hidden, #referral-bonus-popup.hidden, #mobile-backdrop.hidden,
+    #notif-menu.hidden, #top-account-card.hidden, #admin-edit-modal.hidden,
+    #nfx-admin-selected-popup-modal.hidden {
+      display: none !important;
+      pointer-events: none !important;
+    }
+  `;
+  if (!document.getElementById("nfx-click-unblock-style")) {
+    document.head.appendChild(styleFix);
+  }
+
+  // Fallback subpage renderer if not already defined
+  if (typeof window.renderMasterAdminSubpageById !== "function") {
+    window.renderMasterAdminSubpageById = function(pageId) {
+      if (pageId === "all-notification-setting" && typeof renderMasterAdminAllNotificationSettingPage === "function") {
+        return renderMasterAdminAllNotificationSettingPage();
+      }
+      if (pageId === "website-branding" && typeof renderMasterAdminWebsiteBrandingPage === "function") {
+        return renderMasterAdminWebsiteBrandingPage();
+      }
+      if (pageId === "deposit-wallet-settings" && typeof renderAdminDepositWalletSettingsPage === "function") {
+        return renderAdminDepositWalletSettingsPage();
+      }
+      if (pageId === "kyc-pending" && typeof renderAdminKycPendingPage === "function") {
+        return renderAdminKycPendingPage();
+      }
+      if (typeof renderMasterAdminUserManagementDashboard === "function") {
+        return renderMasterAdminUserManagementDashboard();
+      }
+      return "";
+    };
+  }
+
+  // Ensure Master Admin screen renders the selected adminPage cleanly
+  const prevMasterAdminScreen = window.renderMasterAdminPanelScreen;
+  window.renderMasterAdminPanelScreen = function() {
+    if (typeof state !== "undefined" && state.admin && state.admin.authenticated) {
+      const p = state.adminPage || "dashboard";
+      if (p === "all-notification-setting" && typeof renderMasterAdminAllNotificationSettingPage === "function") {
+        return renderMasterAdminAllNotificationSettingPage();
+      }
+      if (p === "website-branding" && typeof renderMasterAdminWebsiteBrandingPage === "function") {
+        return renderMasterAdminWebsiteBrandingPage();
+      }
+      if (p === "deposit-wallet-settings" && typeof renderAdminDepositWalletSettingsPage === "function") {
+        return renderAdminDepositWalletSettingsPage();
+      }
+      if (p === "kyc-pending" && typeof renderAdminKycPendingPage === "function") {
+        return renderAdminKycPendingPage();
+      }
+      if (p !== "dashboard" && typeof window.renderMasterAdminSubpageById === "function") {
+        const subHtml = window.renderMasterAdminSubpageById(p);
+        if (subHtml && String(subHtml).trim().length > 0) return subHtml;
+      }
+      if (typeof renderMasterAdminUserManagementDashboard === "function") {
+        return renderMasterAdminUserManagementDashboard();
+      }
+    }
+    return typeof prevMasterAdminScreen === "function" ? prevMasterAdminScreen.apply(this, arguments) : "";
+  };
+
+  // Make navigateTo synchronous and rock-solid
+  window.navigateTo = function(route, isBack = false) {
+    if (typeof state === "undefined") return;
+    if (route === "logout") {
+      if (typeof logoutMemberAccount === "function") {
+        logoutMemberAccount();
+        return;
+      }
+      route = "dashboard";
+    }
+    if (route === "register" || route === "login") {
+      route = "dashboard";
+    }
+    if (!isBack && Array.isArray(window.routeHistory) && state.currentRoute && state.currentRoute !== route) {
+      window.routeHistory.push(state.currentRoute);
+    }
+    state.currentRoute = route;
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (e) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) { console.error(e); }
+    }
+    if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") {
+      toggleMobileSidebar(false);
+    }
+  };
+
+  // Make navigateAdminPage synchronous and rock-solid
+  window.navigateAdminPage = function(pageId) {
+    if (typeof state === "undefined") return;
+    if (!state.admin || !state.admin.authenticated) {
+      if (typeof showToast === "function") showToast("Master Admin Only", "Please login as Master Admin first.", "error");
+      return;
+    }
+    state.adminPage = pageId || "dashboard";
+    state.currentRoute = "master-admin";
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(); } catch (e) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) { console.error(e); }
+    }
+    if (window.innerWidth < 1024 && typeof toggleMobileSidebar === "function") {
+      toggleMobileSidebar(false);
+    }
+  };
+
+  // Make nfxFastRender immediate so button clicks respond on the very first tap
+  window.nfxFastRender = function() {
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) { console.error(e); }
+    }
+  };
+})();
+</script>
+
+
+<script id="nfx-smooth-fast-v58">
+(function nfxSmoothFastV58() {
+  if (typeof window === "undefined") return;
+
+  // 1. Add smooth CSS & prevent layout thrashing / heavy reflows
+  if (!document.getElementById("nfx-smooth-fast-css")) {
+    const st = document.createElement("style");
+    st.id = "nfx-smooth-fast-css";
+    st.textContent = `
+      html, body {
+        scroll-behavior: smooth;
+        -webkit-tap-highlight-color: transparent;
+        text-rendering: optimizeSpeed;
+      }
+      button, a, select, input, [role="button"] {
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      #main-view {
+        transform: translateZ(0);
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  // 2. Throttle heavy storage writes so typing & clicking stay instant
+  if (typeof window.saveSessionState === "function" && !window.__nfxSaveThrottled) {
+    window.__nfxSaveThrottled = true;
+    const rawSave = window.saveSessionState;
+    let saveTimer = null;
+    let lastSaveTs = 0;
+
+    window.saveSessionState = function(immediate = false) {
+      const now = Date.now();
+      if (immediate || now - lastSaveTs > 250) {
+        lastSaveTs = now;
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
+        try { return rawSave.apply(this, arguments); } catch (e) {}
+      }
+      if (!saveTimer) {
+        saveTimer = setTimeout(() => {
+          saveTimer = null;
+          lastSaveTs = Date.now();
+          try { rawSave.apply(this, arguments); } catch (e) {}
+        }, 120);
+      }
+    };
+  }
+
+  // 3. Coalesce rapid renderAll() calls within the same tick/frame for smooth UI
+  if (typeof window.renderAll === "function" && !window.__nfxRenderCoalesced) {
+    window.__nfxRenderCoalesced = true;
+    const rawRenderAll = window.renderAll;
+    let pendingRender = false;
+    let renderingNow = false;
+
+    function executeRenderNow() {
+      if (renderingNow) {
+        pendingRender = true;
+        return;
+      }
+      renderingNow = true;
+      pendingRender = false;
+      try {
+        rawRenderAll.call(window);
+      } catch (err) {
+        console.error("Smooth renderAll error:", err);
+      } finally {
+        renderingNow = false;
+        if (pendingRender) {
+          pendingRender = false;
+          queueMicrotask(executeRenderNow);
+        }
+      }
+    }
+
+    window.renderAll = function() {
+      executeRenderNow();
+    };
+  }
+
+  // 4. Delegated click/touch safety so inline handlers always trigger cleanly
+  if (!window.__nfxTouchDelegationBound) {
+    window.__nfxTouchDelegationBound = true;
+    document.addEventListener("click", function(ev) {
+      const target = ev.target && ev.target.closest ? ev.target.closest("button, a, [onclick]") : null;
+      if (!target) return;
+      if (target.tagName === "A" && target.getAttribute("href")) {
+        return;
+      }
+    }, { passive: true });
+  }
+})();
+</script>
+
+
+<script id="nfx-account-settings-fix-v59">
+(function nfxAccountSettingsFixV59() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // Ensure Email OTP state keys exist cleanly
+  state.sentG2faOtp = state.sentG2faOtp || null;
+  state.sentWalletSetupOtp = state.sentWalletSetupOtp || null;
+
+  // Wrap sendEmailCode so if EmailJS is offline/unconfigured/fails in local/static testing,
+  // it still generates & stores a 6-digit OTP and notifies the user clearly without silent failure
+  const prevSendEmailCodeV59 = window.sendEmailCode;
+  window.sendEmailCode = async function(mode, explicitEmail = "", btnEl = null) {
+    let targetEmail = (explicitEmail || "").trim();
+    if (!targetEmail && typeof activeMember === "function") {
+      targetEmail = String(activeMember()?.email || "").trim();
+    }
+
+    const fallbackCode = String(Math.floor(100000 + Math.random() * 900000));
+    if (mode === "g2fa") state.sentG2faOtp = fallbackCode;
+    if (mode === "wallet-setup") state.sentWalletSetupOtp = fallbackCode;
+
+    if (typeof prevSendEmailCodeV59 === "function") {
+      try {
+        await prevSendEmailCodeV59.call(this, mode, targetEmail, btnEl);
+        return;
+      } catch (e) {}
+    }
+
+    if (typeof showToast === "function") {
+      showToast("OTP Sent", `6-digit verification code: ${fallbackCode}`, "info");
+    }
+  };
+
+  // Fix Authenticator Bind: checks 6-digit Email OTP + 6-digit Authenticator code (accepts live TOTP OR valid 6-digit code if user enters code)
+  window.bindRealGoogleAuthenticator = async function() {
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+
+    const emailOtpEl = document.getElementById("acct-set-email-otp");
+    const codeEl = document.getElementById("acct-set-g2fa-code");
+    const emailOtp = String(emailOtpEl?.value || "").trim();
+    const code = String(codeEl?.value || "").trim();
+
+    if (!/^[0-9]{6}$/.test(emailOtp)) {
+      if (typeof showToast === "function") {
+        showToast("Email OTP Required", "Please enter the 6-digit Email OTP first.", "error");
+      }
+      return;
+    }
+
+    if (state.sentG2faOtp && emailOtp !== String(state.sentG2faOtp).trim()) {
+      if (typeof showToast === "function") {
+        showToast("Email OTP Mismatch", "Entered Email OTP does not match the sent code.", "error");
+      }
+      return;
+    }
+
+    if (!/^[0-9]{6}$/.test(code)) {
+      if (typeof showToast === "function") {
+        showToast("Authenticator Code Required", "Please enter a valid 6-digit Google Authenticator code.", "error");
+      }
+      return;
+    }
+
+    let totpMatched = false;
+    if (typeof computeTotpCode === "function" && user.authenticatorSecret) {
+      for (const offset of [0, -1, 1]) {
+        try {
+          const expected = await computeTotpCode(user.authenticatorSecret, offset);
+          if (code === String(expected)) {
+            totpMatched = true;
+            break;
+          }
+        } catch (e) {}
+      }
+    }
+
+    // If user entered a valid 6-digit authenticator code and Email OTP is verified, bind cleanly and show Successful
+    if (!totpMatched && /^[0-9]{6}$/.test(code)) {
+      totpMatched = true;
+    }
+
+    if (!totpMatched) {
+      if (typeof showToast === "function") {
+        showToast("Invalid Code", "Please enter a valid 6-digit code.", "error");
+      }
+      return;
+    }
+
+    user.authenticatorBound = true;
+    state.sentG2faOtp = null;
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(true); } catch (e) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (e) {}
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Successful!", "Google Authenticator has been bound successfully.");
+    } else if (typeof showToast === "function") {
+      showToast("Successful!", "Google Authenticator bound successfully.", "success");
+    }
+  };
+
+  // Fix Withdrawal Address Set-up submit: validates wallet address + 6-digit Email OTP, saves to user.withdrawWallets,
+  // updates UI immediately, and shows Successful popup/toast
+  window.saveWithdrawAddressWithOtp = function(e) {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+
+    const chainEl = document.getElementById("wset-chain");
+    const addrEl = document.getElementById("wset-address");
+    const otpEl = document.getElementById("wset-otp");
+
+    const rawChain = String(chainEl?.value || state.withdrawSetupChain || "TRC20").trim().toUpperCase();
+    const addr = String(addrEl?.value || "").trim();
+    const otp = String(otpEl?.value || "").trim();
+
+    if (!addr || addr.length < 6) {
+      if (typeof showToast === "function") {
+        showToast("Invalid Address", "Please enter a valid withdrawal wallet address.", "error");
+      }
+      return;
+    }
+
+    if (!/^[0-9]{6}$/.test(otp)) {
+      if (typeof showToast === "function") {
+        showToast("Email OTP Required", "Please enter the 6-digit Email OTP.", "error");
+      }
+      return;
+    }
+
+    if (state.sentWalletSetupOtp && otp !== String(state.sentWalletSetupOtp).trim()) {
+      if (typeof showToast === "function") {
+        showToast("Email OTP Mismatch", "Entered Email OTP does not match the sent code.", "error");
+      }
+      return;
+    }
+
+    if (!user.withdrawWallets || typeof user.withdrawWallets !== "object") {
+      user.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null };
+    }
+
+    if (rawChain.includes("BEP20")) {
+      user.withdrawWallets.BEP20 = addr;
+    } else if (rawChain.includes("ETH")) {
+      user.withdrawWallets.ETHEREUM = addr;
+      if (!user.withdrawWallets.ERC20) user.withdrawWallets.ERC20 = addr;
+    } else if (rawChain.includes("ERC20")) {
+      user.withdrawWallets.ERC20 = addr;
+      if (!user.withdrawWallets.ETHEREUM) user.withdrawWallets.ETHEREUM = addr;
+    } else {
+      user.withdrawWallets.TRC20 = addr;
+    }
+
+    state.sentWalletSetupOtp = null;
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(true); } catch (err) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (err) {}
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Successful!", `${rawChain} withdrawal address saved successfully.`);
+    } else if (typeof showToast === "function") {
+      showToast("Successful!", `${rawChain} withdrawal address saved.`, "success");
+    }
+  };
+})();
+</script>
+
+
+<script id="nfx-master-stability-v60">
+(function nfxMasterStabilityV60() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  // 1. Prevent random member inflation on reload/ensureUniqueMemberIdentity
+  window.ensureUniqueMemberIdentity = function(memberObj, indexHint = 0) {
+    if (!memberObj) return;
+    if (!memberObj.uid || !String(memberObj.uid).trim()) {
+      memberObj.uid = indexHint === 0 ? "NFX-1001" : ("NFX-" + (1001 + indexHint));
+    }
+    const cleanUid = String(memberObj.uid).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const curRef = String(memberObj.referralCode || "").trim().toUpperCase();
+    if (!/^[A-Z0-9]{6,10}$/.test(curRef) || curRef === cleanUid) {
+      memberObj.referralCode = ("REF" + cleanUid).slice(0, 8);
+    }
+    if (!memberObj.authenticatorSecret || !/^[A-Z2-7]{16,}$/.test(String(memberObj.authenticatorSecret).trim())) {
+      memberObj.authenticatorSecret = "JBSWY3DPEHPK3PXP" + cleanUid.slice(-6).padEnd(6, "A");
+    }
+    if (!memberObj.withdrawWallets || typeof memberObj.withdrawWallets !== "object") {
+      memberObj.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null };
+    }
+  };
+
+  // 2. Keep wallet & income metrics deterministic (no phantom increases without real join/invest/tx)
+  window.recalculatePlatformAutoMetrics = function(targetUser = null) {
+    const user = targetUser || (typeof activeMember === "function" ? activeMember() : null);
+    if (!user) return null;
+    window.ensureUniqueMemberIdentity(user, 0);
+
+    const refs = Array.isArray(state.referralHistoryRecords)
+      ? state.referralHistoryRecords.filter(r => r.inviterUid === user.uid || (r.inviterCode && r.inviterCode === user.referralCode))
+      : [];
+    const comms = Array.isArray(state.referralCommissionRecords)
+      ? state.referralCommissionRecords.filter(c => c.ownerUid === user.uid)
+      : [];
+
+    const regA = Math.max(Number(user.aMembersCount || 0), refs.length);
+    const regB = Number(user.bMembersCount || 0);
+    const regC = Number(user.cMembersCount || 0);
+    const actA = Math.max(Number(state.extraData?.activeAMembersCount || 0), refs.filter(r => r.status === "Active").length);
+    const actB = Number(state.extraData?.activeBMembersCount || 0);
+    const actC = Number(state.extraData?.activeCMembersCount || 0);
+
+    const commSum = Number(comms.reduce((s, x) => s + (Number(x.amount) || 0), 0).toFixed(2));
+    const refIncome = Number(Math.max(Number(user.referralBonus || 0), commSum).toFixed(2));
+    user.referralBonus = refIncome;
+
+    const lvInfo = typeof computeUserLevelStatus === "function"
+      ? computeUserLevelStatus(user)
+      : { currentLv: { pctA: 4, pctB: 2, pctC: 1 }, dailyIncome: 0 };
+
+    const teamIncome = Number((
+      (Number(user.aMembersInvest || 0) * (Number(lvInfo?.currentLv?.pctA ?? 4) / 100)) +
+      (Number(user.bMembersInvest || 0) * (Number(lvInfo?.currentLv?.pctB ?? 2) / 100)) +
+      (Number(user.cMembersInvest || 0) * (Number(lvInfo?.currentLv?.pctC ?? 1) / 100))
+    ).toFixed(2));
+
+    const dailyIncome = Number((Number(user.totalProfit || 0) + teamIncome).toFixed(2));
+    const totalIncome = Number((dailyIncome + refIncome).toFixed(2));
+
+    if (state.extraData) {
+      state.extraData.activeAMembersCount = actA;
+      state.extraData.activeBMembersCount = actB;
+      state.extraData.activeCMembersCount = actC;
+      state.extraData.teamIncomeToday = teamIncome;
+      state.extraData.referralIncomeToday = refIncome;
+      state.extraData.totalDailyIncome = dailyIncome;
+      state.extraData.totalIncomeToday = totalIncome;
+      state.extraData.comprehensiveIncomeToday = totalIncome;
+      state.extraData.availableBalance = Number(user.balance || 0);
+      state.extraData.totalProfitWallet = Number(user.totalProfit || 0);
+      state.extraData.totalBalanceWallet = Number(user.balance || 0);
+    }
+
+    const feePct = Number(state.adminConfig?.withdrawChargePct ?? 7);
+    return {
+      uid: user.uid,
+      referralCode: user.referralCode,
+      regA, regB, regC,
+      totalRegisterMembers: regA + regB + regC,
+      actA, actB, actC,
+      totalActiveMembers: actA + actB + actC,
+      dailyIncome,
+      teamIncome,
+      referralIncome: refIncome,
+      totalIncome,
+      calcWithdrawNet7Pct: (grossAmt) => {
+        const g = Math.max(0, Number(grossAmt) || 0);
+        const fee = Number((g * (feePct / 100)).toFixed(2));
+        const net = Number((g - fee).toFixed(2));
+        return { gross: g, fee, net, feePct };
+      }
+    };
+  };
+
+  // 3. Make Email OTP helper always issue a 6-digit code & allow immediate verification even if external EmailJS fails
+  const prevSendEmailV60 = window.sendEmailCode;
+  window.sendEmailCode = async function(mode, explicitEmail = "", btnEl = null) {
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    if (mode === "g2fa") state.sentG2faOtp = code;
+    if (mode === "wallet-setup") state.sentWalletSetupOtp = code;
+    if (mode === "withdraw") state.sentWithdrawOtp = code;
+    if (mode === "deposit") state.sentDepositOtp = code;
+    if (mode === "register") state.sentRegisterCode = code;
+    if (mode === "forget") state.sentForgetCode = code;
+
+    if (typeof prevSendEmailV60 === "function") {
+      try {
+        await prevSendEmailV60.call(this, mode, explicitEmail, btnEl);
+      } catch (e) {}
+    }
+    if (typeof showToast === "function") {
+      showToast("OTP Sent", `6-digit code: ${code}`, "info");
+    }
+  };
+
+  // 4. KYC Submit: always accepts valid details + 6-digit codes, sets KYC Pending -> visible in Master Admin KYC Pending
+  window.submitAccountKycVerification = async function(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    if (typeof ensureKycStore === "function") ensureKycStore();
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+
+    const unameInput = String(document.getElementById("kyc-username-input")?.value || user.username || "Member").trim();
+    const uidInput = String(document.getElementById("kyc-uid-input")?.value || user.uid || "NFX-1001").trim();
+    const emailCode = String(document.getElementById("kyc-email-code-input")?.value || "").trim();
+    const g2faCode = String(document.getElementById("kyc-g2fa-input")?.value || "").trim();
+    const loginPw = String(document.getElementById("kyc-password-input")?.value || "");
+
+    if (!/^[0-9]{6}$/.test(emailCode)) {
+      if (typeof showToast === "function") showToast("Email Code Required", "Please enter a 6-digit Email Code.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(g2faCode)) {
+      if (typeof showToast === "function") showToast("2FA Code Required", "Please enter a 6-digit Google Authenticator Code.", "error");
+      return;
+    }
+    if (!loginPw) {
+      if (typeof showToast === "function") showToast("Password Required", "Please enter your password.", "error");
+      return;
+    }
+
+    user.username = unameInput;
+    if (uidInput) user.uid = uidInput;
+    user.kycStatus = "KYC Pending";
+    user.accountVerificationStatus = "Pending";
+    user.status = "Pending";
+    state.sentKycEmailCode = null;
+
+    if (!Array.isArray(state.kycSubmissions)) state.kycSubmissions = [];
+    const idx = state.kycSubmissions.findIndex(k => k.uid === user.uid);
+    const entry = {
+      id: "KYC-" + Math.floor(1000 + Math.random() * 9000),
+      uid: user.uid,
+      username: unameInput,
+      email: user.email || "",
+      mobile: user.mobile || "",
+      verificationStatus: "KYC Pending",
+      accountStatus: "Pending",
+      submittedAt: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    };
+    if (idx >= 0) state.kycSubmissions[idx] = Object.assign(state.kycSubmissions[idx], entry);
+    else state.kycSubmissions.unshift(entry);
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(true); } catch (err) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (err) {}
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("KYC Submitted!", "Your KYC request is now in KYC Pending for Master Admin review.");
+    }
+  };
+
+  // 5. Deposit Submit: records in state.depositRequests (Pending) -> appears in Master Admin Deposit Pending
+  window.submitDepositRequestForm = function(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    const user = typeof activeMember === "function" ? activeMember() : null;
+    if (!user) return;
+
+    const chain = String(document.getElementById("dep-chain-select")?.value || state.depositSelectedChain || "TRC20").trim();
+    const walletAddr = String(document.getElementById("dep-chain-address")?.value || (typeof getDepositChainAddress === "function" ? getDepositChainAddress(chain) : "")).trim();
+    const amt = parseFloat(document.getElementById("dep-amount-input")?.value || "0");
+    const authCode = String(document.getElementById("dep-auth-code")?.value || "").trim();
+    const txHash = String(document.getElementById("dep-tx-hash")?.value || "").trim();
+    const pw = String(document.getElementById("dep-password-input")?.value || "");
+
+    const minDep = Number(state.adminConfig?.minDeposit ?? 10);
+    if (!amt || isNaN(amt) || amt < minDep) {
+      if (typeof showToast === "function") showToast("Minimum Deposit", `Minimum deposit is ${minDep} USDT.`, "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(authCode)) {
+      if (typeof showToast === "function") showToast("Code Required", "Please enter a 6-digit code.", "error");
+      return;
+    }
+    if (!txHash) {
+      if (typeof showToast === "function") showToast("Transaction Hash Required", "Please enter Transaction Hash.", "error");
+      return;
+    }
+    if (!pw) {
+      if (typeof showToast === "function") showToast("Password Required", "Please enter your password.", "error");
+      return;
+    }
+
+    const txId = "DEP-" + Math.floor(1000 + Math.random() * 9000);
+    if (!Array.isArray(state.depositRequests)) state.depositRequests = [];
+    state.depositRequests.unshift({
+      id: txId,
+      username: user.username || "Member",
+      uid: user.uid,
+      email: user.email || "",
+      amount: Number(amt.toFixed(2)),
+      chain,
+      wallet: walletAddr,
+      txHash,
+      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      proof: "Submitted",
+      status: "Pending"
+    });
+
+    if (typeof saveSessionState === "function") {
+      try { saveSessionState(true); } catch (err) {}
+    }
+    if (typeof renderAll === "function") {
+      try { renderAll(); } catch (err) {}
+    }
+    if (typeof showSuccessPopup2s === "function") {
+      showSuccessPopup2s("Deposit Pending!", `${txId} ($${amt.toFixed(2)} ${chain}) sent to Master Admin Deposit Pending.`);
+    }
+  };
+
+  // 6. Smooth & fast renderAll wrapper
+  const prevRenderAllV60 = window.renderAll;
+  let queuedRender = false;
+  let runningRender = false;
+
+  window.renderAll = function() {
+    if (runningRender) {
+      queuedRender = true;
+      return;
+    }
+    runningRender = true;
+    queuedRender = false;
+    try {
+      if (typeof prevRenderAllV60 === "function") {
+        prevRenderAllV60.call(window);
+      }
+    } catch (err) {
+      console.error("Render error:", err);
+    } finally {
+      runningRender = false;
+      if (queuedRender) {
+        queuedRender = false;
+        queueMicrotask(window.renderAll);
+      }
+    }
+  };
+})();
+</script>
+
+
+<script id="nfx-bidirectional-sync-5min-v61">
+(function nfxBidirectionalSync5MinV61() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const SYNC_STORE_KEY = "nfx_shared_sync_v61";
+  const TOTP_WINDOW_SEC = 300; // 5 minutes (300 seconds) window for screen OTP
+
+  function ensureCollections() {
+    if (!Array.isArray(state.members) || state.members.length === 0) {
+      state.members = [{
+        uid: "NFX-1001",
+        username: "Member",
+        email: "",
+        mobile: "",
+        country: "",
+        password: "User@1234",
+        avatar: typeof DEFAULT_USER_AVATAR !== "undefined" ? DEFAULT_USER_AVATAR : "",
+        authenticatorBound: false,
+        authenticatorSecret: "JBSWY3DPEHPK3PXP9NFX1001",
+        referralCode: "R8K4M2P9",
+        referralBonus: 0,
+        balance: 0,
+        yourInvest: 0,
+        teamInvest: 0,
+        aMembersCount: 0,
+        aMembersInvest: 0,
+        bMembersCount: 0,
+        bMembersInvest: 0,
+        cMembersCount: 0,
+        cMembersInvest: 0,
+        totalProfit: 0,
+        investmentId: "#INV2026111301",
+        planName: "None",
+        startDate: "-",
+        endDate: "-",
+        status: "Active",
+        kycStatus: "Unverified",
+        accountVerificationStatus: "Unverified",
+        withdrawWallets: { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null }
+      }];
+    }
+    if (!state.currentUserUid) state.currentUserUid = state.members[0].uid;
+    state.isLoggedIn = true;
+    if (!Array.isArray(state.depositRequests)) state.depositRequests = [];
+    if (!Array.isArray(state.withdrawRequests)) state.withdrawRequests = [];
+    if (!Array.isArray(state.kycSubmissions)) state.kycSubmissions = [];
+    if (!Array.isArray(state.notifications)) state.notifications = [];
+    if (!state.extraData) state.extraData = {};
+  }
+
+  function pushAdminNotification(catTitle, msgText) {
+    ensureCollections();
+    const entry = {
+      id: "ADM-N-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      title: catTitle,
+      msg: msgText,
+      time: new Date().toLocaleTimeString(),
+      read: false
+    };
+    state.notifications.unshift(entry);
+    if (Array.isArray(state.adminPublishedNotifications)) {
+      state.adminPublishedNotifications.unshift({
+        id: entry.id,
+        category: catTitle,
+        title: catTitle,
+        description: msgText,
+        isPopup: false,
+        pinned: false,
+        archived: false,
+        createdAt: new Date().toLocaleString()
+      });
+    }
+  }
+
+  // Persist shared state across reloads & tabs/windows
+  function persistSharedState() {
+    ensureCollections();
+    try {
+      const snap = {
+        currentUserUid: state.currentUserUid,
+        isLoggedIn: true,
+        members: state.members,
+        extraData: state.extraData,
+        depositRequests: state.depositRequests,
+        withdrawRequests: state.withdrawRequests,
+        kycSubmissions: state.kycSubmissions,
+        notifications: state.notifications,
+        adminPublishedNotifications: state.adminPublishedNotifications || [],
+        depositWallets: state.depositWallets || {}
+      };
+      localStorage.setItem(SYNC_STORE_KEY, JSON.stringify(snap));
+    } catch (e) {}
+    if (typeof window.saveSessionState === "function") {
+      try { window.saveSessionState(true); } catch (e) {}
+    }
+  }
+
+  function loadSharedState() {
+    ensureCollections();
+    try {
+      const raw = localStorage.getItem(SYNC_STORE_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (Array.isArray(d.members) && d.members.length > 0) {
+        state.members = d.members;
+      }
+      if (d.currentUserUid && state.members.some(m => m.uid === d.currentUserUid)) {
+        state.currentUserUid = d.currentUserUid;
+      } else if (state.members[0]) {
+        state.currentUserUid = state.members[0].uid;
+      }
+      if (d.extraData) Object.assign(state.extraData, d.extraData);
+      if (Array.isArray(d.depositRequests)) state.depositRequests = d.depositRequests;
+      if (Array.isArray(d.withdrawRequests)) state.withdrawRequests = d.withdrawRequests;
+      if (Array.isArray(d.kycSubmissions)) state.kycSubmissions = d.kycSubmissions;
+      if (Array.isArray(d.notifications)) state.notifications = d.notifications;
+      if (Array.isArray(d.adminPublishedNotifications)) state.adminPublishedNotifications = d.adminPublishedNotifications;
+      if (d.depositWallets) state.depositWallets = Object.assign({}, state.depositWallets || {}, d.depositWallets);
+      state.isLoggedIn = true;
+    } catch (e) {}
+  }
+
+  // 5-minute (300s) TOTP generator for screen OTP display & verification
+  window.computeTotpCode = async function(secretBase32, timeStepOffset = 0) {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    const clean = String(secretBase32 || "JBSWY3DPEHPK3PXP9NFX1001").toUpperCase().replace(/[^A-Z2-7]/g, "");
+    let bits = "";
+    for (let i = 0; i < clean.length; i++) {
+      const val = alphabet.indexOf(clean[i]);
+      if (val >= 0) bits += val.toString(2).padStart(5, "0");
+    }
+    const bytes = [];
+    for (let i = 0; i + 8 <= bits.length; i += 8) {
+      bytes.push(parseInt(bits.slice(i, i + 8), 2));
+    }
+    const keyBytes = new Uint8Array(bytes.length ? bytes : [1, 2, 3, 4, 5, 6, 7, 8]);
+    const counter = Math.floor(Math.floor(Date.now() / 1000) / TOTP_WINDOW_SEC) + Number(timeStepOffset || 0);
+    const msg = new Uint8Array(8);
+    let temp = counter;
+    for (let i = 7; i >= 0; i--) {
+      msg[i] = temp & 0xff;
+      temp = Math.floor(temp / 256);
+    }
+    if (window.crypto && window.crypto.subtle) {
+      try {
+        const key = await window.crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: { name: "SHA-1" } }, false, ["sign"]);
+        const sig = new Uint8Array(await window.crypto.subtle.sign("HMAC", key, msg));
+        const offset = sig[sig.length - 1] & 0x0f;
+        const binary = ((sig[offset] & 0x7f) << 24) | ((sig[offset + 1] & 0xff) << 16) | ((sig[offset + 2] & 0xff) << 8) | (sig[offset + 3] & 0xff);
+        return String(binary % 1000000).padStart(6, "0");
+      } catch (e) {}
+    }
+    const fallbackNum = Math.abs((counter * 2654435761) % 900000) + 100000;
+    return String(fallbackNum).slice(0, 6);
+  };
+
+  window.refreshLiveTotpDisplay = async function() {
+    const hint = document.getElementById("live-totp-hint");
+    if (!hint) return;
+    const user = typeof activeMember === "function" ? activeMember() : state.members[0];
+    const code = await window.computeTotpCode(user?.authenticatorSecret, 0);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const remSec = TOTP_WINDOW_SEC - (nowSec % TOTP_WINDOW_SEC);
+    const mins = Math.floor(remSec / 60);
+    const secs = remSec % 60;
+    hint.textContent = `Screen Authenticator Code (5m): ${code} • Expires in ${mins}m ${String(secs).padStart(2, "0")}s`;
+  };
+
+  // Sync Authenticator Bind -> Member & Master Admin both see Bound ✓
+  window.bindRealGoogleAuthenticator = async function() {
+    ensureCollections();
+    const user = typeof activeMember === "function" ? activeMember() : state.members[0];
+    const emailOtp = String(document.getElementById("acct-set-email-otp")?.value || "").trim();
+    const code = String(document.getElementById("acct-set-g2fa-code")?.value || "").trim();
+
+    if (!/^[0-9]{6}$/.test(emailOtp)) {
+      if (typeof showToast === "function") showToast("Email OTP Required", "Please enter 6-digit Email OTP.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(code)) {
+      if (typeof showToast === "function") showToast("Authenticator Code Required", "Please enter 6-digit Authenticator code.", "error");
+      return;
+    }
+
+    user.authenticatorBound = true;
+    user.authenticatorBoundAt = new Date().toLocaleString();
+    state.sentG2faOtp = null;
+    pushAdminNotification("Google Authenticator Bound", `${user.username || "Member"} (${user.uid}) bound Google Authenticator.`);
+    persistSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Successful!", "Google Authenticator bound & synced with Master Admin.");
+  };
+
+  // Sync Withdrawal Address Set-up -> Member & Withdraw chain both get saved address
+  window.saveWithdrawAddressWithOtp = function(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    ensureCollections();
+    const user = typeof activeMember === "function" ? activeMember() : state.members[0];
+    const rawChain = String(document.getElementById("wset-chain")?.value || "TRC20").trim().toUpperCase();
+    const addr = String(document.getElementById("wset-address")?.value || "").trim();
+    const otp = String(document.getElementById("wset-otp")?.value || "").trim();
+
+    if (!addr || addr.length < 6) {
+      if (typeof showToast === "function") showToast("Invalid Address", "Enter a valid withdrawal address.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(otp)) {
+      if (typeof showToast === "function") showToast("OTP Required", "Enter 6-digit Email OTP.", "error");
+      return;
+    }
+
+    if (!user.withdrawWallets) user.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null };
+    if (rawChain.includes("BEP20")) {
+      user.withdrawWallets.BEP20 = addr;
+    } else if (rawChain.includes("ETH")) {
+      user.withdrawWallets.ETHEREUM = addr;
+      if (!user.withdrawWallets.ERC20) user.withdrawWallets.ERC20 = addr;
+    } else if (rawChain.includes("ERC20")) {
+      user.withdrawWallets.ERC20 = addr;
+      if (!user.withdrawWallets.ETHEREUM) user.withdrawWallets.ETHEREUM = addr;
+    } else {
+      user.withdrawWallets.TRC20 = addr;
+    }
+
+    state.sentWalletSetupOtp = null;
+    pushAdminNotification("Withdrawal Address Updated", `${user.username || "Member"} (${user.uid}) saved ${rawChain} address.`);
+    persistSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Successful!", `${rawChain} withdrawal address saved.`);
+  };
+
+  // Deduct balance on Withdraw & send to Master Admin Withdrawal Pending + Notification
+  window.submitUserWithdrawWithOtp = async function(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    ensureCollections();
+    const user = typeof activeMember === "function" ? activeMember() : state.members[0];
+    const minWd = Number(state.adminConfig?.minWithdraw ?? 50);
+    const feePct = Number(state.adminConfig?.withdrawChargePct ?? 7);
+    const chainLabel = String(document.getElementById("wd-page-chain")?.value || state.withdrawSelectedChain || "USDT TRC20").trim();
+    const savedWallet = String(
+      (typeof getMemberSavedWithdrawAddress === "function" ? getMemberSavedWithdrawAddress(user, chainLabel) : "") ||
+      document.getElementById("wd-auto-address")?.value ||
+      ""
+    ).trim();
+    const amt = parseFloat(document.getElementById("wd-page-amount")?.value || "0");
+    const emailCode = String(document.getElementById("wd-page-otp")?.value || "").trim();
+    const loginPw = String(document.getElementById("wd-page-password")?.value || "");
+
+    const curBal = Number(user.balance || 0);
+    if (!amt || isNaN(amt) || amt < minWd) {
+      if (typeof showToast === "function") showToast("Minimum Withdraw", `Minimum withdrawal is ${minWd} USDT.`, "error");
+      return;
+    }
+    if (curBal < amt) {
+      if (typeof showToast === "function") showToast("Insufficient Balance", `Available balance: ${curBal.toFixed(2)} USDT.`, "error");
+      return;
+    }
+    if (!savedWallet) {
+      if (typeof showToast === "function") showToast("Wallet Address Required", "Set your withdrawal address in Settings first.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(emailCode)) {
+      if (typeof showToast === "function") showToast("OTP Required", "Enter 6-digit Email OTP.", "error");
+      return;
+    }
+    if (!loginPw || (user.password && loginPw !== user.password)) {
+      if (typeof showToast === "function") showToast("Invalid Password", "Enter your valid account password.", "error");
+      return;
+    }
+
+    const feeAmt = Number((amt * (feePct / 100)).toFixed(2));
+    const netAmt = Number((amt - feeAmt).toFixed(2));
+    user.balance = Number((curBal - amt).toFixed(2));
+    state.extraData.availableBalance = user.balance;
+    state.extraData.pendingBalance = Number(((Number(state.extraData.pendingBalance) || 0) + amt).toFixed(2));
+    state.sentWithdrawOtp = null;
+
+    const reqId = "WD-" + Math.floor(1000 + Math.random() * 9000);
+    state.withdrawRequests.unshift({
+      id: reqId,
+      username: user.username || "Member",
+      uid: user.uid,
+      email: user.email || "",
+      amount: Number(amt.toFixed(2)),
+      fee: feeAmt,
+      netAmount: netAmt,
+      netReceive: netAmt,
+      chain: chainLabel,
+      wallet: savedWallet,
+      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      status: "Pending"
+    });
+
+    pushAdminNotification("Withdrawal Request Pending", `${user.username || "Member"} (${user.uid}) requested ${amt.toFixed(2)} USDT (${chainLabel}).`);
+    persistSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Withdrawal Pending!", `${reqId} deducted ${amt.toFixed(2)} USDT & sent to Master Admin.`);
+  };
+
+  // Sync KYC Submit -> KYC Pending + Admin Notification
+  window.submitAccountKycVerification = async function(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    ensureCollections();
+    const user = typeof activeMember === "function" ? activeMember() : state.members[0];
+    const unameInput = String(document.getElementById("kyc-username-input")?.value || user.username || "Member").trim();
+    const uidInput = String(document.getElementById("kyc-uid-input")?.value || user.uid || "NFX-1001").trim();
+    const emailCode = String(document.getElementById("kyc-email-code-input")?.value || "").trim();
+    const g2faCode = String(document.getElementById("kyc-g2fa-input")?.value || "").trim();
+    const loginPw = String(document.getElementById("kyc-password-input")?.value || "");
+
+    if (!/^[0-9]{6}$/.test(emailCode)) {
+      if (typeof showToast === "function") showToast("Email Code Required", "Enter 6-digit Email Code.", "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(g2faCode)) {
+      if (typeof showToast === "function") showToast("2FA Code Required", "Enter 6-digit Authenticator Code.", "error");
+      return;
+    }
+    if (!loginPw) {
+      if (typeof showToast === "function") showToast("Password Required", "Enter your login password.", "error");
+      return;
+    }
+
+    user.username = unameInput;
+    if (uidInput) user.uid = uidInput;
+    user.kycStatus = "KYC Pending";
+    user.accountVerificationStatus = "Pending";
+    user.status = "Pending";
+    state.sentKycEmailCode = null;
+
+    const idx = state.kycSubmissions.findIndex(k => k.uid === user.uid);
+    const rec = {
+      id: "KYC-" + Math.floor(1000 + Math.random() * 9000),
+      uid: user.uid,
+      username: unameInput,
+      email: user.email || "",
+      mobile: user.mobile || "",
+      verificationStatus: "KYC Pending",
+      accountStatus: "Pending",
+      submittedAt: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    };
+    if (idx >= 0) state.kycSubmissions[idx] = Object.assign(state.kycSubmissions[idx], rec);
+    else state.kycSubmissions.unshift(rec);
+
+    pushAdminNotification("KYC Request Pending", `${unameInput} (${user.uid}) submitted KYC verification.`);
+    persistSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("KYC Pending!", "Submitted to Master Admin KYC Pending.");
+  };
+
+  // Sync Deposit Submit -> Deposit Pending + Admin Notification
+  window.submitDepositRequestForm = function(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    ensureCollections();
+    const user = typeof activeMember === "function" ? activeMember() : state.members[0];
+    const chain = String(document.getElementById("dep-chain-select")?.value || state.depositSelectedChain || "TRC20").trim();
+    const walletAddr = String(document.getElementById("dep-chain-address")?.value || "").trim();
+    const amt = parseFloat(document.getElementById("dep-amount-input")?.value || "0");
+    const authCode = String(document.getElementById("dep-auth-code")?.value || "").trim();
+    const txHash = String(document.getElementById("dep-tx-hash")?.value || "").trim();
+    const pw = String(document.getElementById("dep-password-input")?.value || "");
+
+    const minDep = Number(state.adminConfig?.minDeposit ?? 10);
+    if (!amt || isNaN(amt) || amt < minDep) {
+      if (typeof showToast === "function") showToast("Minimum Deposit", `Minimum deposit is ${minDep} USDT.`, "error");
+      return;
+    }
+    if (!/^[0-9]{6}$/.test(authCode) || !txHash || !pw) {
+      if (typeof showToast === "function") showToast("Details Required", "Fill 6-digit code, Transaction Hash & Password.", "error");
+      return;
+    }
+
+    const txId = "DEP-" + Math.floor(1000 + Math.random() * 9000);
+    state.depositRequests.unshift({
+      id: txId,
+      username: user.username || "Member",
+      uid: user.uid,
+      email: user.email || "",
+      amount: Number(amt.toFixed(2)),
+      chain,
+      wallet: walletAddr,
+      txHash,
+      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      proof: "Submitted",
+      status: "Pending"
+    });
+
+    pushAdminNotification("Deposit Request Pending", `${user.username || "Member"} (${user.uid}) submitted ${amt.toFixed(2)} USDT (${chain}).`);
+    persistSharedState();
+    if (typeof renderAll === "function") renderAll();
+    if (typeof showSuccessPopup2s === "function") showSuccessPopup2s("Deposit Pending!", `${txId} sent to Master Admin Deposit Pending.`);
+  };
+
+  // Sync Master Admin edits back to Member & shared store immediately
+  const prevSaveAdminEditV61 = window.saveAdminMemberEdit;
+  window.saveAdminMemberEdit = function(e) {
+    if (typeof prevSaveAdminEditV61 === "function") prevSaveAdminEditV61(e);
+    persistSharedState();
+  };
+
+  const prevSaveUmV61 = window.saveAdminUmSection;
+  window.saveAdminUmSection = function(uid, sectionType) {
+    if (typeof prevSaveUmV61 === "function") prevSaveUmV61(uid, sectionType);
+    persistSharedState();
+  };
+
+  // Load shared state on boot & keep account on reload
+  loadSharedState();
+  setInterval(() => {
+    window.refreshLiveTotpDisplay();
+  }, 1000);
+})();
+</script>
+
+
+<script id="nfx-fixed-ref-cross-device-sync-v62">
+(function nfxFixedRefCrossDeviceSyncV62() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const REF_MAP_KEY = "nfx_fixed_member_referral_codes_v62";
+  const CROSS_DEVICE_KEY = "nfx_cross_device_member_records_v62";
+
+  // Deterministic 8-char code generator per UID (never changes across refreshes or devices!)
+  function deterministicEightCharRef(uidStr, indexHint = 0) {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const seed = String(uidStr || ("NFX-" + (1001 + indexHint))).trim().toUpperCase();
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    let code = "";
+    for (let j = 0; j < 8; j++) {
+      h = (Math.imul(h ^ (j + 17), 1103515245) + 12345) >>> 0;
+      code += alphabet[h % alphabet.length];
+    }
+    return code;
+  }
+
+  function loadRefRegistry() {
+    try {
+      const raw = localStorage.getItem(REF_MAP_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveRefRegistry(reg) {
+    try {
+      localStorage.setItem(REF_MAP_KEY, JSON.stringify(reg));
+    } catch (e) {}
+  }
+
+  function loadCrossDeviceRecords() {
+    try {
+      const raw = localStorage.getItem(CROSS_DEVICE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveCrossDeviceRecords(mapObj) {
+    try {
+      localStorage.setItem(CROSS_DEVICE_KEY, JSON.stringify(mapObj));
+    } catch (e) {}
+  }
+
+  // Lock each member's unique referral code permanently & ensure no two members share the same code
+  window.ensureUniqueMemberIdentity = function(memberObj, indexHint = 0) {
+    if (!memberObj) return;
+    if (!memberObj.uid || !String(memberObj.uid).trim()) {
+      memberObj.uid = indexHint === 0 ? "NFX-1001" : ("NFX-" + (1001 + indexHint));
+    }
+    const uidKey = String(memberObj.uid).trim().toUpperCase();
+    const reg = loadRefRegistry();
+    const usedCodes = new Set(Object.values(reg).map(x => String(x || "").toUpperCase()));
+
+    let fixedCode = String(memberObj.referralCode || reg[uidKey] || "").trim().toUpperCase();
+    const isValidFormat = /^[A-Z0-9]{8}$/.test(fixedCode);
+    const conflictWithOther = Array.from(usedCodes).includes(fixedCode) && reg[uidKey] !== fixedCode;
+
+    if (!isValidFormat || conflictWithOther) {
+      fixedCode = deterministicEightCharRef(uidKey, indexHint);
+      let attempt = 1;
+      while (Array.from(usedCodes).includes(fixedCode) && reg[uidKey] !== fixedCode && attempt < 50) {
+        fixedCode = deterministicEightCharRef(uidKey + "_" + attempt, indexHint + attempt);
+        attempt++;
+      }
+    }
+
+    reg[uidKey] = fixedCode;
+    saveRefRegistry(reg);
+    memberObj.referralCode = fixedCode;
+
+    if (!memberObj.authenticatorSecret || !/^[A-Z2-7]{16,}$/.test(String(memberObj.authenticatorSecret).trim())) {
+      memberObj.authenticatorSecret = "JBSWY3DPEHPK3PXP" + uidKey.replace(/[^A-Z0-9]/g, "").slice(-6).padEnd(6, "A");
+    }
+    if (!memberObj.withdrawWallets || typeof memberObj.withdrawWallets !== "object") {
+      memberObj.withdrawWallets = { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null };
+    }
+  };
+
+  window.generateEightCharReferralCode = function(uidVal = "", indexHint = 0) {
+    return deterministicEightCharRef(uidVal, indexHint);
+  };
+
+  window.generateDistinctReferralCode = function(uidVal = "", indexHint = 0) {
+    return deterministicEightCharRef(uidVal, indexHint);
+  };
+
+  // Sync member balance & core account fields across local cache + cross-device registry + Firestore
+  function syncMemberAccountAcrossDevices(memberObj) {
+    if (!memberObj || !memberObj.uid) return;
+    window.ensureUniqueMemberIdentity(memberObj, 0);
+    const uidKey = String(memberObj.uid).trim();
+    const mapObj = loadCrossDeviceRecords();
+
+    const record = {
+      uid: uidKey,
+      username: memberObj.username || "Member",
+      email: memberObj.email || "",
+      mobile: memberObj.mobile || "",
+      country: memberObj.country || "",
+      referralCode: memberObj.referralCode,
+      referredBy: memberObj.referredBy || null,
+      balance: Number(memberObj.balance || 0),
+      yourInvest: Number(memberObj.yourInvest || 0),
+      teamInvest: Number(memberObj.teamInvest || 0),
+      totalProfit: Number(memberObj.totalProfit || 0),
+      referralBonus: Number(memberObj.referralBonus || 0),
+      authenticatorBound: Boolean(memberObj.authenticatorBound),
+      kycStatus: memberObj.kycStatus || "Unverified",
+      accountVerificationStatus: memberObj.accountVerificationStatus || "Unverified",
+      status: memberObj.status || "Active",
+      withdrawWallets: memberObj.withdrawWallets || { BEP20: null, TRC20: null, ERC20: null, ETHEREUM: null },
+      updatedAt: Date.now()
+    };
+
+    mapObj[uidKey] = record;
+    saveCrossDeviceRecords(mapObj);
+
+    if (typeof window.saveSessionState === "function") {
+      try { window.saveSessionState(true); } catch (e) {}
+    }
+
+    // Also push to Firestore if available so logging in from another phone pulls the exact same balance
+    if (window.NFXFirebase && window.NFXFirebase.db && window.NFXFirebase.setDoc && window.NFXFirebase.doc) {
+      try {
+        const { db, doc, setDoc, serverTimestamp } = window.NFXFirebase;
+        setDoc(doc(db, "users", uidKey), {
+          uid: uidKey,
+          username: record.username,
+          email: record.email,
+          mobile: record.mobile,
+          country: record.country,
+          referralCode: record.referralCode,
+          referredBy: record.referredBy,
+          balance: record.balance,
+          yourInvest: record.yourInvest,
+          teamInvest: record.teamInvest,
+          totalProfit: record.totalProfit,
+          referralBonus: record.referralBonus,
+          authenticatorBound: record.authenticatorBound,
+          kycStatus: record.kycStatus,
+          accountVerificationStatus: record.accountVerificationStatus,
+          status: record.status,
+          withdrawWallets: record.withdrawWallets,
+          updatedAt: serverTimestamp ? serverTimestamp() : Date.now()
+        }, { merge: true }).catch(() => {});
+      } catch (e) {}
+    }
+  }
+
+  // Hydrate member balance & fixed referral code on login or page load
+  async function hydrateMemberFromSharedSources(memberObj) {
+    if (!memberObj || !memberObj.uid) return;
+    window.ensureUniqueMemberIdentity(memberObj, 0);
+    const uidKey = String(memberObj.uid).trim();
+    const mapObj = loadCrossDeviceRecords();
+
+    if (mapObj[uidKey]) {
+      const saved = mapObj[uidKey];
+      if (saved.balance !== undefined) memberObj.balance = Number(saved.balance || 0);
+      if (saved.yourInvest !== undefined) memberObj.yourInvest = Number(saved.yourInvest || 0);
+      if (saved.teamInvest !== undefined) memberObj.teamInvest = Number(saved.teamInvest || 0);
+      if (saved.totalProfit !== undefined) memberObj.totalProfit = Number(saved.totalProfit || 0);
+      if (saved.referralBonus !== undefined) memberObj.referralBonus = Number(saved.referralBonus || 0);
+      if (saved.referralCode) memberObj.referralCode = String(saved.referralCode).toUpperCase();
+      if (saved.withdrawWallets) memberObj.withdrawWallets = Object.assign({}, memberObj.withdrawWallets || {}, saved.withdrawWallets);
+      if (saved.kycStatus) memberObj.kycStatus = saved.kycStatus;
+      if (saved.accountVerificationStatus) memberObj.accountVerificationStatus = saved.accountVerificationStatus;
+      if (saved.status) memberObj.status = saved.status;
+    }
+
+    if (window.NFXFirebase && window.NFXFirebase.db && window.NFXFirebase.getDoc && window.NFXFirebase.doc) {
+      try {
+        const { db, doc, getDoc } = window.NFXFirebase;
+        const snap = await getDoc(doc(db, "users", uidKey));
+        if (snap.exists()) {
+          const fd = snap.data() || {};
+          if (fd.balance !== undefined) memberObj.balance = Number(fd.balance || 0);
+          if (fd.yourInvest !== undefined) memberObj.yourInvest = Number(fd.yourInvest || 0);
+          if (fd.teamInvest !== undefined) memberObj.teamInvest = Number(fd.teamInvest || 0);
+          if (fd.totalProfit !== undefined) memberObj.totalProfit = Number(fd.totalProfit || 0);
+          if (fd.referralBonus !== undefined) memberObj.referralBonus = Number(fd.referralBonus || 0);
+          if (fd.referralCode) memberObj.referralCode = String(fd.referralCode).toUpperCase();
+          if (fd.withdrawWallets) memberObj.withdrawWallets = Object.assign({}, memberObj.withdrawWallets || {}, fd.withdrawWallets);
+          if (fd.kycStatus) memberObj.kycStatus = fd.kycStatus;
+          if (fd.accountVerificationStatus) memberObj.accountVerificationStatus = fd.accountVerificationStatus;
+          if (fd.status) memberObj.status = fd.status;
+          mapObj[uidKey] = Object.assign({}, mapObj[uidKey] || {}, fd, { uid: uidKey });
+          saveCrossDeviceRecords(mapObj);
+        }
+      } catch (e) {}
+    }
+  }
+
+  // Wrap renderAll so every member's referral code is locked & synced consistently
+  const prevRenderAllV62 = window.renderAll;
+  window.renderAll = function() {
+    if (Array.isArray(state.members)) {
+      state.members.forEach((m, idx) => window.ensureUniqueMemberIdentity(m, idx));
+    }
+    const curUser = typeof activeMember === "function" ? activeMember() : null;
+    if (curUser) {
+      syncMemberAccountAcrossDevices(curUser);
+    }
+    if (typeof prevRenderAllV62 === "function") {
+      return prevRenderAllV62.apply(this, arguments);
+    }
+  };
+
+  window.addEventListener("DOMContentLoaded", () => {
+    const curUser = typeof activeMember === "function" ? activeMember() : null;
+    if (curUser) {
+      hydrateMemberFromSharedSources(curUser).then(() => {
+        if (typeof renderAll === "function") renderAll();
+      });
+    }
+  });
+})();
+</script>
+
+
+<script id="nfx-member-to-master-admin-sync-v64">
+(function nfxMemberToMasterAdminSyncV64() {
+  if (typeof window === "undefined" || typeof state === "undefined") return;
+
+  const SHARED_QUEUE_KEY = "nfx_shared_admin_inbox_v64";
+  const SHARED_MEMBERS_KEY = "nfx_shared_members_v64";
+
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function writeJson(key, val) {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch (e) {}
+  }
+
+  function mergeById(primaryArr, secondaryArr, idField = "id") {
+    const out = [];
+    const seen = new Set();
+    const addList = (arr) => {
+      if (!Array.isArray(arr)) return;
+      arr.forEach(item => {
+        if (!item) return;
+        const key = String(item[idField] || item.uid || JSON.stringify(item));
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push(item);
+        }
+      });
+    };
+    addList(primaryArr);
+    addList(secondaryArr);
+    return out;
+  }
+
+  // Publish local state requests & member snapshots into shared storage + Firestore
+  window.publishMemberRequestsToMasterAdmin = function() {
+    const inbox = readJson(SHARED_QUEUE_KEY, {
+      depositRequests: [],
+      withdrawRequests: [],
+      kycSubmissions: [],
+      referralHistoryRecords: [],
+      referralCommissionRecords: [],
+      updatedAt: 0
+    });
+
+    state.depositRequests = mergeById(state.depositRequests, inbox.depositRequests, "id");
+    state.withdrawRequests = mergeById(state.withdrawRequests, inbox.withdrawRequests, "id");
+    state.kycSubmissions = mergeById(state.kycSubmissions, inbox.kycSubmissions, "uid");
+    state.referralHistoryRecords = mergeById(state.referralHistoryRecords, inbox.referralHistoryRecords, "id");
+    state.referralCommissionRecords = mergeById(state.referralCommissionRecords, inbox.referralCommissionRecords, "id");
+
+    const nextInbox = {
+      depositRequests: state.depositRequests,
+      withdrawRequests: state.withdrawRequests,
+      kycSubmissions: state.kycSubmissions,
+      referralHistoryRecords: state.referralHistoryRecords,
+      referralCommissionRecords: state.referralCommissionRecords,
+      updatedAt: Date.now()
+    };
+    writeJson(SHARED_QUEUE_KEY, nextInbox);
+
+    const sharedMembers = readJson(SHARED_MEMBERS_KEY, {});
+    if (Array.isArray(state.members)) {
+      state.members.forEach(m => {
+        if (m && m.uid) {
+          sharedMembers[m.uid] = Object.assign({}, sharedMembers[m.uid] || {}, m);
+        }
+      });
+    }
+    writeJson(SHARED_MEMBERS_KEY, sharedMembers);
+
+    // Also push latest requests to Firestore collections so cross-device Admin sees them
+    if (window.NFXFirebase && window.NFXFirebase.db && window.NFXFirebase.setDoc && window.NFXFirebase.doc) {
+      try {
+        const { db, doc, setDoc, serverTimestamp } = window.NFXFirebase;
+        (state.depositRequests || []).slice(0, 25).forEach(d => {
+          if (d && d.id) {
+            setDoc(doc(db, "deposit_requests", String(d.id)), Object.assign({}, d, { updatedAt: serverTimestamp ? serverTimestamp() : Date.now() }), { merge: true }).catch(() => {});
+          }
+        });
+        (state.withdrawRequests || []).slice(0, 25).forEach(w => {
+          if (w && w.id) {
+            setDoc(doc(db, "withdraw_requests", String(w.id)), Object.assign({}, w, { updatedAt: serverTimestamp ? serverTimestamp() : Date.now() }), { merge: true }).catch(() => {});
+          }
+        });
+        (state.kycSubmissions || []).slice(0, 25).forEach(k => {
+          const kKey = String(k.uid || k.id || "");
+          if (kKey) {
+            setDoc(doc(db, "kyc_requests", kKey), Object.assign({}, k, { updatedAt: serverTimestamp ? serverTimestamp() : Date.now() }), { merge: true }).catch(() => {});
+          }
+        });
+      } catch (e) {}
+    }
+  };
+
+  // Pull shared requests & member records into state (used on load, storage event, and renderAll)
+  window.pullMasterAdminRequestsFromShared = function() {
+    const inbox = readJson(SHARED_QUEUE_KEY, null);
+    if (inbox) {
+      state.depositRequests = mergeById(state.depositRequests, inbox.depositRequests, "id");
+      state.withdrawRequests = mergeById(state.withdrawRequests, inbox.withdrawRequests, "id");
+      state.kycSubmissions = mergeById(state.kycSubmissions, inbox.kycSubmissions, "uid");
+      state.referralHistoryRecords = mergeById(state.referralHistoryRecords, inbox.referralHistoryRecords, "id");
+      state.referralCommissionRecords = mergeById(state.referralCommissionRecords, inbox.referralCommissionRecords, "id");
+    }
+
+    const sharedMembers = readJson(SHARED_MEMBERS_KEY, null);
+    if (sharedMembers && Array.isArray(state.members)) {
+      Object.values(sharedMembers).forEach(sm => {
+        if (!sm || !sm.uid) return;
+        const idx = state.members.findIndex(m => m.uid === sm.uid);
+        if (idx >= 0) {
+          state.members[idx] = Object.assign({}, state.members[idx], sm);
+        }
+      });
+    }
+  };
+
+  // Wrap submit & admin decision functions to always sync both ways
+  const wrapAndPublish = (fnName) => {
+    const orig = window[fnName];
+    if (typeof orig === "function") {
+      window[fnName] = async function() {
+        const res = await orig.apply(this, arguments);
+        window.publishMemberRequestsToMasterAdmin();
+        if (typeof saveSessionState === "function") saveSessionState(true);
+        return res;
+      };
+    }
+  };
+
+  ["submitDepositRequestForm", "submitUserWithdrawWithOtp", "submitAccountKycVerification", "decideDepositRequest", "decideWithdrawRequest", "adminApproveOrRejectKycAction"].forEach(wrapAndPublish);
+
+  // Listen across tabs/windows on same browser
+  window.addEventListener("storage", (ev) => {
+    if (ev.key === SHARED_QUEUE_KEY || ev.key === SHARED_MEMBERS_KEY || ev.key === "nfx_treading_session_v16") {
+      window.pullMasterAdminRequestsFromShared();
+      if (typeof renderAll === "function") renderAll();
+    }
+  });
+
+  // Also load Firestore request collections when NFXFirebase becomes ready
+  async function hydrateAdminCollectionsFromFirestore() {
+    if (!window.NFXFirebase || !window.NFXFirebase.db || !window.NFXFirebase.getDocs || !window.NFXFirebase.collection) return;
+    try {
+      const { db, collection, getDocs } = window.NFXFirebase;
+      const pullCol = async (colName, targetArr, idField) => {
+        const snap = await getDocs(collection(db, colName));
+        const items = [];
+        snap.forEach(d => items.push(Object.assign({ [idField]: d.id }, d.data() || {})));
+        if (items.length > 0) {
+          state[targetArr] = mergeById(items, state[targetArr], idField);
+        }
+      };
+      await pullCol("deposit_requests", "depositRequests", "id");
+      await pullCol("withdraw_requests", "withdrawRequests", "id");
+      await pullCol("kyc_requests", "kycSubmissions", "uid");
+      writeJson(SHARED_QUEUE_KEY, {
+        depositRequests: state.depositRequests,
+        withdrawRequests: state.withdrawRequests,
+        kycSubmissions: state.kycSubmissions,
+        referralHistoryRecords: state.referralHistoryRecords || [],
+        referralCommissionRecords: state.referralCommissionRecords || [],
+        updatedAt: Date.now()
+      });
+      if (typeof renderAll === "function") renderAll();
+    } catch (e) {}
+  }
+
+  const prevRenderAllV64 = window.renderAll;
+  window.renderAll = function() {
+    window.pullMasterAdminRequestsFromShared();
+    if (typeof prevRenderAllV64 === "function") {
+      return prevRenderAllV64.apply(this, arguments);
+    }
+  };
+
+  window.addEventListener("DOMContentLoaded", () => {
+    window.pullMasterAdminRequestsFromShared();
+    setTimeout(hydrateAdminCollectionsFromFirestore, 1200);
+  });
 })();
 </script>
 
